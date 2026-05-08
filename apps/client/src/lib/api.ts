@@ -33,7 +33,7 @@ export const api = {
       }),
   },
   stats: {
-    get: () => request<{ snapshots: StatsSnapshot[] }>('/stats'),
+    get: (refresh = false) => request<{ snapshots: StatsSnapshot[] }>(`/stats${refresh ? '?refresh=1' : ''}`),
   },
 };
 

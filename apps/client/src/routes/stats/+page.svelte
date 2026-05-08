@@ -21,11 +21,11 @@
     });
   }
 
-  async function loadStats() {
+  async function loadStats(refresh = false) {
     loading = true;
     error = '';
     try {
-      const result = await api.stats.get();
+      const result = await api.stats.get(refresh);
       snapshots = result.snapshots;
     } catch {
       error = 'Failed to load stats.';
@@ -49,7 +49,7 @@
       <Icon icon="solar:chart-square-bold-duotone" class="size-4" />
       Stats Snapshots
     </span>
-    <Button variant="outline" size="sm" onclick={loadStats} disabled={loading} class="rounded-xl">
+    <Button variant="outline" size="sm" onclick={() => loadStats(true)} disabled={loading} class="rounded-xl">
       <span class="inline-flex items-center gap-2">
         <Icon icon="solar:restart-bold-duotone" class="size-4" />
         {loading ? 'Loading...' : 'Refresh'}

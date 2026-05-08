@@ -53,3 +53,16 @@ export async function getLatestSnapshots(): Promise<StatsSnapshot[]> {
     data: JSON.parse(r.data_json as string) as Record<string, unknown>,
   }));
 }
+
+export async function getLatestSnapshotGeneratedAt(): Promise<string | null> {
+  const result = await db.execute({
+    sql: `SELECT generated_at FROM stats_snapshots ORDER BY generated_at DESC LIMIT 1`,
+    args: [],
+  });
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0].generated_at as string;
+}
