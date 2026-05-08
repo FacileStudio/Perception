@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
-import { createHash, randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { db } from '../db/client';
 import { verifyNookSignature } from '../security/hmac';
 import { redactPayload } from '../ingest/redact';
 import { extractEnvelope } from '../ingest/envelope';
 import { mapPayload } from '../ingest/mapper';
 import { lookupSchema, computeKeysHash, markNeedsReview } from '../schema-registry/lookup';
+import { labelEvent } from '../ontology/labels';
+import { resolveEventEntity } from '../entities/resolver';
 import type { NookEventEnvelope } from '../types';
 import { config } from '../config';
 
@@ -94,6 +96,8 @@ ingestRoutes.post('/', async (c) => {
   }
 
   const { facts, quality } = mapPayload(envelope, schema);
+  const labeling = await labelEvent(envelope, layer1, schema);
+  const resolvedEntity = await resolveEventEntity(envelope, layer1, labeling.entityConceptId);
 
   const payloadHash = createHash('sha256')
     .update(JSON.stringify(redacted))
@@ -111,6 +115,12 @@ ingestRoutes.post('/', async (c) => {
   const inputHash = createHash('sha256').update(embeddingInput).digest('hex');
 
   const now = new Date().toISOString();
+  const conceptIds = [
+    ...labeling.eventConceptIds,
+    ...labeling.fieldConceptIds,
+    labeling.entityConceptId,
+    labeling.relationConceptId,
+  ];
 
   await db.batch([
     {
@@ -158,6 +168,14 @@ ingestRoutes.post('/', async (c) => {
         'pending',
       ],
     },
+    ...conceptIds.map((conceptId) => ({
+      sql: 'INSERT OR IGNORE INTO event_concepts (event_id, concept_id, confidence, source) VALUES (?, ?, ?, ?)',
+      args: [envelope.id, conceptId, 0.82, 'ingest:auto'],
+    })),
+    ...(resolvedEntity ? [{
+      sql: 'INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source) VALUES (?, ?, ?, ?, ?)',
+      args: [envelope.id, resolvedEntity.id, labeling.relationConceptId, 0.86, 'ingest:auto'],
+    }] : []),
   ]);
 
   await db.execute({

@@ -47,17 +47,20 @@ export function buildContextBlock(
   ];
 
   for (const event of events) {
-    lines.push(`[EVENT id=${event.id} provider=${event.provider_name} type=${event.event_type} entity=${event.entity_type} occurred=${event.occurred_at} quality=${event.quality}]`);
+    const lanes = 'lanes' in event && Array.isArray(event.lanes) ? event.lanes.join(',') : '';
+    const concepts = 'concepts' in event && Array.isArray(event.concepts) ? event.concepts.join(',') : '';
+    const entityNames = 'entity_names' in event && Array.isArray(event.entity_names) ? event.entity_names.join(',') : '';
+    lines.push(`[EVENT id=${event.id} provider=${event.provider_name} type=${event.event_type} entity=${event.entity_type} occurred=${event.occurred_at} quality=${event.quality} lanes=${lanes} concepts=${concepts} matched_entities=${entityNames}]`);
     lines.push(event.title);
     lines.push(event.summary);
-    lines.push(`[/EVENT]`);
+    lines.push('[/EVENT]');
     lines.push('');
   }
 
   for (const snapshot of stats) {
     lines.push(`[STATS kind=${snapshot.kind} window_start=${snapshot.window_start} window_end=${snapshot.window_end} source_count=${snapshot.source_count} min_sample_met=${snapshot.min_sample_met}]`);
     lines.push(JSON.stringify(snapshot.data, null, 2));
-    lines.push(`[/STATS]`);
+    lines.push('[/STATS]');
     lines.push('');
   }
 

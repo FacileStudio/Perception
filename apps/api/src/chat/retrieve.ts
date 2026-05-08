@@ -3,11 +3,14 @@ import { rowToEvent } from '../db/row';
 import type { InValue } from '@libsql/client';
 import type { EventRow, StatsSnapshot } from '../types';
 import type { QueryPlan } from './planner';
+import { EVENT_LIST_ORDER_BY } from '../events/order';
 
 export type RetrievalResult = {
-  events: Array<EventRow & { score: number; source: 'vector' | 'fts' | 'sql' | 'stats' }>;
+  events: Array<EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[] }>;
   stats: StatsSnapshot[];
 };
+
+type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept';
 
 async function vectorLane(queryEmbedding: number[]): Promise<Array<EventRow & { score: number; source: 'vector' }>> {
   try {
@@ -65,7 +68,7 @@ async function sqlLane(plan: QueryPlan): Promise<Array<EventRow & { score: numbe
 
   const where = conditions.join(' AND ');
   const result = await db.execute({
-    sql: `SELECT * FROM events WHERE ${where} ORDER BY occurred_at DESC LIMIT 30`,
+    sql: `SELECT * FROM events WHERE ${where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
     args,
   });
 
@@ -98,7 +101,7 @@ async function recentLane(plan: QueryPlan): Promise<Array<EventRow & { score: nu
   }
 
   const result = await db.execute({
-    sql: `SELECT * FROM events WHERE ${conditions.join(' AND ')} ORDER BY occurred_at DESC LIMIT 30`,
+    sql: `SELECT * FROM events WHERE ${conditions.join(' AND ')} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
     args,
   });
 
@@ -107,6 +110,86 @@ async function recentLane(plan: QueryPlan): Promise<Array<EventRow & { score: nu
     score: 0.4,
     source: 'sql' as const,
   }));
+}
+
+async function entityLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'entity'; entity_names: string[] }>> {
+  if (plan.queryTerms.length === 0) return [];
+
+  const aliasClauses = plan.queryTerms.map(() => 'ea.alias_value LIKE ?').join(' OR ');
+  const nameClauses = plan.queryTerms.map(() => 'lower(ent.canonical_name) LIKE ?').join(' OR ');
+  const args = [
+    ...plan.queryTerms.map((term) => `%${term.replace(/_/g, ' ')}%`),
+    ...plan.queryTerms.map((term) => `%${term.replace(/_/g, ' ')}%`),
+  ];
+
+  try {
+    const result = await db.execute({
+      sql: `SELECT e.*, ent.canonical_name AS matched_entity_name, max(coalesce(ea.confidence, 0), ee.confidence) AS match_score
+        FROM entities ent
+        JOIN event_entities ee ON ee.entity_id = ent.id
+        JOIN events e ON e.id = ee.event_id
+        LEFT JOIN entity_aliases ea ON ea.entity_id = ent.id
+        WHERE (${aliasClauses}) OR (${nameClauses})
+        GROUP BY e.id
+        ORDER BY match_score DESC, ${EVENT_LIST_ORDER_BY}
+        LIMIT 30`,
+      args,
+    });
+
+    return result.rows.map((r) => ({
+      ...rowToEvent(r as unknown as Record<string, unknown>),
+      score: typeof r.match_score === 'number' ? r.match_score : 0.75,
+      source: 'entity' as const,
+      entity_names: typeof r.matched_entity_name === 'string' ? [r.matched_entity_name] : [],
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function conceptLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'concept'; concepts: string[] }>> {
+  const conditions: string[] = [];
+  const args: InValue[] = [];
+
+  if (plan.capabilities.length > 0) {
+    for (const capability of plan.capabilities) {
+      conditions.push('oc.capabilities_json LIKE ?');
+      args.push(`%"${capability}"%`);
+    }
+  }
+
+  if (plan.queryTerms.length > 0) {
+    for (const term of plan.queryTerms) {
+      conditions.push('(oc.label LIKE ? OR oca.alias LIKE ?)');
+      args.push(`%${term}%`, `%${term}%`);
+    }
+  }
+
+  if (conditions.length === 0) return [];
+
+  try {
+    const result = await db.execute({
+      sql: `SELECT e.*, group_concat(DISTINCT oc.label) AS matched_concepts, max(ec.confidence + oc.confidence) AS match_score
+        FROM event_concepts ec
+        JOIN ontology_concepts oc ON oc.id = ec.concept_id
+        LEFT JOIN ontology_concept_aliases oca ON oca.concept_id = oc.id
+        JOIN events e ON e.id = ec.event_id
+        WHERE (${conditions.join(' OR ')}) AND oc.state != 'rejected'
+        GROUP BY e.id
+        ORDER BY match_score DESC, ${EVENT_LIST_ORDER_BY}
+        LIMIT 30`,
+      args,
+    });
+
+    return result.rows.map((r) => ({
+      ...rowToEvent(r as unknown as Record<string, unknown>),
+      score: typeof r.match_score === 'number' ? r.match_score / 2 : 0.7,
+      source: 'concept' as const,
+      concepts: typeof r.matched_concepts === 'string' ? r.matched_concepts.split(',') : [],
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function statsLane(): Promise<StatsSnapshot[]> {
@@ -127,16 +210,36 @@ async function statsLane(): Promise<StatsSnapshot[]> {
 }
 
 function mergeAndRank(
-  lanes: Array<Array<EventRow & { score: number; source: 'vector' | 'fts' | 'sql' | 'stats' }>>,
+  lanes: Array<Array<EventRow & { score: number; source: RetrievalSource; concepts?: string[]; entity_names?: string[] }>>,
   plan: QueryPlan,
-): Array<EventRow & { score: number; source: 'vector' | 'fts' | 'sql' | 'stats' }> {
-  const best = new Map<string, EventRow & { score: number; source: 'vector' | 'fts' | 'sql' | 'stats' }>();
+): Array<EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[] }> {
+  const best = new Map<string, EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[] }>();
 
   for (const lane of lanes) {
     for (const event of lane) {
       const existing = best.get(event.id);
-      if (!existing || event.score > existing.score) {
-        best.set(event.id, event);
+      const laneWeight = event.source === 'entity'
+        ? 0.55
+        : event.source === 'concept'
+          ? 0.4
+          : event.source === 'sql'
+            ? 0.25
+            : event.source === 'fts'
+              ? 0.2
+              : 0.15;
+      const scored = {
+        ...event,
+        score: event.score + laneWeight,
+        lanes: existing ? Array.from(new Set([...existing.lanes, event.source])) : [event.source],
+        concepts: Array.from(new Set([...(existing?.concepts ?? []), ...(event.concepts ?? [])])),
+        entity_names: Array.from(new Set([...(existing?.entity_names ?? []), ...(event.entity_names ?? [])])),
+      };
+      if (!existing || scored.score > existing.score) {
+        best.set(event.id, scored);
+      } else {
+        existing.lanes = scored.lanes;
+        existing.concepts = scored.concepts;
+        existing.entity_names = scored.entity_names;
       }
     }
   }
@@ -145,6 +248,10 @@ function mergeAndRank(
     let bonus = 0;
     if (plan.providerFilters.some((p) => event.provider_type === p)) bonus += 0.3;
     if (plan.entityHints.some((e) => event.entity_type === e)) bonus += 0.3;
+    if (event.lanes.includes('entity')) bonus += 0.45;
+    if (event.lanes.includes('concept')) bonus += 0.3;
+    if (event.quality === 'complete') bonus += 0.25;
+    if (event.quality === 'partial') bonus += 0.1;
     if (plan.timeWindow) {
       const eventTime = new Date(event.occurred_at).getTime();
       const windowEnd = new Date(plan.timeWindow.to).getTime();
@@ -160,17 +267,19 @@ function mergeAndRank(
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
   const shouldRunRecentLane = plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
 
-  const [vectorEvents, ftsEvents, sqlEvents, recentEvents, stats] = await Promise.all([
+  const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     vectorLane(queryEmbedding),
     ftsLane(plan.rawMessage),
     plan.requiresSqlFacts ? sqlLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
     shouldRunRecentLane ? recentLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
+    entityLane(plan),
+    conceptLane(plan),
     plan.requiresStats ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
-  let events = mergeAndRank([vectorEvents, ftsEvents, sqlEvents, recentEvents], plan);
+  let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents], plan);
   if (events.length === 0) {
-    events = await recentLane(plan);
+    events = (await recentLane(plan)).map((event) => ({ ...event, lanes: ['sql' as const] }));
   }
 
   return { events, stats };

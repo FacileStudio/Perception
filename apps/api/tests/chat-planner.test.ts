@@ -21,4 +21,13 @@ describe('chat planner retrieval modes', () => {
     expect(plan.prefersRecency).toBe(true);
     expect(plan.providerFilters).toContain('dokploy');
   });
+
+  test('extracts capability hints for ontology retrieval', () => {
+    const plan = buildQueryPlan('which clients have unsigned contracts?');
+    expect(plan.capabilities).toContain('commercial_account');
+    expect(plan.capabilities).toContain('document');
+    expect(plan.capabilities).toContain('can_have_contracts');
+    expect(plan.queryTerms).toContain('clients');
+    expect(plan.queryTerms).toContain('contracts');
+  });
 });

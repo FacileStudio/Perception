@@ -31,6 +31,13 @@ Key decisions locked in:
 | [spec/milestones.md](docs/spec/milestones.md) | Build milestones and acceptance criteria |
 | [spec/open-questions.md](docs/spec/open-questions.md) | Unresolved decisions and recommended defaults |
 
+## Intelligence Specs
+
+| File | Contents |
+|---|---|
+| [auto-labeling.md](docs/auto-labeling.md) | Generated ontology, capabilities, unknown-data workflow, confidence gates, retrieval integration |
+| [retrieval-and-entity-resolver.md](docs/retrieval-and-entity-resolver.md) | Retrieval evals, entity resolver, relation graph, phased implementation |
+
 ## Diagrams
 
 Source files and rendered PNGs live in [`docs/diagrams/`](docs/diagrams/). PNGs are generated artifacts — edit the `.d2` sources.

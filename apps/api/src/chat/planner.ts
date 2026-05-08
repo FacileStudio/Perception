@@ -1,7 +1,11 @@
+import { extractQueryTerms, inferQueryCapabilities } from '../ontology/query';
+
 export type QueryPlan = {
   timeWindow: { from: string; to: string } | null;
   providerFilters: string[];
   entityHints: string[];
+  queryTerms: string[];
+  capabilities: string[];
   requiresSqlFacts: boolean;
   requiresStats: boolean;
   prefersRecency: boolean;
@@ -203,6 +207,8 @@ export function buildQueryPlan(message: string): QueryPlan {
     timeWindow,
     providerFilters,
     entityHints: Array.from(entitySet),
+    queryTerms: extractQueryTerms(message),
+    capabilities: inferQueryCapabilities(message),
     requiresSqlFacts,
     requiresStats,
     prefersRecency,
