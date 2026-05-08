@@ -54,14 +54,22 @@ schemasRoutes.get('/:id', async (c) => {
 schemasRoutes.post('/:id/confirm', async (c) => {
   const id = c.req.param('id');
   const result = await db.execute({
-    sql: 'SELECT id FROM provider_schemas WHERE id = ?',
+    sql: 'SELECT id, provider_type FROM provider_schemas WHERE id = ?',
     args: [id],
   });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
+  const providerType = result.rows[0].provider_type as string;
+  const now = new Date().toISOString();
+
   await db.execute({
     sql: 'UPDATE provider_schemas SET confirmed_at = ?, needs_review = 0 WHERE id = ?',
-    args: [new Date().toISOString(), id],
+    args: [now, id],
+  });
+
+  await db.execute({
+    sql: "UPDATE events SET quality = 'complete' WHERE id IN (SELECT event_id FROM dynamic_facts WHERE provider_type = ?)",
+    args: [providerType],
   });
 
   return c.json({ ok: true });

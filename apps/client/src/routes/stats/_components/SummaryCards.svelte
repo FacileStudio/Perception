@@ -59,7 +59,7 @@
         <div></div>
         <Icon icon={card.icon} class="size-5 text-zinc-400" />
       </div>
-      <p class="text-2xl font-semibold text-zinc-900">
+      <p class="font-mono text-2xl font-semibold text-zinc-900">
         {card.value !== null ? card.value : '—'}
       </p>
       <p class="text-xs text-zinc-400 mt-0.5">{card.label}</p>

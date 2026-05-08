@@ -42,15 +42,15 @@
   <div class="flex gap-3">
     <div class="bg-zinc-50 rounded-xl px-3 py-2">
       <p class="text-xs text-zinc-400">Total Current</p>
-      <p class="text-sm font-semibold text-zinc-900">{totalCurrent}</p>
+      <p class="font-mono text-sm font-semibold text-zinc-900">{totalCurrent}</p>
     </div>
     <div class="bg-zinc-50 rounded-xl px-3 py-2">
       <p class="text-xs text-zinc-400">Mean</p>
-      <p class="text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
+      <p class="font-mono text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
     </div>
     <div class="bg-zinc-50 rounded-xl px-3 py-2">
       <p class="text-xs text-zinc-400">StdDev</p>
-      <p class="text-sm font-semibold text-zinc-900">{stdDev.toFixed(1)}</p>
+      <p class="font-mono text-sm font-semibold text-zinc-900">{stdDev.toFixed(1)}</p>
     </div>
   </div>
 

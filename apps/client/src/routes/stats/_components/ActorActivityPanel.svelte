@@ -32,7 +32,7 @@
 
   <div class="bg-zinc-50 rounded-xl px-3 py-2 w-fit">
     <p class="text-xs text-zinc-400">Avg events/actor</p>
-    <p class="text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
+    <p class="font-mono text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
   </div>
 
   {#if isEmpty}
