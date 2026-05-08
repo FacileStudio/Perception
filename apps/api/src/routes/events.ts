@@ -3,6 +3,7 @@ import { db } from '../db/client';
 import { rowToEvent } from '../db/row';
 import type { InValue } from '@libsql/client';
 import { requireSession } from '../security/session';
+import { EVENT_LIST_ORDER_BY } from '../events/order';
 
 export const eventsRoutes = new Hono();
 
@@ -16,15 +17,15 @@ eventsRoutes.get('/', async (c) => {
   const quality = c.req.query('quality');
   const from = c.req.query('from');
   const to = c.req.query('to');
-  const limit = Math.min(parseInt(c.req.query('limit') ?? '50', 10), 200);
-  const offset = parseInt(c.req.query('offset') ?? '0', 10);
+  const limit = Math.min(Number.parseInt(c.req.query('limit') ?? '50', 10), 200);
+  const offset = Number.parseInt(c.req.query('offset') ?? '0', 10);
 
   let ftsIds: Set<string> | null = null;
 
   if (q) {
     try {
       const ftsResult = await db.execute({
-        sql: `SELECT e.id FROM event_fts JOIN events e ON e.rowid = event_fts.rowid WHERE event_fts MATCH ? LIMIT 200`,
+        sql: 'SELECT e.id FROM event_fts JOIN events e ON e.rowid = event_fts.rowid WHERE event_fts MATCH ? LIMIT 200',
         args: [q],
       });
       ftsIds = new Set(ftsResult.rows.map((r) => r.id as string));
@@ -45,23 +46,23 @@ eventsRoutes.get('/', async (c) => {
   }
 
   if (providerType) {
-    conditions.push(`provider_type = ?`);
+    conditions.push('provider_type = ?');
     args.push(providerType);
   }
   if (entityType) {
-    conditions.push(`entity_type = ?`);
+    conditions.push('entity_type = ?');
     args.push(entityType);
   }
   if (quality) {
-    conditions.push(`quality = ?`);
+    conditions.push('quality = ?');
     args.push(quality);
   }
   if (from) {
-    conditions.push(`occurred_at >= ?`);
+    conditions.push('occurred_at >= ?');
     args.push(from);
   }
   if (to) {
-    conditions.push(`occurred_at <= ?`);
+    conditions.push('occurred_at <= ?');
     args.push(to);
   }
 
@@ -69,7 +70,7 @@ eventsRoutes.get('/', async (c) => {
 
   const [dataResult, countResult] = await Promise.all([
     db.execute({
-      sql: `SELECT * FROM events WHERE ${where} ORDER BY occurred_at DESC LIMIT ? OFFSET ?`,
+      sql: `SELECT * FROM events WHERE ${where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT ? OFFSET ?`,
       args: [...args, limit, offset],
     }),
     db.execute({
@@ -91,9 +92,9 @@ eventsRoutes.get('/:id', async (c) => {
   const id = c.req.param('id');
 
   const [eventResult, factsResult, embeddingResult] = await Promise.all([
-    db.execute({ sql: `SELECT * FROM events WHERE id = ?`, args: [id] }),
-    db.execute({ sql: `SELECT facts_json FROM dynamic_facts WHERE event_id = ?`, args: [id] }),
-    db.execute({ sql: `SELECT status, embedded_at FROM event_embeddings WHERE event_id = ?`, args: [id] }),
+    db.execute({ sql: 'SELECT * FROM events WHERE id = ?', args: [id] }),
+    db.execute({ sql: 'SELECT facts_json FROM dynamic_facts WHERE event_id = ?', args: [id] }),
+    db.execute({ sql: 'SELECT status, embedded_at FROM event_embeddings WHERE event_id = ?', args: [id] }),
   ]);
 
   if (eventResult.rows.length === 0) {

@@ -36,5 +36,5 @@ export function mapPayload(
     }
   }
 
-  return { facts, quality: 'complete' };
+  return { facts, quality: schema.confirmed_at ? 'complete' : 'partial' };
 }
