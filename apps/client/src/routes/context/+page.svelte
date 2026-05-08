@@ -15,8 +15,7 @@
 
   ensureSolar();
 
-  function qualityVariant(q: EventRow['quality']): 'default' | 'outline' | 'secondary' {
-    if (q === 'complete') return 'default';
+  function qualityVariant(q: Exclude<EventRow['quality'], 'complete'>): 'outline' | 'secondary' {
     if (q === 'partial') return 'outline';
     return 'secondary';
   }
@@ -134,7 +133,9 @@
                   <p class="text-sm text-zinc-500">{event.summary}</p>
                 {/if}
                 <div class="flex items-center gap-2 pt-1">
-                  <Badge variant={qualityVariant(event.quality)}>{event.quality}</Badge>
+                  {#if event.quality !== 'complete'}
+                    <Badge variant={qualityVariant(event.quality)}>{event.quality}</Badge>
+                  {/if}
                   {#if event.entity_name}
                     <Badge variant="outline" class="font-mono">{event.entity_name}</Badge>
                   {/if}
