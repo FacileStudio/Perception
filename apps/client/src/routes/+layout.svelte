@@ -43,9 +43,9 @@
 {:else if $page.url.pathname === '/login'}
   {@render children?.()}
 {:else}
-  <div class="flex min-h-screen w-full flex-col overflow-hidden bg-zinc-50/70 md:flex-row">
+  <div class="flex min-h-screen w-full flex-col bg-zinc-50/70 md:h-screen md:flex-row md:overflow-hidden">
     <Sidebar onLogout={handleLogout} />
-    <main class="flex-1 overflow-hidden">
+    <main class="flex min-h-0 flex-1 flex-col md:h-screen md:overflow-hidden">
       {@render children?.()}
     </main>
   </div>
