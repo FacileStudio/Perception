@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api, type EventRow } from '$lib/api';
-  import { eventsState } from '$lib/stores.svelte';
+  import { eventsState } from '$lib/stores';
   import { Card } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
   import { Input } from '$lib/components/ui/input';
@@ -86,18 +86,12 @@
           class="h-11 rounded-2xl bg-zinc-50 pl-10"
         />
       </label>
-      <select
+      <Input
+        placeholder="Provider (e.g. github)"
         bind:value={eventsState.providerFilter}
-        onchange={onFilterChange}
-        class="h-11 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900"
-      >
-        <option value="">All providers</option>
-        <option value="github">GitHub</option>
-        <option value="gitlab">GitLab</option>
-        <option value="linear">Linear</option>
-        <option value="slack">Slack</option>
-        <option value="pagerduty">PagerDuty</option>
-      </select>
+        oninput={onFilterChange}
+        class="h-11 rounded-2xl bg-zinc-50 w-40"
+      />
       <select
         bind:value={eventsState.qualityFilter}
         onchange={onFilterChange}

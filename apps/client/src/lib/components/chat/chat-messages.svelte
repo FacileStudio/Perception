@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { chatState } from '$lib/stores.svelte';
+  import { chatState } from '$lib/stores';
   import type { ChatSource } from '$lib/api';
   import ChatMarkdown from '$lib/components/chat-markdown.svelte';
   import TypingIndicator from './typing-indicator.svelte';

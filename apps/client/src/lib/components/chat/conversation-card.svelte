@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ChatSessionSummary } from '$lib/api';
-  import { chatState } from '$lib/stores.svelte';
+  import { chatState } from '$lib/stores';
   import Icon from '@iconify/svelte';
 
   let {

@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { auth, checkAuth, clearChatState, loadChatSessions } from '$lib/stores.svelte';
+  import { auth, checkAuth, clearChatState, loadChatSessions } from '$lib/stores';
   import { api } from '$lib/api';
   import Sidebar from '$lib/components/sidebar.svelte';
   import { ensureSolar } from '$lib/solar';

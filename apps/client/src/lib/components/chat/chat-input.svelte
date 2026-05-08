@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { chatState } from '$lib/stores.svelte';
+  import { chatState } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
   import Icon from '@iconify/svelte';
 

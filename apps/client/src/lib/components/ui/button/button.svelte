@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { HTMLButtonAttributes } from 'svelte/elements';
+  import { twMerge } from 'tailwind-merge';
 
   type Variant = 'default' | 'outline' | 'ghost' | 'destructive';
   type Size = 'default' | 'sm' | 'lg' | 'icon';
@@ -27,10 +28,12 @@
     lg: 'h-11 px-6 text-base rounded-md',
     icon: 'h-9 w-9 rounded-md',
   };
+
+  const computedClass = twMerge(base, variants[variant], sizes[size], className);
 </script>
 
 <button
-  class="{base} {variants[variant]} {sizes[size]} {className}"
+  class={computedClass}
   {disabled}
   {onclick}
   {...rest}

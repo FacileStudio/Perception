@@ -1,19 +1,12 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { chatState, deleteChatSession, loadChatSessions, openChatSession } from '$lib/stores.svelte';
+  import { chatState, deleteChatSession } from '$lib/stores';
   import Icon from '@iconify/svelte';
   import ConversationCard from './conversation-card.svelte';
 
   async function handleOpen(sessionId: string) {
     if (chatState.pending || chatState.streaming || chatState.loadingHistory) return;
-    try {
-      await openChatSession(sessionId);
-      goto(`/chat/${sessionId}`);
-    } catch {
-      try {
-        await loadChatSessions();
-      } catch {}
-    }
+    goto(`/chat/${sessionId}`);
   }
 
   async function handleDelete(event: MouseEvent, sessionId: string) {

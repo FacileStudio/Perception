@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { chatState, loadChatSessions, startNewChat } from '$lib/stores.svelte';
+  import { chatState, loadChatSessions, startNewChat } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import ConversationList from '$lib/components/chat/conversation-list.svelte';
@@ -35,8 +35,8 @@
 </svelte:head>
 
 <ScrollArea class="flex-1 px-4 py-6 sm:px-6 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,244,245,0.9))]">
-  <div class="mx-auto flex max-w-3xl flex-col gap-10 pb-8">
-    <div class="flex min-h-[46dvh] items-center justify-center">
+  <div class="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
+    <div class="flex min-h-[28dvh] items-center justify-center">
       <div class="w-full flex flex-col gap-5">
         <p class="font-[Goga] text-3xl tracking-tight text-zinc-950 sm:text-[2.2rem]">Interrogate the noise.</p>
         <div class="flex items-center gap-2">

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { api } from '$lib/api';
-  import { auth } from '$lib/stores.svelte';
+  import { auth } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Card } from '$lib/components/ui/card';

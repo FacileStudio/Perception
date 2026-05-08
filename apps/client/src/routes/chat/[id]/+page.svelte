@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { chatState, loadChatSessions, openChatSession } from '$lib/stores.svelte';
+  import { chatState, loadChatSessions, openChatSession } from '$lib/stores';
   import { buildTitle } from '$lib/head';
   import ChatView from '$lib/components/chat/chat-view.svelte';
   import { ensureSolar } from '$lib/solar';
