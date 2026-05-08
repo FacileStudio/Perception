@@ -87,7 +87,7 @@ eventsRoutes.get('/', async (c) => {
     const placeholders = events.map(() => '?').join(',');
     try {
       const conceptsResult = await db.execute({
-        sql: `SELECT ec.event_id, oc.label FROM event_concepts ec JOIN ontology_concepts oc ON oc.id = ec.concept_id WHERE ec.event_id IN (${placeholders})`,
+        sql: `SELECT ec.event_id, oc.label FROM event_concepts ec JOIN ontology_concepts oc ON oc.id = ec.concept_id WHERE ec.event_id IN (${placeholders}) AND oc.kind IN ('entity_type','event_category')`,
         args: events.map((e) => e.id),
       });
       for (const row of conceptsResult.rows) {
