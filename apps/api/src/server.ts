@@ -11,6 +11,7 @@ import { eventsRoutes } from './routes/events';
 import { schemasRoutes } from './routes/schemas';
 import { adminRoutes } from './routes/admin';
 import { statsRoutes } from './routes/stats';
+import { settingsRoutes } from './routes/settings';
 import { config } from './config';
 
 const app = new Hono();
@@ -40,6 +41,7 @@ app.route('/events', eventsRoutes);
 app.route('/schemas', schemasRoutes);
 app.route('/admin', adminRoutes);
 app.route('/stats', statsRoutes);
+app.route('/settings', settingsRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);

@@ -2,8 +2,6 @@
   import { onMount } from 'svelte';
   import { api, type StatsSnapshot } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
-  import { Button } from '$lib/components/ui/button';
-  import { Separator } from '$lib/components/ui/separator';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -17,6 +15,7 @@
   let loading = $state(false);
   let error = $state('');
   let activeWindow = $state<'7d' | '30d'>('7d');
+  let lastLoadedAt = 0;
 
   ensureSolar();
 
@@ -35,12 +34,14 @@
       : null
   );
 
-  async function loadStats(refresh = false) {
+  async function loadStats() {
+    if (loading) return;
     loading = true;
     error = '';
     try {
-      const result = await api.stats.get(refresh);
+      const result = await api.stats.get();
       snapshots = result.snapshots;
+      lastLoadedAt = Date.now();
     } catch {
       error = 'Failed to load stats.';
       snapshots = [];
@@ -49,7 +50,23 @@
     }
   }
 
-  onMount(() => loadStats());
+  onMount(() => {
+    loadStats();
+
+    const interval = setInterval(loadStats, 5 * 60 * 1000);
+
+    function onVisibility() {
+      if (document.visibilityState === 'visible' && Date.now() - lastLoadedAt > 2 * 60 * 1000) {
+        loadStats();
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  });
 </script>
 
 <svelte:head>
@@ -70,12 +87,6 @@
     </div>
     <div class="flex items-center gap-2">
       <WindowToggle window={activeWindow} onchange={(w) => (activeWindow = w)} />
-      <Button variant="outline" size="sm" onclick={() => loadStats(true)} disabled={loading} class="rounded-xl">
-        <span class="inline-flex items-center gap-2">
-          <Icon icon="solar:restart-bold-duotone" class="size-4" />
-          {loading ? 'Loading…' : 'Refresh'}
-        </span>
-      </Button>
     </div>
   </div>
 

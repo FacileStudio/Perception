@@ -2,13 +2,11 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';
 import { randomUUID } from 'crypto';
 import { db } from '../db/client';
-import { config } from '../config';
+import { getEffectiveSetting } from '../db/settings';
 import type { ChatSource } from '../types';
 import type { QueryPlan } from './planner';
 import type { RetrievalResult } from './retrieve';
 import { buildSystemPrompt, buildContextBlock } from './prompt';
-
-const anthropic = createAnthropic({ apiKey: config.anthropicApiKey });
 
 interface ChatMessageRow {
   role: 'user' | 'assistant';
@@ -78,8 +76,14 @@ export function streamChat(
           { role: 'user', content: promptMessage },
         ];
 
+        const [apiKey, llmModel] = await Promise.all([
+          getEffectiveSetting('anthropic_api_key'),
+          getEffectiveSetting('llm_model'),
+        ]);
+
+        const anthropic = createAnthropic({ apiKey });
         const result = streamText({
-          model: anthropic(config.llmModel),
+          model: anthropic(llmModel),
           system: systemPrompt,
           messages,
         });
@@ -97,6 +101,15 @@ export function streamChat(
         controller.close();
 
         await persistAssistantMessage(sessionId, fullText, sources);
+
+        try {
+          const usage = await result.usage;
+          await db.execute({
+            sql: `INSERT INTO token_usage (id, kind, model, session_id, input_tokens, output_tokens, occurred_at) VALUES (?, 'llm', ?, ?, ?, ?, ?)`,
+            args: [randomUUID(), llmModel, sessionId, usage.promptTokens, usage.completionTokens, new Date().toISOString()],
+          });
+        } catch {
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ error: msg })}\n\n`));

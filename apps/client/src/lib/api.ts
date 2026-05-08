@@ -38,6 +38,11 @@ export const api = {
   stats: {
     get: (refresh = false) => request<{ snapshots: StatsSnapshot[] }>(`/stats${refresh ? '?refresh=1' : ''}`),
   },
+  settings: {
+    get: () => request<{ settings: Record<string, string>; sources: Record<string, string> }>('/settings'),
+    update: (body: Record<string, string | null>) => request<{ ok: boolean }>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
+    usage: () => request<{ usage: TokenUsageRow[]; total_cost_usd: number }>('/settings/usage'),
+  },
 };
 
 export type EventRow = {
@@ -71,6 +76,15 @@ export type ChatMessageRecord = {
   sources: ChatSource[];
   created_at: string;
 };
+export type TokenUsageRow = {
+  kind: 'llm' | 'embedding';
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  calls: number;
+  cost_usd: number;
+};
+
 export type ChatSessionDetail = {
   id: string;
   title: string;

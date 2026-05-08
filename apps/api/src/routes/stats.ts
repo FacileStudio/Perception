@@ -4,7 +4,7 @@ import { getLatestSnapshotGeneratedAt, getLatestSnapshots, refreshSnapshots } fr
 
 export const statsRoutes = new Hono();
 
-const STATS_STALE_MS = 60 * 60 * 1000;
+const STATS_STALE_MS = 15 * 60 * 1000;
 
 statsRoutes.get('/', async (c) => {
   const authed = await requireSession(c);

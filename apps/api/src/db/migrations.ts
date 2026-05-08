@@ -18,6 +18,26 @@ export async function runMigrations(): Promise<void> {
       name: '001_initial_schema',
       sql: readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'schema.sql'), 'utf-8'),
     },
+    {
+      name: '002_settings_and_token_usage',
+      sql: `
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS token_usage (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL CHECK(kind IN ('llm','embedding')),
+  model TEXT NOT NULL,
+  session_id TEXT,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  occurred_at TEXT NOT NULL
+);
+      `,
+    },
   ];
 
   for (const migration of migrations) {
