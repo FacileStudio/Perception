@@ -69,6 +69,7 @@ export function streamChat(
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ session_id: sessionId })}\n\n`));
         const history = trimLatestUserEcho(await loadHistory(sessionId), message);
         const promptMessage = plan.requiresRetrieval ? `${contextBlock}\n\nUser question: ${message}` : message;
 

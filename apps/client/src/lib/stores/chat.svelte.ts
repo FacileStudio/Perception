@@ -128,7 +128,12 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
             error?: string;
             done?: boolean;
             sources?: ChatSource[];
+            session_id?: string;
           };
+          if (parsed.session_id && !sessionId) {
+            sessionId = parsed.session_id;
+            setActiveChatSession(parsed.session_id);
+          }
           if (parsed.error) throw new Error(parsed.error);
           if (parsed.text) {
             chatState.pending = false;
