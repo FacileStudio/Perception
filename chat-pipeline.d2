@@ -1,0 +1,62 @@
+direction: down
+
+user: User question {
+  shape: oval
+}
+
+embed_q: Embed question {
+  shape: rectangle
+}
+
+lanes: Three lanes (parallel) {
+  shape: rectangle
+
+  rag: RAG lane {
+    search: vector_distance_cos() top-20
+    events: Relevant event summaries
+  }
+
+  sql: SQL lane {
+    query: Targeted filters\n(dates, provider, counts)
+    facts: Precise facts
+  }
+
+  stats: Stats lane {
+    agg: SQL aggregations
+    compute: simple-statistics\n(trends, anomalies, velocity)
+    signals: Computed signals
+  }
+}
+
+merge: Merge context {
+  shape: rectangle
+}
+
+prompt: Build Claude prompt {
+  shape: rectangle
+  system: System: what each provider means
+  history: Conversation history
+  context: "[RAG events] [SQL facts] [Stats signals]"
+  question: User question
+}
+
+claude: claude-sonnet-4-6 {
+  shape: rectangle
+}
+
+stream: Stream to dashboard {
+  shape: oval
+}
+
+user -> embed_q
+embed_q -> lanes.rag.search
+embed_q -> lanes.sql.query
+embed_q -> lanes.stats.agg
+
+lanes.rag.events -> merge
+lanes.sql.facts -> merge
+lanes.stats.signals -> merge
+
+merge -> prompt.context
+prompt -> claude
+claude -> stream

@@ -1,0 +1,24 @@
+direction: right
+
+events: events {
+  shape: sql_table
+  id: TEXT PK
+  timestamp: TEXT
+  source: TEXT
+  provider_type: TEXT
+  provider_name: TEXT
+  raw_payload: JSON
+  summary: TEXT
+  embedding: "FLOAT32(1536)"
+}
+
+chat_messages: chat_messages {
+  shape: sql_table
+  id: TEXT PK
+  session_id: TEXT
+  role: "TEXT (user | assistant)"
+  content: TEXT
+  timestamp: TEXT
+}
+
+events -> chat_messages: session references events via RAG

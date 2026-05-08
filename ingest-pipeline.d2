@@ -1,0 +1,58 @@
+direction: down
+
+nook: Nook {
+  shape: rectangle
+}
+
+ingest: POST /ingest {
+  shape: rectangle
+  validate: Validate secret header
+  parse: Parse EventLogEntry
+}
+
+extract: extract.ts {
+  shape: rectangle
+  router: Route by provider_type
+  vikunja: Vikunja extractor
+  charles: Charles extractor
+  docuseal: Docuseal extractor
+  imap: IMAP extractor
+  fallback: Generic fallback
+}
+
+store: libSQL write {
+  shape: rectangle
+  row: "INSERT INTO events (timestamp, provider_type, raw_payload, summary)"
+}
+
+embed: embed.ts (async) {
+  shape: rectangle
+  text: Build text from summary
+  call: embed() via Vercel AI SDK
+  write: UPDATE events SET embedding = ?
+}
+
+respond: HTTP 200 {
+  shape: rectangle
+}
+
+nook -> ingest.validate
+ingest.validate -> ingest.parse
+ingest.parse -> extract.router
+
+extract.router -> extract.vikunja: provider_type == vikunja
+extract.router -> extract.charles: provider_type == charles
+extract.router -> extract.docuseal: provider_type == docuseal
+extract.router -> extract.imap: provider_type == imap
+extract.router -> extract.fallback: unknown
+
+extract.vikunja -> store.row
+extract.charles -> store.row
+extract.docuseal -> store.row
+extract.imap -> store.row
+extract.fallback -> store.row
+
+store.row -> respond
+store.row -> embed.text: fire and forget
+embed.text -> embed.call
+embed.call -> embed.write

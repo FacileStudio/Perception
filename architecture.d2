@@ -1,0 +1,45 @@
+direction: right
+
+nook: Nook {
+  shape: rectangle
+  vikunja: Tasks (Vikunja)
+  charles: CRM (Charles)
+  docuseal: Contracts (Docuseal)
+  git: Code (Git)
+  imap: Emails (IMAP)
+  other: ...
+}
+
+api: Perception API {
+  shape: rectangle
+
+  ingest: Ingest
+  extract: Semantic extraction
+  embed: Embedding pipeline
+  stats: Statistical signals
+
+  db: libSQL {
+    shape: cylinder
+  }
+
+  chat: Hybrid chat handler
+}
+
+dashboard: Dashboard {
+  shape: rectangle
+  chatui: Chat (primary)
+  feed: Context feed
+}
+
+nook -> api.ingest: POST /ingest
+api.ingest -> api.extract
+api.extract -> api.db: summary + raw payload
+api.embed -> api.db: "float[] vector"
+api.extract -> api.embed: semantic text (async)
+
+api.db -> api.chat: RAG + SQL + stats
+api.stats -> api.chat: computed signals
+api.db -> api.stats: aggregated event data
+
+api.chat -> dashboard.chatui: streamed answer
+api.db -> dashboard.feed: recent events
