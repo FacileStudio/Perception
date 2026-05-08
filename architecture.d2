@@ -2,44 +2,97 @@ direction: right
 
 nook: Nook {
   shape: rectangle
-  vikunja: Tasks (Vikunja)
-  charles: CRM (Charles)
-  docuseal: Contracts (Docuseal)
-  git: Code (Git)
-  imap: Emails (IMAP)
-  other: ...
-}
 
-api: Perception API {
-  shape: rectangle
-
-  ingest: Ingest
-  extract: Semantic extraction
-  embed: Embedding pipeline
-  stats: Statistical signals
-
-  db: libSQL {
-    shape: cylinder
+  providers: Providers {
+    shape: rectangle
+    website: Website monitors
+    imap: IMAP headers
+    webhooks: Webhooks
+    system: System events
   }
 
-  chat: Hybrid chat handler
+  envelope: Event envelope v1
+  sign: HMAC signature
 }
 
-dashboard: Dashboard {
+perception: Perception API {
   shape: rectangle
-  chatui: Chat (primary)
-  feed: Context feed
+
+  ingest: Ingest route {
+    verify: Verify HMAC
+    dedupe: Idempotency check
+    extract: Provider extractors
+    redact: Payload redaction
+  }
+
+  worker: Embedding worker {
+    queue: Pending jobs
+    voyage: Voyage embeddings
+  }
+
+  chat: Chat route {
+    plan: Query planner
+    retrieve: Retrieval lanes
+    prompt: Prompt builder
+    stream: Claude stream
+  }
+
+  auth: Session auth
 }
 
-nook -> api.ingest: POST /ingest
-api.ingest -> api.extract
-api.extract -> api.db: summary + raw payload
-api.embed -> api.db: "float[] vector"
-api.extract -> api.embed: semantic text (async)
+db: libSQL {
+  shape: cylinder
+  events: events
+  facts: provider fact tables
+  fts: event_fts
+  vectors: event_embeddings
+  chats: chat_sessions + chat_messages
+  stats: stats_snapshots
+}
 
-api.db -> api.chat: RAG + SQL + stats
-api.stats -> api.chat: computed signals
-api.db -> api.stats: aggregated event data
+external: External AI {
+  shape: rectangle
+  voyage_api: Voyage AI\nvoyage-4-lite 1024d
+  claude_api: Anthropic Claude\nclaude-sonnet-4-6
+}
 
-api.chat -> dashboard.chatui: streamed answer
-api.db -> dashboard.feed: recent events
+ui: SvelteKit dashboard {
+  shape: rectangle
+  login: Login
+  chat_ui: Chat
+  source_drawer: Source drawer
+  context_feed: Context feed
+  stats_view: Stats
+}
+
+nook.providers -> nook.envelope
+nook.envelope -> nook.sign
+nook.sign -> perception.ingest.verify: POST /ingest
+
+perception.ingest.verify -> perception.ingest.dedupe
+perception.ingest.dedupe -> perception.ingest.redact
+perception.ingest.redact -> perception.ingest.extract
+perception.ingest.extract -> db.events: normalized event
+perception.ingest.extract -> db.facts: provider facts
+perception.ingest.extract -> db.fts: searchable text
+perception.ingest.extract -> db.vectors: pending job
+
+db.vectors -> perception.worker.queue: pending rows
+perception.worker.queue -> external.voyage_api: document embedding
+external.voyage_api -> db.vectors: F32_BLOB(1024)
+
+ui.login -> perception.auth
+ui.chat_ui -> perception.chat.plan: POST /chat
+perception.chat.plan -> perception.chat.retrieve
+perception.chat.retrieve -> db.events
+perception.chat.retrieve -> db.facts
+perception.chat.retrieve -> db.fts
+perception.chat.retrieve -> db.vectors
+perception.chat.retrieve -> db.stats
+perception.chat.retrieve -> perception.chat.prompt: ranked context
+perception.chat.prompt -> external.claude_api: streamText
+external.claude_api -> perception.chat.stream
+perception.chat.stream -> ui.chat_ui: streamed answer
+db.events -> ui.source_drawer: source evidence
+db.events -> ui.context_feed: event audit
+db.stats -> ui.stats_view: fresh signals

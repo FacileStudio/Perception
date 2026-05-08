@@ -3,22 +3,195 @@ direction: right
 events: events {
   shape: sql_table
   id: TEXT PK
-  timestamp: TEXT
+  schema_version: INTEGER
   source: TEXT
+  provider_id: TEXT
   provider_type: TEXT
   provider_name: TEXT
-  raw_payload: JSON
+  event_type: TEXT
+  entity_type: TEXT
+  entity_id: TEXT
+  entity_name: TEXT
+  actor_email_hash: TEXT
+  status: TEXT
+  due_at: TEXT
+  completed_at: TEXT
+  occurred_at: TEXT
+  ingested_at: TEXT
+  title: TEXT
   summary: TEXT
-  embedding: "FLOAT32(1536)"
+  searchable_text: TEXT
+  payload_redacted_json: TEXT
+  payload_hash: TEXT
+  quality: TEXT
+}
+
+event_fts: event_fts {
+  shape: sql_table
+  title: TEXT
+  summary: TEXT
+  searchable_text: TEXT
+}
+
+embeddings: event_embeddings {
+  shape: sql_table
+  event_id: TEXT PK
+  model: TEXT
+  dimensions: INTEGER
+  input_hash: TEXT
+  embedding: F32_BLOB(1024)
+  status: TEXT
+  attempts: INTEGER
+  last_error: TEXT
+  embedded_at: TEXT
+}
+
+task_facts: task_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  task_id: TEXT
+  task_title: TEXT
+  project_name: TEXT
+  status: TEXT
+  assignee_name: TEXT
+  due_at: TEXT
+  completed_at: TEXT
+}
+
+contract_facts: contract_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  submission_id: TEXT
+  template_name: TEXT
+  signer_email_hash: TEXT
+  status: TEXT
+  opened_at: TEXT
+  completed_at: TEXT
+  declined_at: TEXT
+}
+
+client_activity_facts: client_activity_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  client_id: TEXT
+  client_name: TEXT
+  contact_id: TEXT
+  activity_type: TEXT
+  changed_fields_json: TEXT
+}
+
+deployment_facts: deployment_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  project_name: TEXT
+  application_name: TEXT
+  status: TEXT
+  build_url: TEXT
+  commit_sha: TEXT
+}
+
+code_facts: code_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  repository: TEXT
+  ref: TEXT
+  commit_sha: TEXT
+  commit_count: INTEGER
+  pull_request_id: TEXT
+  issue_id: TEXT
+}
+
+email_facts: email_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  message_id: TEXT
+  thread_id: TEXT
+  uid: TEXT
+  from_hash: TEXT
+  from_domain: TEXT
+  subject: TEXT
+  sent_at: TEXT
+}
+
+service_health_facts: service_health_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  service_id: TEXT
+  service_name: TEXT
+  url: TEXT
+  status: TEXT
+  duration_seconds: INTEGER
+  ping_ms: INTEGER
+}
+
+schedule_facts: schedule_facts {
+  shape: sql_table
+  event_id: TEXT PK
+  schedule_id: TEXT
+  project_name: TEXT
+  client_name: TEXT
+  started_at: TEXT
+  stopped_at: TEXT
+  duration_seconds: INTEGER
+}
+
+chat_sessions: chat_sessions {
+  shape: sql_table
+  id: TEXT PK
+  title: TEXT
+  created_at: TEXT
+  updated_at: TEXT
 }
 
 chat_messages: chat_messages {
   shape: sql_table
   id: TEXT PK
-  session_id: TEXT
-  role: "TEXT (user | assistant)"
+  session_id: TEXT FK
+  role: TEXT
   content: TEXT
-  timestamp: TEXT
+  sources_json: TEXT
+  created_at: TEXT
 }
 
-events -> chat_messages: session references events via RAG
+stats_snapshots: stats_snapshots {
+  shape: sql_table
+  id: TEXT PK
+  kind: TEXT
+  window_start: TEXT
+  window_end: TEXT
+  generated_at: TEXT
+  source_count: INTEGER
+  min_sample_met: INTEGER
+  data_json: TEXT
+}
+
+ingest_rejections: ingest_rejections {
+  shape: sql_table
+  id: TEXT PK
+  received_at: TEXT
+  reason: TEXT
+  event_id: TEXT
+  source_ip_hash: TEXT
+  payload_hash: TEXT
+}
+
+events -> event_fts: indexed text
+events -> embeddings: one embedding job
+events -> task_facts: optional provider fact
+events -> contract_facts: optional provider fact
+events -> client_activity_facts: optional provider fact
+events -> deployment_facts: optional provider fact
+events -> code_facts: optional provider fact
+events -> email_facts: optional provider fact
+events -> service_health_facts: optional provider fact
+events -> schedule_facts: optional provider fact
+chat_sessions -> chat_messages: messages
+events -> chat_messages: source refs via sources_json
+task_facts -> stats_snapshots: compute signals
+contract_facts -> stats_snapshots: compute signals
+client_activity_facts -> stats_snapshots: compute signals
+deployment_facts -> stats_snapshots: compute signals
+code_facts -> stats_snapshots: compute signals
+email_facts -> stats_snapshots: compute signals
+service_health_facts -> stats_snapshots: compute signals
+schedule_facts -> stats_snapshots: compute signals

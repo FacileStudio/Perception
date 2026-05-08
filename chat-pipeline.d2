@@ -4,59 +4,107 @@ user: User question {
   shape: oval
 }
 
-embed_q: Embed question {
+auth: Dashboard session {
   shape: rectangle
 }
 
-lanes: Three lanes (parallel) {
+planner: Query planner {
+  shape: rectangle
+  parse: Time/provider/entity hints
+  intent: Needs SQL facts or stats
+  filters: Build retrieval filters
+}
+
+lanes: Retrieval lanes {
   shape: rectangle
 
-  rag: RAG lane {
-    search: vector_distance_cos() top-20
-    events: Relevant event summaries
+  vector: Vector lane {
+    qembed: Voyage embed\ninput_type=query
+    topk: vector_top_k\n40 candidates
+  }
+
+  lexical: Lexical lane {
+    fts: event_fts exact terms
+    ids: IDs, names, subjects
   }
 
   sql: SQL lane {
-    query: Targeted filters\n(dates, provider, counts)
-    facts: Precise facts
+    facts: Provider fact tables
+    exact: Counts, dates, statuses
   }
 
   stats: Stats lane {
-    agg: SQL aggregations
-    compute: simple-statistics\n(trends, anomalies, velocity)
-    signals: Computed signals
+    snapshots: Fresh stats snapshots
+    compute: Compute if stale
   }
 }
 
-merge: Merge context {
+merge: Merge + rank {
+  shape: rectangle
+  dedupe: Dedupe by event id
+  boost: Boost exact matches
+  cap: Cap context budget
+}
+
+prompt: Prompt builder {
+  shape: rectangle
+  system: System rules
+  history: Session history
+  context: Source-labeled evidence
+  facts: SQL facts
+  signals: Stats with freshness
+}
+
+claude: Claude Sonnet 4.6 {
   shape: rectangle
 }
 
-prompt: Build Claude prompt {
-  shape: rectangle
-  system: System: what each provider means
-  history: Conversation history
-  context: "[RAG events] [SQL facts] [Stats signals]"
-  question: User question
-}
-
-claude: claude-sonnet-4-6 {
+persist: Persist assistant message {
   shape: rectangle
 }
 
-stream: Stream to dashboard {
+stream: Streamed answer {
   shape: oval
 }
 
-user -> embed_q
-embed_q -> lanes.rag.search
-embed_q -> lanes.sql.query
-embed_q -> lanes.stats.agg
+db: libSQL {
+  shape: cylinder
+  events: events
+  vectors: event_embeddings
+  ftsdb: event_fts
+  factsdb: fact tables
+  statsdb: stats_snapshots
+  chats: chat_messages
+}
 
-lanes.rag.events -> merge
-lanes.sql.facts -> merge
-lanes.stats.signals -> merge
+user -> auth
+auth -> planner.parse
+planner.parse -> planner.intent
+planner.intent -> planner.filters
 
-merge -> prompt.context
-prompt -> claude
+planner.filters -> lanes.vector.qembed
+planner.filters -> lanes.lexical.fts
+planner.filters -> lanes.sql.facts
+planner.filters -> lanes.stats.snapshots
+
+lanes.vector.qembed -> lanes.vector.topk
+lanes.vector.topk -> db.vectors
+lanes.lexical.fts -> db.ftsdb
+lanes.sql.facts -> db.factsdb
+lanes.stats.snapshots -> db.statsdb
+lanes.stats.snapshots -> lanes.stats.compute: stale or missing
+lanes.stats.compute -> db.statsdb
+
+db.vectors -> merge.dedupe
+db.ftsdb -> merge.dedupe
+db.factsdb -> merge.dedupe
+db.statsdb -> merge.dedupe
+
+merge.dedupe -> merge.boost
+merge.boost -> merge.cap
+merge.cap -> prompt.context
+db.chats -> prompt.history
+prompt -> claude: AI SDK streamText
 claude -> stream
+stream -> persist
+persist -> db.chats

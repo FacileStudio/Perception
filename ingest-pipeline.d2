@@ -1,58 +1,130 @@
 direction: down
 
-nook: Nook {
+nook: Nook Perception target {
+  shape: rectangle
+  envelope: Build NookEventEnvelope
+  sign: Sign raw body\nHMAC-SHA256
+}
+
+request: POST /ingest {
+  shape: rectangle
+  raw: Read raw body once
+  headers: Read signature headers
+}
+
+auth: Verify request {
+  shape: rectangle
+  skew: Timestamp window
+  hmac: Constant-time HMAC
+  replay: Event ID replay check
+}
+
+parse: Parse envelope {
+  shape: rectangle
+  schema: Validate schema_version
+  size: Enforce body size
+}
+
+privacy: Privacy pass {
+  shape: rectangle
+  redact: Redact payload
+  hash: Hash raw payload
+  pii: Mark PII flags
+}
+
+extract: Provider extractor {
+  shape: rectangle
+  route: Route by provider.type
+  vikunja: Task facts
+  docuseal: Contract facts
+  charles: Client activity facts
+  dokploy: Deployment facts
+  git: Code facts
+  uptime: Service health facts
+  imap: Email facts
+  sablier: Schedule facts
+  fallback: Degraded generic event
+}
+
+tx: libSQL transaction {
+  shape: rectangle
+  event: Insert events
+  fact: Insert fact row
+  fts: Insert event_fts row
+  job: Insert embedding job\nstatus=pending
+}
+
+response: 202 Accepted {
+  shape: oval
+}
+
+worker: Embedding worker {
+  shape: rectangle
+  claim: Claim pending job
+  input: Build document text
+  embed: Voyage embed\ninput_type=document
+  vector: Store vector32(?)\nF32_BLOB(1024)
+  error: Record error + attempts
+}
+
+db: libSQL {
+  shape: cylinder
+  events: events
+  facts: fact tables
+  embeddings: event_embeddings
+}
+
+reject: ingest_rejections {
   shape: rectangle
 }
 
-ingest: POST /ingest {
-  shape: rectangle
-  validate: Validate secret header
-  parse: Parse EventLogEntry
-}
+nook.envelope -> nook.sign
+nook.sign -> request.raw
+request.raw -> request.headers
+request.headers -> auth.skew
+auth.skew -> auth.hmac
+auth.hmac -> auth.replay
 
-extract: extract.ts {
-  shape: rectangle
-  router: Route by provider_type
-  vikunja: Vikunja extractor
-  charles: Charles extractor
-  docuseal: Docuseal extractor
-  imap: IMAP extractor
-  fallback: Generic fallback
-}
+auth.replay -> reject: invalid or replayed
+auth.replay -> parse.schema: accepted
+parse.schema -> parse.size
+parse.size -> privacy.redact
+privacy.redact -> privacy.hash
+privacy.hash -> privacy.pii
+privacy.pii -> extract.route
 
-store: libSQL write {
-  shape: rectangle
-  row: "INSERT INTO events (timestamp, provider_type, raw_payload, summary)"
-}
+extract.route -> extract.vikunja: vikunja
+extract.route -> extract.docuseal: docuseal
+extract.route -> extract.charles: charles
+extract.route -> extract.dokploy: dokploy
+extract.route -> extract.git: git
+extract.route -> extract.uptime: uptime-kuma or website
+extract.route -> extract.imap: imap
+extract.route -> extract.sablier: sablier
+extract.route -> extract.fallback: unknown
 
-embed: embed.ts (async) {
-  shape: rectangle
-  text: Build text from summary
-  call: embed() via Vercel AI SDK
-  write: UPDATE events SET embedding = ?
-}
+extract.vikunja -> tx.event
+extract.docuseal -> tx.event
+extract.charles -> tx.event
+extract.dokploy -> tx.event
+extract.git -> tx.event
+extract.uptime -> tx.event
+extract.imap -> tx.event
+extract.sablier -> tx.event
+extract.fallback -> tx.event
 
-respond: HTTP 200 {
-  shape: rectangle
-}
+tx.event -> tx.fact
+tx.fact -> tx.fts
+tx.fts -> tx.job
+tx.job -> db.events
+tx.job -> db.facts
+tx.job -> db.embeddings
+tx.job -> response
 
-nook -> ingest.validate
-ingest.validate -> ingest.parse
-ingest.parse -> extract.router
-
-extract.router -> extract.vikunja: provider_type == vikunja
-extract.router -> extract.charles: provider_type == charles
-extract.router -> extract.docuseal: provider_type == docuseal
-extract.router -> extract.imap: provider_type == imap
-extract.router -> extract.fallback: unknown
-
-extract.vikunja -> store.row
-extract.charles -> store.row
-extract.docuseal -> store.row
-extract.imap -> store.row
-extract.fallback -> store.row
-
-store.row -> respond
-store.row -> embed.text: fire and forget
-embed.text -> embed.call
-embed.call -> embed.write
+db.embeddings -> worker.claim
+worker.claim -> worker.input
+worker.input -> worker.embed
+worker.embed -> worker.vector: success
+worker.embed -> worker.error: failure
+worker.vector -> db.embeddings: status=ready
+worker.error -> db.embeddings: status=error
