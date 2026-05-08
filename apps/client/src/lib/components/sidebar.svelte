@@ -21,7 +21,9 @@
 <aside class="flex w-full shrink-0 flex-col border-b border-zinc-200/80 bg-white/95 backdrop-blur md:sticky md:top-0 md:h-screen md:w-60 md:border-b-0 md:border-r">
   <div class="px-5 pb-6 pt-8">
     <PerceptionLogo
+      class="gap-2"
       subtitle=""
+      iconFrameClass="size-7"
       iconSizeClass="size-7"
       titleClass="text-2xl font-bold"
     />

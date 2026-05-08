@@ -11,6 +11,7 @@
     subtitle = '',
     showWordmark = true,
     iconSizeClass = 'size-5',
+    iconFrameClass = 'size-11',
   }: {
     class?: string;
     textClass?: string;
@@ -18,16 +19,17 @@
     subtitle?: string;
     showWordmark?: boolean;
     iconSizeClass?: string;
+    iconFrameClass?: string;
   } = $props();
 </script>
 
 <div class={`flex items-center gap-3 ${className}`}>
-  <span class="flex size-11 items-center justify-center text-zinc-950">
+  <span class={`flex items-center justify-center text-zinc-950 ${iconFrameClass}`}>
     <Icon icon="solar:eye-bold-duotone" class={iconSizeClass} />
   </span>
   {#if showWordmark}
     <div class={`flex flex-col ${textClass}`}>
-      <span class={`font-[Goga] text-lg leading-none tracking-tight text-zinc-950 ${titleClass}`}>Perception</span>
+      <span class={`font-[Goga] leading-none tracking-tight text-zinc-950 ${titleClass || 'text-lg'}`}>Perception</span>
       {#if subtitle}
         <span class="text-xs text-zinc-500">{subtitle}</span>
       {/if}
