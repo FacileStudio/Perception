@@ -36,8 +36,21 @@ async function applySchemaToFacts(
   });
 }
 
+async function backfillUnconfirmedSchemas(): Promise<void> {
+  await db.execute({
+    sql: 'UPDATE provider_schemas SET confirmed_at = inferred_at WHERE confirmed_at IS NULL',
+    args: [],
+  });
+  await db.execute({
+    sql: "UPDATE events SET quality = 'complete' WHERE quality != 'complete' AND id IN (SELECT event_id FROM dynamic_facts)",
+    args: [],
+  });
+}
+
 export const schemaInferenceWorker = {
   async run(): Promise<void> {
+    await backfillUnconfirmedSchemas();
+
     const pending = await db.execute(
       "SELECT * FROM schema_inference_jobs WHERE status = 'pending' LIMIT 3",
     );

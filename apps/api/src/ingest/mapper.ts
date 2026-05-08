@@ -36,6 +36,5 @@ export function mapPayload(
     }
   }
 
-  const quality: ExtractedEvent['quality'] = schema.confirmed_at ? 'complete' : 'partial';
-  return { facts, quality };
+  return { facts, quality: 'complete' };
 }
