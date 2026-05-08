@@ -41,31 +41,40 @@ async function persistAssistantMessage(
   });
 }
 
+function trimLatestUserEcho(history: ChatMessageRow[], message: string): ChatMessageRow[] {
+  const last = history.at(-1);
+  if (last?.role === 'user' && last.content === message) {
+    return history.slice(0, -1);
+  }
+  return history;
+}
+
 export function streamChat(
   sessionId: string,
   message: string,
-  _plan: QueryPlan,
+  plan: QueryPlan,
   context: RetrievalResult,
 ): ReadableStream {
   const contextBlock = buildContextBlock(context.events, context.stats);
-  const systemPrompt = buildSystemPrompt();
+  const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
-  const sources: ChatSource[] = context.events.slice(0, 10).map((e) => ({
+  const sources: ChatSource[] = plan.requiresRetrieval ? context.events.slice(0, 10).map((e) => ({
     event_id: e.id,
     provider_name: e.provider_name,
     occurred_at: e.occurred_at,
     title: e.title,
     score: e.score,
-  }));
+  })) : [];
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const history = await loadHistory(sessionId);
+        const history = trimLatestUserEcho(await loadHistory(sessionId), message);
+        const promptMessage = plan.requiresRetrieval ? `${contextBlock}\n\nUser question: ${message}` : message;
 
         const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
           ...history,
-          { role: 'user', content: `${contextBlock}\n\nUser question: ${message}` },
+          { role: 'user', content: promptMessage },
         ];
 
         const result = streamText({

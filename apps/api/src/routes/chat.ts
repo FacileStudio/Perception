@@ -4,6 +4,7 @@ import { db } from '../db/client';
 import { requireSession } from '../security/session';
 import { buildQueryPlan } from '../chat/planner';
 import { retrieveContext } from '../chat/retrieve';
+import type { RetrievalResult } from '../chat/retrieve';
 import { streamChat } from '../chat/stream';
 import { embedQuery } from '../embeddings/voyage';
 import type { ChatMessageRecord, ChatRequest, ChatSessionDetail, ChatSessionSummary, ChatSource } from '../types';
@@ -248,15 +249,18 @@ chatRoutes.post('/', async (c) => {
   });
 
   const plan = buildQueryPlan(body.message);
+  let context: RetrievalResult = { events: [], stats: [] };
 
-  let queryEmbedding: number[] = [];
-  try {
-    queryEmbedding = await embedQuery(body.message);
-  } catch {
-    queryEmbedding = [];
+  if (plan.requiresRetrieval) {
+    let queryEmbedding: number[] = [];
+    try {
+      queryEmbedding = await embedQuery(body.message);
+    } catch {
+      queryEmbedding = [];
+    }
+
+    context = await retrieveContext(plan, queryEmbedding);
   }
-
-  const context = await retrieveContext(plan, queryEmbedding);
   const stream = streamChat(sessionId, body.message, plan, context);
 
   return new Response(stream, {

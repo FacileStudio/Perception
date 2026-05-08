@@ -340,42 +340,24 @@
       <ScrollArea class="flex-1 px-4 py-6 sm:px-6">
         <div class="mx-auto flex max-w-3xl flex-col gap-10 pb-8">
           <div class="flex min-h-[46dvh] items-center justify-center">
-            <div class="w-full max-w-2xl rounded-[32px] border border-zinc-200/80 bg-white/92 p-5 shadow-[0_32px_90px_-52px_rgba(24,24,27,0.4)] backdrop-blur sm:p-6">
-              <div class="flex flex-col gap-5">
-                <div class="flex items-start gap-4">
-                  <span class="flex size-14 shrink-0 items-center justify-center rounded-[24px] bg-zinc-950 text-white shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)]">
-                    <Icon icon="solar:eye-bold-duotone" class="size-7" />
-                  </span>
-                  <div class="space-y-2">
-                    <p class="font-[Goga] text-3xl tracking-tight text-zinc-950 sm:text-[2.2rem]">Interrogate the noise.</p>
-                    <p class="max-w-xl text-sm leading-6 text-zinc-500 sm:text-[15px]">
-                      Drop one question here to start a fresh conversation, or pick up an older thread below.
-                    </p>
-                  </div>
-                </div>
-
-                <div class="rounded-[28px] border border-zinc-200 bg-zinc-50/85 p-3 shadow-inner">
-                  <Textarea
-                    placeholder="Ask about incidents, deploys, delivery drift, or team context..."
-                    bind:value={chatState.input}
-                    onkeydown={handleKeydown}
-                    disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
-                    rows={4}
-                    class="min-h-36 resize-none border-0 bg-transparent px-3 py-3 text-[15px] leading-7 shadow-none focus-visible:ring-0"
-                  />
-                  <div class="flex items-center justify-end border-t border-zinc-200/80 px-2 pt-3">
-                    <Button
-                      onclick={handleLaunchMessage}
-                      disabled={chatState.pending || chatState.streaming || chatState.loadingHistory || !chatState.input.trim()}
-                      class="min-h-11 rounded-2xl px-4"
-                    >
-                      <span class="inline-flex items-center gap-2">
-                        <Icon icon={chatState.pending || chatState.streaming ? 'solar:hourglass-bold-duotone' : 'solar:plain-2-bold-duotone'} class="size-4" />
-                        {chatState.pending || chatState.streaming ? 'Thinking' : 'Start chat'}
-                      </span>
-                    </Button>
-                  </div>
-                </div>
+            <div class="w-full flex flex-col gap-5">
+              <p class="font-[Goga] text-3xl tracking-tight text-zinc-950 sm:text-[2.2rem]">Interrogate the noise.</p>
+              <div class="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Ask about incidents, deploys, delivery drift, or team context..."
+                  bind:value={chatState.input}
+                  onkeydown={handleKeydown}
+                  disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
+                  class="h-[52px] flex-1 rounded-full border border-zinc-200/80 bg-white/90 px-5 text-[15px] text-zinc-950 placeholder:text-zinc-400 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.25)] backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-950/10 disabled:opacity-50"
+                />
+                <Button
+                  onclick={handleLaunchMessage}
+                  disabled={chatState.pending || chatState.streaming || chatState.loadingHistory || !chatState.input.trim()}
+                  class="h-[52px] shrink-0 rounded-full px-6"
+                >
+                  {chatState.pending || chatState.streaming ? 'Thinking' : 'Send'}
+                </Button>
               </div>
             </div>
           </div>
