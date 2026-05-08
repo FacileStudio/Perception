@@ -31,6 +31,14 @@
     return '$' + n.toFixed(4);
   }
 
+  function usageIcon(kind: TokenUsageRow['kind']) {
+    return kind === 'llm' ? 'solar:magic-stick-2-bold-duotone' : 'solar:layers-bold-duotone';
+  }
+
+  function usageIconClass(kind: TokenUsageRow['kind']) {
+    return kind === 'llm' ? 'text-violet-500 bg-violet-50' : 'text-blue-500 bg-blue-50';
+  }
+
   ensureSolar();
 
   const velocitySnap = $derived(snapshots.find((s) => s.kind === `entity_velocity_${activeWindow}`));
@@ -126,7 +134,7 @@
         {:else}
           <SummaryCards {snapshots} window={activeWindow} />
 
-          <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
             {#if velocitySnap}
               <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <EntityVelocityPanel snap={velocitySnap} />
@@ -147,56 +155,54 @@
           {/if}
         {/if}
 
-        <section>
-          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Token Usage</h2>
+        <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+          <div class="mb-4 flex items-center gap-2">
+            <Icon icon="solar:chart-2-bold-duotone" class="size-4 text-zinc-500" />
+            <span class="text-sm font-semibold text-zinc-900">Token Usage</span>
+          </div>
           {#if usage.length === 0}
-            <Card class="rounded-[20px] border-zinc-200/80 px-5 py-8 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
-              <div class="flex flex-col items-center gap-2 text-center">
-                <Icon icon="solar:chart-2-bold-duotone" class="size-8 text-zinc-300" />
-                <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
-              </div>
-            </Card>
+            <div class="flex flex-col items-center gap-2 py-8 text-center">
+              <Icon icon="solar:chart-2-bold-duotone" class="size-8 text-zinc-300" />
+              <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
+            </div>
           {:else}
-            <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
-              <div class="divide-y divide-zinc-100">
-                {#each usage as row}
-                  <div class="flex flex-col gap-3 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex min-w-0 items-center gap-2.5">
-                      <Icon
-                        icon={row.kind === 'llm' ? 'solar:brain-bold-duotone' : 'solar:layers-bold-duotone'}
-                        class="size-4 shrink-0 {row.kind === 'llm' ? 'text-violet-500' : 'text-blue-500'}"
-                      />
-                      <div class="min-w-0">
-                        <p class="truncate font-mono text-sm text-zinc-900">{row.model}</p>
-                        <p class="text-xs text-zinc-400">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
-                      </div>
-                    </div>
-                    <div class="flex items-center justify-between gap-4 text-right sm:justify-end sm:gap-6">
-                      <div>
-                        <p class="font-mono text-sm text-zinc-700">{formatTokens(row.input_tokens + row.output_tokens)}</p>
-                        <p class="text-xs text-zinc-400">
-                          {#if row.kind === 'llm'}
-                            {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
-                          {:else}
-                            total tokens
-                          {/if}
-                        </p>
-                      </div>
-                      <div class="w-20">
-                        <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-zinc-900' : 'text-zinc-400'}">{formatCost(row.cost_usd)}</p>
-                        <p class="text-xs text-zinc-400">estimated</p>
-                      </div>
+            <div class="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-100">
+              {#each usage as row}
+                <div class="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <span class="inline-flex size-8 shrink-0 items-center justify-center rounded-xl {usageIconClass(row.kind)}">
+                      <Icon icon={usageIcon(row.kind)} class="size-4" />
+                    </span>
+                    <div class="min-w-0">
+                      <p class="truncate font-mono text-sm text-zinc-900">{row.model}</p>
+                      <p class="text-xs text-zinc-400">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
                     </div>
                   </div>
-                {/each}
-              </div>
-              <div class="flex items-center justify-between border-t border-zinc-200/80 px-5 py-3.5">
-                <span class="text-sm font-medium text-zinc-500">Total estimated cost</span>
-                <span class="font-mono text-sm font-semibold text-zinc-900">{formatCost(totalCost)}</span>
-              </div>
-            </Card>
+                  <div class="flex items-center justify-between gap-4 text-right sm:justify-end sm:gap-6">
+                    <div>
+                      <p class="font-mono text-sm text-zinc-700">{formatTokens(row.input_tokens + row.output_tokens)}</p>
+                      <p class="text-xs text-zinc-400">
+                        {#if row.kind === 'llm'}
+                          {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
+                        {:else}
+                          total tokens
+                        {/if}
+                      </p>
+                    </div>
+                    <div class="w-20">
+                      <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-zinc-900' : 'text-zinc-400'}">{formatCost(row.cost_usd)}</p>
+                      <p class="text-xs text-zinc-400">estimated</p>
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+            <div class="mt-4 flex items-center justify-between rounded-2xl bg-zinc-50 px-4 py-3">
+              <span class="text-sm font-medium text-zinc-500">Total estimated cost</span>
+              <span class="font-mono text-sm font-semibold text-zinc-900">{formatCost(totalCost)}</span>
+            </div>
           {/if}
-        </section>
+        </Card>
       </div>
     {/if}
   </div>

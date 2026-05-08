@@ -57,6 +57,6 @@
   {#if isEmpty}
     <p class="text-sm text-zinc-400 py-6 text-center">No entity data in this window</p>
   {:else}
-    <BarChart data={chartData} />
+    <BarChart data={chartData} height={150} />
   {/if}
 </div>

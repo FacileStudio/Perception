@@ -20,6 +20,7 @@
   let error = $state('');
 
   let edits = $state<Record<string, string>>({});
+  let showSensitive = $state<Record<string, boolean>>({});
 
   const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);
 
@@ -165,11 +166,21 @@
                 </div>
                 <div class="flex gap-2">
                   <Input
-                    type="password"
+                    type={showSensitive[key] ? 'text' : 'password'}
                     bind:value={edits[key]}
                     placeholder="Enter new value…"
                     class="font-mono text-sm rounded-xl flex-1"
                   />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onclick={() => (showSensitive[key] = !showSensitive[key])}
+                    class="shrink-0 rounded-xl"
+                    title={showSensitive[key] ? 'Hide key' : 'Show key'}
+                    aria-label={showSensitive[key] ? 'Hide key' : 'Show key'}
+                  >
+                    <Icon icon={showSensitive[key] ? 'solar:eye-closed-bold-duotone' : 'solar:eye-bold-duotone'} class="size-4" />
+                  </Button>
                   {#if sources[key] === 'db'}
                     <Button
                       variant="ghost"
