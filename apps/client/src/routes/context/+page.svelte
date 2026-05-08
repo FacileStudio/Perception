@@ -83,19 +83,19 @@
           placeholder="Search events..."
           bind:value={eventsState.query}
           oninput={onFilterChange}
-          class="h-11 rounded-2xl bg-zinc-50 pl-10"
+          class="h-11 rounded-full bg-zinc-50 pl-10"
         />
       </label>
       <Input
         placeholder="Provider (e.g. github)"
         bind:value={eventsState.providerFilter}
         oninput={onFilterChange}
-        class="h-11 rounded-2xl bg-zinc-50 w-40"
+        class="h-11 rounded-full bg-zinc-50 w-40"
       />
       <select
         bind:value={eventsState.qualityFilter}
         onchange={onFilterChange}
-        class="h-11 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900"
+        class="h-11 rounded-full border border-zinc-200 bg-zinc-50 px-4 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900"
       >
         <option value="">All quality</option>
         <option value="complete">Complete</option>
