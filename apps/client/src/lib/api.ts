@@ -50,7 +50,7 @@ export type EventRow = {
   entity_type: string; entity_id: string | null; entity_name: string | null;
   actor_name: string | null; occurred_at: string; ingested_at: string; url: string | null;
   title: string; summary: string; quality: 'complete' | 'partial' | 'degraded';
-  status: string | null;
+  status: string | null; concepts?: string[];
 };
 
 export type StatsSnapshot = {

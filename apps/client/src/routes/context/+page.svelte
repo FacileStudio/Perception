@@ -132,7 +132,7 @@
                 {#if event.summary}
                   <p class="text-sm text-zinc-500">{event.summary}</p>
                 {/if}
-                <div class="flex items-center gap-2 pt-1">
+                <div class="flex flex-wrap items-center gap-2 pt-1">
                   {#if event.quality !== 'complete'}
                     <Badge variant={qualityVariant(event.quality)}>{event.quality}</Badge>
                   {/if}
@@ -142,6 +142,9 @@
                   {#if event.actor_name}
                     <span class="text-xs text-zinc-400">by {event.actor_name}</span>
                   {/if}
+                  {#each (event.concepts ?? []).slice(0, 4) as concept}
+                    <span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-400">{concept}</span>
+                  {/each}
                 </div>
               </div>
               {#if event.url}

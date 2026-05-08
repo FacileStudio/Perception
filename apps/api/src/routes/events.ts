@@ -82,7 +82,26 @@ eventsRoutes.get('/', async (c) => {
   const events = dataResult.rows.map((r) => rowToEvent(r as unknown as Record<string, unknown>));
   const total = countResult.rows[0].total as number;
 
-  return c.json({ events, total, limit, offset });
+  const conceptsByEvent = new Map<string, string[]>();
+  if (events.length > 0) {
+    const placeholders = events.map(() => '?').join(',');
+    try {
+      const conceptsResult = await db.execute({
+        sql: `SELECT ec.event_id, oc.label FROM event_concepts ec JOIN ontology_concepts oc ON oc.id = ec.concept_id WHERE ec.event_id IN (${placeholders})`,
+        args: events.map((e) => e.id),
+      });
+      for (const row of conceptsResult.rows) {
+        const eid = row.event_id as string;
+        const label = row.label as string;
+        const existing = conceptsByEvent.get(eid) ?? [];
+        existing.push(label);
+        conceptsByEvent.set(eid, existing);
+      }
+    } catch {
+    }
+  }
+
+  return c.json({ events: events.map((e) => ({ ...e, concepts: conceptsByEvent.get(e.id) ?? [] })), total, limit, offset });
 });
 
 eventsRoutes.get('/:id', async (c) => {
