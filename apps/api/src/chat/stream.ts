@@ -17,13 +17,13 @@ interface ChatMessageRow {
 
 async function loadHistory(sessionId: string): Promise<ChatMessageRow[]> {
   const result = await db.execute({
-    sql: `SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC LIMIT 10`,
+    sql: `SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 40`,
     args: [sessionId],
   });
   return result.rows.map((r) => ({
     role: r.role as 'user' | 'assistant',
     content: r.content as string,
-  }));
+  })).reverse();
 }
 
 async function persistAssistantMessage(

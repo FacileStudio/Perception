@@ -3,7 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import { auth, checkAuth } from '$lib/stores.svelte';
+  import { auth, checkAuth, clearChatState, loadChatSessions } from '$lib/stores.svelte';
   import { api } from '$lib/api';
   import Sidebar from '$lib/components/sidebar.svelte';
   import { ensureSolar } from '$lib/solar';
@@ -14,7 +14,11 @@
 
   onMount(async () => {
     await checkAuth();
-    if (!auth.authenticated && $page.url.pathname !== '/login') {
+    if (auth.authenticated) {
+      await loadChatSessions();
+      return;
+    }
+    if ($page.url.pathname !== '/login') {
       goto('/login');
     }
   });
@@ -27,6 +31,7 @@
 
   async function handleLogout() {
     await api.auth.logout();
+    clearChatState();
     auth.authenticated = false;
     goto('/login');
   }

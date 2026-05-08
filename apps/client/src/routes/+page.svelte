@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { api, type ChatSource } from '$lib/api';
-  import { chatState } from '$lib/stores.svelte';
+  import { api, type ChatSessionSummary, type ChatSource } from '$lib/api';
+  import { chatState, loadChatSessions, restoreChatSession, setActiveChatSession, startNewChat } from '$lib/stores.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { Separator } from '$lib/components/ui/separator';
+  import ChatMarkdown from '$lib/components/chat-markdown.svelte';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -21,6 +22,41 @@
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
+  function formatSessionMeta(iso: string) {
+    return new Date(iso).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
+
+  function buildDraftTitle(value: string) {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    if (!normalized) {
+      return 'New conversation';
+    }
+    return normalized.length > 72 ? `${normalized.slice(0, 69).trimEnd()}...` : normalized;
+  }
+
+  function currentSession(): ChatSessionSummary | null {
+    return chatState.sessions.find((session) => session.id === chatState.sessionId) ?? null;
+  }
+
+  function currentSessionTitle() {
+    const session = currentSession();
+    if (session) {
+      return session.title;
+    }
+    const firstUserMessage = chatState.messages.find((message) => message.role === 'user')?.content ?? '';
+    return buildDraftTitle(firstUserMessage);
+  }
+
+  function closeSourcesPanel() {
+    sourcesOpen = false;
+    lastSources = [];
+  }
+
   async function scrollToBottom() {
     await tick();
     if (messagesEl) {
@@ -30,7 +66,7 @@
 
   async function sendMessage() {
     const text = chatState.input.trim();
-    if (!text || chatState.pending || chatState.streaming) return;
+    if (!text || chatState.pending || chatState.streaming || chatState.loadingHistory) return;
 
     chatState.messages.push({ role: 'user', content: text });
     chatState.messages.push({ role: 'assistant', content: '' });
@@ -46,7 +82,7 @@
       }
 
       const sessionId = res.headers.get('X-Session-Id');
-      if (sessionId) chatState.sessionId = sessionId;
+      if (sessionId) setActiveChatSession(sessionId);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -102,6 +138,10 @@
       chatState.messages[idx].content = 'Something went wrong. Please try again.';
     }
 
+    try {
+      await loadChatSessions();
+    } catch {}
+
     await scrollToBottom();
   }
 
@@ -118,7 +158,16 @@
   }
 
   onMount(() => {
-    scrollToBottom();
+    void (async () => {
+      await restoreChatSession();
+      closeSourcesPanel();
+      await scrollToBottom();
+    })();
+  });
+
+  $effect(() => {
+    chatState.sessionId;
+    closeSourcesPanel();
   });
 </script>
 
@@ -129,11 +178,52 @@
 
 <div class="flex h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,244,245,0.9))]">
   <div class="flex flex-1 flex-col">
+    <div class="border-b border-zinc-200/80 bg-white/80 px-4 py-3 backdrop-blur sm:px-6">
+      <div class="mx-auto flex max-w-2xl items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="truncate font-[Goga] text-lg tracking-tight text-zinc-950">{currentSessionTitle()}</p>
+          <p class="truncate text-xs text-zinc-400">
+            {#if currentSession()}
+              Updated {formatSessionMeta(currentSession()!.updated_at)} · {chatState.messages.length} messages
+            {:else if chatState.messages.length > 0}
+              Draft conversation · {chatState.messages.length} messages
+            {:else}
+              Ask a question. Keep the rubble outside your brain.
+            {/if}
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          class="min-h-11 shrink-0 rounded-2xl md:hidden"
+          onclick={() => {
+            startNewChat();
+            closeSourcesPanel();
+          }}
+          disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
+        >
+          <span class="inline-flex items-center gap-2">
+            <Icon icon="solar:add-circle-bold-duotone" class="size-4" />
+            New chat
+          </span>
+        </Button>
+      </div>
+    </div>
+
     <div
       bind:this={messagesEl}
       class="flex-1 overflow-y-auto px-4 py-6 sm:px-6"
     >
-      {#if chatState.messages.length === 0}
+      {#if chatState.loadingHistory}
+        <div class="flex h-full items-center justify-center">
+          <div class="flex flex-col items-center gap-3 text-center">
+            <span class="flex size-12 items-center justify-center rounded-3xl bg-white text-zinc-400 shadow-[0_18px_40px_-28px_rgba(24,24,27,0.32)]">
+              <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin" />
+            </span>
+            <p class="text-sm text-zinc-400">Loading conversation...</p>
+          </div>
+        </div>
+      {:else if chatState.messages.length === 0}
         <div class="flex h-full items-center justify-center">
           <div class="flex max-w-md flex-col items-center gap-4 px-8 py-10 text-center">
             <span class="flex size-14 items-center justify-center rounded-3xl bg-zinc-950 text-white">
@@ -164,7 +254,10 @@
                       <span class="typing-dot"></span>
                     </span>
                   {:else}
-                    <span class="whitespace-pre-wrap">{msg.content}</span>{#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
+                    <ChatMarkdown
+                      content={msg.content}
+                      streaming={(chatState.pending || chatState.streaming) && i === chatState.messages.length - 1}
+                    />
                   {/if}
                   {#if msg.sources && msg.sources.length > 0}
                     <div class="mt-3 flex flex-wrap items-center gap-1.5">
@@ -197,13 +290,13 @@
           placeholder="Ask about your team, deployments, incidents..."
           bind:value={chatState.input}
           onkeydown={handleKeydown}
-          disabled={chatState.pending || chatState.streaming}
+          disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
           rows={1}
           class="h-[52px] min-h-[52px] max-h-32 rounded-2xl bg-zinc-50 px-4 py-[15px] leading-5 shadow-inner"
         />
         <Button
           onclick={sendMessage}
-          disabled={chatState.pending || chatState.streaming || !chatState.input.trim()}
+          disabled={chatState.pending || chatState.streaming || chatState.loadingHistory || !chatState.input.trim()}
           class="h-[52px] shrink-0 rounded-2xl px-4"
         >
           <span class="inline-flex items-center gap-2">

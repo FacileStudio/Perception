@@ -31,6 +31,9 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message, session_id: sessionId }),
       }),
+    sessions: () => request<{ sessions: ChatSessionSummary[] }>('/chat/sessions'),
+    session: (sessionId: string) => request<{ session: ChatSessionDetail }>(`/chat/sessions/${sessionId}`),
+    deleteSession: (sessionId: string) => request<{ ok: boolean; session_id: string }>(`/chat/sessions/${sessionId}`, { method: 'DELETE' }),
   },
   stats: {
     get: (refresh = false) => request<{ snapshots: StatsSnapshot[] }>(`/stats${refresh ? '?refresh=1' : ''}`),
@@ -53,3 +56,25 @@ export type StatsSnapshot = {
 
 export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[] };
 export type ChatSource = { event_id: string; provider_name: string; occurred_at: string; title: string; score: number };
+export type ChatSessionSummary = {
+  id: string;
+  title: string;
+  preview: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+};
+export type ChatMessageRecord = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: ChatSource[];
+  created_at: string;
+};
+export type ChatSessionDetail = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages: ChatMessageRecord[];
+};
