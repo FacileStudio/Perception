@@ -5,10 +5,14 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
+  import Icon from '@iconify/svelte';
+  import { ensureSolar } from '$lib/solar';
 
   let snapshots = $state<StatsSnapshot[]>([]);
   let loading = $state(false);
   let error = $state('');
+
+  ensureSolar();
 
   function formatDate(iso: string) {
     return new Date(iso).toLocaleString('en-US', {
@@ -34,14 +38,20 @@
 </script>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200 bg-white px-6 py-4">
-    <span class="text-sm font-medium">Stats Snapshots</span>
-    <Button variant="outline" size="sm" onclick={loadStats} disabled={loading}>
-      {loading ? 'Loading...' : 'Refresh'}
+  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+    <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+      <Icon icon="solar:chart-square-bold-duotone" class="size-4" />
+      Stats Snapshots
+    </span>
+    <Button variant="outline" size="sm" onclick={loadStats} disabled={loading} class="rounded-xl">
+      <span class="inline-flex items-center gap-2">
+        <Icon icon="solar:restart-bold-duotone" class="size-4" />
+        {loading ? 'Loading...' : 'Refresh'}
+      </span>
     </Button>
   </div>
 
-  <div class="flex-1 overflow-y-auto px-6 py-4">
+  <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-12">
         <span class="text-sm text-zinc-400">Loading...</span>
@@ -57,7 +67,7 @@
     {:else}
       <div class="flex flex-col gap-4">
         {#each snapshots as snap}
-          <Card class="p-5">
+          <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
             <div class="flex items-start justify-between gap-4">
               <div class="flex flex-col gap-1">
                 <div class="flex items-center gap-2">

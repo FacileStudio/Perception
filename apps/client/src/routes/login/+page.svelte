@@ -5,6 +5,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Card } from '$lib/components/ui/card';
+  import PerceptionLogo from '$lib/components/perception-logo.svelte';
 
   let password = $state('');
   let error = $state('');
@@ -27,11 +28,11 @@
   }
 </script>
 
-<div class="flex h-screen items-center justify-center bg-white">
-  <Card class="w-full max-w-sm p-8">
+<div class="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(228,228,231,0.9),_rgba(255,255,255,1)_45%)] px-4">
+  <Card class="w-full max-w-sm rounded-[28px] border-zinc-200/80 p-8 shadow-[0_24px_80px_-48px_rgba(24,24,27,0.55)]">
     <div class="mb-6">
-      <h1 class="font-mono text-lg font-semibold">perception</h1>
-      <p class="mt-1 text-sm text-zinc-500">Enter your access password to continue.</p>
+      <PerceptionLogo subtitle="Read signal. Skip folklore." />
+      <p class="mt-4 text-sm text-zinc-500">Enter your access password to continue.</p>
     </div>
     <form onsubmit={handleSubmit} class="flex flex-col gap-3">
       <Input
@@ -40,11 +41,12 @@
         bind:value={password}
         disabled={loading}
         autocomplete="current-password"
+        class="h-11 rounded-xl"
       />
       {#if error}
         <p class="text-xs text-red-600">{error}</p>
       {/if}
-      <Button type="submit" disabled={loading || !password.trim()}>
+      <Button type="submit" disabled={loading || !password.trim()} class="h-11 rounded-xl">
         {loading ? 'Signing in...' : 'Sign in'}
       </Button>
     </form>

@@ -1,16 +1,20 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
-  import { api, type ChatMessage, type ChatSource } from '$lib/api';
+  import { api, type ChatSource } from '$lib/api';
   import { chatState } from '$lib/stores.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Badge } from '$lib/components/ui/badge';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { Separator } from '$lib/components/ui/separator';
+  import Icon from '@iconify/svelte';
+  import { ensureSolar } from '$lib/solar';
 
   let messagesEl: HTMLDivElement;
   let sourcesOpen = $state(false);
   let lastSources = $state<ChatSource[]>([]);
+
+  ensureSolar();
 
   function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -61,7 +65,7 @@
               chatState.messages[idx].content += parsed.text;
               await scrollToBottom();
             }
-          } catch { /* partial chunk */ }
+          } catch {}
         }
       }
 
@@ -92,33 +96,41 @@
   });
 </script>
 
-<div class="flex h-full">
+<div class="flex h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,244,245,0.9))]">
   <div class="flex flex-1 flex-col">
     <div
       bind:this={messagesEl}
-      class="flex-1 overflow-y-auto px-4 py-6"
+      class="flex-1 overflow-y-auto px-4 py-6 sm:px-6"
     >
       {#if chatState.messages.length === 0}
         <div class="flex h-full items-center justify-center">
-          <p class="text-sm text-zinc-400">Ask anything about your operational context.</p>
+          <div class="flex max-w-md flex-col items-center gap-4 rounded-[28px] border border-zinc-200/80 bg-white/90 px-8 py-10 text-center shadow-[0_28px_80px_-56px_rgba(24,24,27,0.45)]">
+            <span class="flex size-14 items-center justify-center rounded-3xl bg-zinc-950 text-white">
+              <Icon icon="solar:eye-bold-duotone" class="size-7" />
+            </span>
+            <div class="space-y-2">
+              <p class="font-[Goga] text-2xl tracking-tight text-zinc-950">See the shape of the chaos.</p>
+              <p class="text-sm leading-6 text-zinc-500">Ask about incidents, deploys, delivery drift, or team context. Perception digs through the mess so you do not.</p>
+            </div>
+          </div>
         </div>
       {:else}
         <div class="mx-auto flex max-w-2xl flex-col gap-4">
           {#each chatState.messages as msg, i}
             {#if msg.role === 'user'}
               <div class="flex justify-end">
-                <div class="max-w-[75%] rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white">
+                <div class="max-w-[75%] rounded-[22px] rounded-br-md bg-zinc-950 px-4 py-3 text-sm text-white shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)]">
                   {msg.content}
                 </div>
               </div>
             {:else}
               <div class="flex justify-start">
-                <div class="max-w-[75%] rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900">
+                <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
                   <span class="whitespace-pre-wrap">{msg.content}</span>{#if chatState.streaming && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
                   {#if msg.sources && msg.sources.length > 0}
-                    <div class="mt-2 flex flex-wrap gap-1">
+                    <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each msg.sources as src}
-                        <Badge variant="outline" class="font-mono text-xs">
+                        <Badge variant="outline" class="rounded-full font-mono text-xs">
                           {src.provider_name} · {formatDate(src.occurred_at)}
                         </Badge>
                       {/each}
@@ -132,42 +144,50 @@
       {/if}
     </div>
 
-    <div class="border-t border-zinc-200 bg-white px-4 py-3">
-      <div class="mx-auto flex max-w-2xl items-end gap-2">
+    <div class="border-t border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+      <div class="mx-auto flex max-w-2xl items-stretch gap-3">
         <Textarea
           placeholder="Ask about your team, deployments, incidents..."
           bind:value={chatState.input}
           onkeydown={handleKeydown}
           disabled={chatState.streaming}
-          class="min-h-[44px] max-h-32"
+          rows={1}
+          class="h-[52px] min-h-[52px] max-h-32 rounded-2xl bg-zinc-50 px-4 py-[15px] leading-5 shadow-inner"
         />
         <Button
           onclick={sendMessage}
           disabled={chatState.streaming || !chatState.input.trim()}
-          class="shrink-0"
+          class="h-[52px] shrink-0 rounded-2xl px-4"
         >
-          {chatState.streaming ? '...' : 'Send'}
+          <span class="inline-flex items-center gap-2">
+            <Icon icon={chatState.streaming ? 'solar:hourglass-bold-duotone' : 'solar:plain-2-bold-duotone'} class="size-4" />
+            {chatState.streaming ? 'Thinking' : 'Send'}
+          </span>
         </Button>
       </div>
     </div>
   </div>
 
   {#if sourcesOpen && lastSources.length > 0}
-    <div class="flex w-72 flex-col border-l border-zinc-200 bg-white">
+    <div class="fixed inset-x-4 bottom-24 top-24 z-20 flex flex-col rounded-[28px] border border-zinc-200/80 bg-white/95 shadow-[0_32px_80px_-48px_rgba(24,24,27,0.55)] xl:static xl:inset-auto xl:bottom-auto xl:top-auto xl:w-80 xl:rounded-none xl:border-0 xl:border-l xl:shadow-none">
       <div class="flex items-center justify-between px-4 py-3">
-        <span class="text-xs font-medium text-zinc-600">Sources</span>
+        <span class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+          <Icon icon="solar:document-text-bold-duotone" class="size-4" />
+          Sources
+        </span>
         <button
           onclick={() => { sourcesOpen = false; }}
-          class="text-xs text-zinc-400 hover:text-zinc-600"
+          class="rounded-full p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+          aria-label="Close sources"
         >
-          close
+          <Icon icon="solar:close-circle-bold-duotone" class="size-4" />
         </button>
       </div>
       <Separator />
       <ScrollArea class="flex-1 px-4 py-3">
         <div class="flex flex-col gap-3">
           {#each lastSources as src}
-            <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-1 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3">
               <span class="text-xs font-medium text-zinc-900">{src.title}</span>
               <div class="flex items-center gap-2">
                 <Badge variant="secondary">{src.provider_name}</Badge>

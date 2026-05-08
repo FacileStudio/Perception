@@ -7,7 +7,7 @@ services:
     expose:
       - "8787"
     volumes:
-      - ./data:/app/data
+      - perception_data:/app/data
     env_file:
       - .env
     environment:
@@ -33,3 +33,6 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  perception_data:
