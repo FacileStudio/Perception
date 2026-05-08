@@ -82,6 +82,7 @@ export function streamChat(
           controller.enqueue(encoded);
         }
 
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true, sources })}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();
 

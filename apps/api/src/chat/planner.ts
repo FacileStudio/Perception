@@ -4,6 +4,7 @@ export type QueryPlan = {
   entityHints: string[];
   requiresSqlFacts: boolean;
   requiresStats: boolean;
+  prefersRecency: boolean;
   rawMessage: string;
 };
 
@@ -29,6 +30,7 @@ const ENTITY_KEYWORDS: Record<string, string> = {
 
 const SQL_KEYWORDS = ['count', 'how many', 'list all', 'unsigned', 'overdue'];
 const STATS_KEYWORDS = ['trend', 'summary', 'week', 'cadence', 'health'];
+const RECENCY_KEYWORDS = ['recent', 'recently', 'latest', 'new', 'happened', 'activity', 'updates'];
 
 function startOfDay(d: Date): string {
   const copy = new Date(d);
@@ -67,6 +69,11 @@ function detectTimeWindow(msg: string): { from: string; to: string } | null {
     return { from: from.toISOString(), to: now.toISOString() };
   }
 
+  if (lower.includes('recent') || lower.includes('recently') || lower.includes('latest')) {
+    const from = new Date(now.getTime() - 3 * 86400000);
+    return { from: from.toISOString(), to: now.toISOString() };
+  }
+
   return null;
 }
 
@@ -84,6 +91,7 @@ export function buildQueryPlan(message: string): QueryPlan {
 
   const requiresSqlFacts = SQL_KEYWORDS.some((kw) => lower.includes(kw));
   const requiresStats = STATS_KEYWORDS.some((kw) => lower.includes(kw));
+  const prefersRecency = RECENCY_KEYWORDS.some((kw) => lower.includes(kw));
 
   return {
     timeWindow,
@@ -91,6 +99,7 @@ export function buildQueryPlan(message: string): QueryPlan {
     entityHints: Array.from(entitySet),
     requiresSqlFacts,
     requiresStats,
+    prefersRecency,
     rawMessage: message,
   };
 }

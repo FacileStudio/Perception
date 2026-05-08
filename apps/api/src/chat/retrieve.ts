@@ -76,6 +76,39 @@ async function sqlLane(plan: QueryPlan): Promise<Array<EventRow & { score: numbe
   }));
 }
 
+async function recentLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'sql' }>> {
+  const conditions: string[] = ['1=1'];
+  const args: InValue[] = [];
+
+  if (plan.providerFilters.length > 0) {
+    const placeholders = plan.providerFilters.map(() => '?').join(',');
+    conditions.push(`provider_type IN (${placeholders})`);
+    args.push(...plan.providerFilters);
+  }
+
+  if (plan.entityHints.length > 0) {
+    const placeholders = plan.entityHints.map(() => '?').join(',');
+    conditions.push(`entity_type IN (${placeholders})`);
+    args.push(...plan.entityHints);
+  }
+
+  if (plan.timeWindow) {
+    conditions.push(`occurred_at >= ? AND occurred_at <= ?`);
+    args.push(plan.timeWindow.from, plan.timeWindow.to);
+  }
+
+  const result = await db.execute({
+    sql: `SELECT * FROM events WHERE ${conditions.join(' AND ')} ORDER BY occurred_at DESC LIMIT 30`,
+    args,
+  });
+
+  return result.rows.map((r) => ({
+    ...rowToEvent(r as unknown as Record<string, unknown>),
+    score: 0.4,
+    source: 'sql' as const,
+  }));
+}
+
 async function statsLane(): Promise<StatsSnapshot[]> {
   const result = await db.execute({
     sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 5`,
@@ -125,14 +158,20 @@ function mergeAndRank(
 }
 
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
-  const [vectorEvents, ftsEvents, sqlEvents, stats] = await Promise.all([
+  const shouldRunRecentLane = plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
+
+  const [vectorEvents, ftsEvents, sqlEvents, recentEvents, stats] = await Promise.all([
     vectorLane(queryEmbedding),
     ftsLane(plan.rawMessage),
     plan.requiresSqlFacts ? sqlLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
+    shouldRunRecentLane ? recentLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
     plan.requiresStats ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
-  const events = mergeAndRank([vectorEvents, ftsEvents, sqlEvents], plan);
+  let events = mergeAndRank([vectorEvents, ftsEvents, sqlEvents, recentEvents], plan);
+  if (events.length === 0) {
+    events = await recentLane(plan);
+  }
 
   return { events, stats };
 }

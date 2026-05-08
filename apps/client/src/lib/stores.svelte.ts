@@ -16,6 +16,7 @@ export async function checkAuth() {
 export const chatState = $state({
   sessionId: null as string | null,
   messages: [] as ChatMessage[],
+  pending: false,
   streaming: false,
   input: '',
 });

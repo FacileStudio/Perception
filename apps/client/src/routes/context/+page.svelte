@@ -113,6 +113,10 @@
         {eventsState.total} event{eventsState.total !== 1 ? 's' : ''}
       </span>
     </div>
+    <p class="mt-3 text-xs leading-5 text-zinc-500">
+      <span class="font-medium text-zinc-700">Quality:</span>
+      complete = confirmed schema, partial = inferred schema not yet confirmed, degraded = raw fallback only.
+    </p>
   </div>
 
   <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">

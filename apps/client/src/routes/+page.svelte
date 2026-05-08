@@ -30,24 +30,26 @@
 
   async function sendMessage() {
     const text = chatState.input.trim();
-    if (!text || chatState.streaming) return;
+    if (!text || chatState.pending || chatState.streaming) return;
 
     chatState.messages.push({ role: 'user', content: text });
+    chatState.messages.push({ role: 'assistant', content: '' });
+    const idx = chatState.messages.length - 1;
     chatState.input = '';
+    chatState.pending = true;
     await scrollToBottom();
 
     try {
       const res = await api.chat.send(text, chatState.sessionId ?? undefined);
+      if (!res.ok || !res.body) {
+        throw new Error(`chat_failed_${res.status}`);
+      }
 
       const sessionId = res.headers.get('X-Session-Id');
       if (sessionId) chatState.sessionId = sessionId;
 
-      const reader = res.body!.getReader();
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
-
-      chatState.messages.push({ role: 'assistant', content: '' });
-      const idx = chatState.messages.length - 1;
-      chatState.streaming = true;
 
       let buffer = '';
       while (true) {
@@ -61,15 +63,32 @@
           const data = line.slice(6).trim();
           if (data === '[DONE]') break;
           try {
-            const parsed = JSON.parse(data) as { text?: string; error?: string };
+            const parsed = JSON.parse(data) as { text?: string; error?: string; done?: boolean; sources?: ChatSource[] };
+            if (parsed.error) {
+              throw new Error(parsed.error);
+            }
             if (parsed.text) {
+              chatState.pending = false;
+              chatState.streaming = true;
               chatState.messages[idx].content += parsed.text;
               await scrollToBottom();
             }
-          } catch {}
+            if (parsed.sources?.length) {
+              chatState.messages[idx].sources = parsed.sources;
+            }
+          } catch (error) {
+            if (error instanceof Error) {
+              throw error;
+            }
+          }
         }
       }
 
+      if (!chatState.messages[idx].content) {
+        chatState.messages[idx].content = 'No response received. Please try again.';
+      }
+
+      chatState.pending = false;
       chatState.streaming = false;
 
       const finalMsg = chatState.messages[idx];
@@ -78,8 +97,9 @@
         sourcesOpen = true;
       }
     } catch (err) {
+      chatState.pending = false;
       chatState.streaming = false;
-      chatState.messages.push({ role: 'assistant', content: 'Something went wrong. Please try again.' });
+      chatState.messages[idx].content = 'Something went wrong. Please try again.';
     }
 
     await scrollToBottom();
@@ -132,14 +152,16 @@
             {:else}
               <div class="flex justify-start">
                 <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
-                  {#if chatState.streaming && i === chatState.messages.length - 1 && !msg.content}
-                    <span class="inline-flex items-center gap-1.5 py-1" aria-label="Assistant is typing">
+                  {#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1 && !msg.content}
+                    <span class="assistant-loader" aria-label="Assistant is typing">
                       <span class="typing-dot"></span>
                       <span class="typing-dot"></span>
                       <span class="typing-dot"></span>
+                      <span class="assistant-loader-bar"></span>
+                      <span class="assistant-loader-bar assistant-loader-bar-short"></span>
                     </span>
                   {:else}
-                    <span class="whitespace-pre-wrap">{msg.content}</span>{#if chatState.streaming && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
+                    <span class="whitespace-pre-wrap">{msg.content}</span>{#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
                   {/if}
                   {#if msg.sources && msg.sources.length > 0}
                     <div class="mt-3 flex flex-wrap gap-1.5">
@@ -164,18 +186,18 @@
           placeholder="Ask about your team, deployments, incidents..."
           bind:value={chatState.input}
           onkeydown={handleKeydown}
-          disabled={chatState.streaming}
+          disabled={chatState.pending || chatState.streaming}
           rows={1}
           class="h-[52px] min-h-[52px] max-h-32 rounded-2xl bg-zinc-50 px-4 py-[15px] leading-5 shadow-inner"
         />
         <Button
           onclick={sendMessage}
-          disabled={chatState.streaming || !chatState.input.trim()}
+          disabled={chatState.pending || chatState.streaming || !chatState.input.trim()}
           class="h-[52px] shrink-0 rounded-2xl px-4"
         >
           <span class="inline-flex items-center gap-2">
-            <Icon icon={chatState.streaming ? 'solar:hourglass-bold-duotone' : 'solar:plain-2-bold-duotone'} class="size-4" />
-            {chatState.streaming ? 'Thinking' : 'Send'}
+            <Icon icon={chatState.pending || chatState.streaming ? 'solar:hourglass-bold-duotone' : 'solar:plain-2-bold-duotone'} class="size-4" />
+            {chatState.pending || chatState.streaming ? 'Thinking' : 'Send'}
           </span>
         </Button>
       </div>
@@ -217,12 +239,23 @@
 </div>
 
 <style>
+  .assistant-loader {
+    display: inline-grid;
+    gap: 0.5rem;
+    padding-block: 0.25rem;
+  }
+
   .typing-dot {
+    display: inline-block;
     width: 0.4rem;
     height: 0.4rem;
     border-radius: 9999px;
     background: rgb(113 113 122);
     animation: typing-bounce 1.1s infinite ease-in-out;
+  }
+
+  .assistant-loader :global(.typing-dot) {
+    grid-row: 1;
   }
 
   .typing-dot:nth-child(2) {
@@ -231,6 +264,21 @@
 
   .typing-dot:nth-child(3) {
     animation-delay: 0.3s;
+  }
+
+  .assistant-loader-bar {
+    display: block;
+    height: 0.42rem;
+    width: 5.2rem;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgb(228 228 231 / 0.9), rgb(212 212 216 / 0.55), rgb(228 228 231 / 0.9));
+    background-size: 200% 100%;
+    animation: loader-sheen 1.3s infinite linear;
+  }
+
+  .assistant-loader-bar-short {
+    width: 3.7rem;
+    opacity: 0.85;
   }
 
   @keyframes typing-bounce {
@@ -245,10 +293,24 @@
     }
   }
 
+  @keyframes loader-sheen {
+    0% {
+      background-position: 100% 0;
+    }
+
+    100% {
+      background-position: -100% 0;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .typing-dot {
       animation: none;
       opacity: 0.75;
+    }
+
+    .assistant-loader-bar {
+      animation: none;
     }
   }
 </style>
