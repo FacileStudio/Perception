@@ -112,6 +112,11 @@
     }
   }
 
+  function openSourcesForMessage(sources: ChatSource[]) {
+    lastSources = sources;
+    sourcesOpen = true;
+  }
+
   onMount(() => {
     scrollToBottom();
   });
@@ -157,19 +162,25 @@
                       <span class="typing-dot"></span>
                       <span class="typing-dot"></span>
                       <span class="typing-dot"></span>
-                      <span class="assistant-loader-bar"></span>
-                      <span class="assistant-loader-bar assistant-loader-bar-short"></span>
                     </span>
                   {:else}
                     <span class="whitespace-pre-wrap">{msg.content}</span>{#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
                   {/if}
                   {#if msg.sources && msg.sources.length > 0}
-                    <div class="mt-3 flex flex-wrap gap-1.5">
+                    <div class="mt-3 flex flex-wrap items-center gap-1.5">
                       {#each msg.sources as src}
                         <Badge variant="outline" class="rounded-full font-mono text-xs">
                           {src.provider_name} · {formatDate(src.occurred_at)}
                         </Badge>
                       {/each}
+                      <button
+                        type="button"
+                        class="inline-flex min-h-8 items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                        onclick={() => openSourcesForMessage(msg.sources ?? [])}
+                      >
+                        <Icon icon="solar:document-text-bold-duotone" class="size-3.5" />
+                        {sourcesOpen && lastSources === msg.sources ? 'Sources open' : 'Open sources'}
+                      </button>
                     </div>
                   {/if}
                 </div>
@@ -240,22 +251,20 @@
 
 <style>
   .assistant-loader {
-    display: inline-grid;
-    gap: 0.5rem;
-    padding-block: 0.25rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-block: 0.35rem;
   }
 
   .typing-dot {
-    display: inline-block;
+    display: block;
     width: 0.4rem;
     height: 0.4rem;
+    flex: 0 0 auto;
     border-radius: 9999px;
     background: rgb(113 113 122);
     animation: typing-bounce 1.1s infinite ease-in-out;
-  }
-
-  .assistant-loader :global(.typing-dot) {
-    grid-row: 1;
   }
 
   .typing-dot:nth-child(2) {
@@ -264,21 +273,6 @@
 
   .typing-dot:nth-child(3) {
     animation-delay: 0.3s;
-  }
-
-  .assistant-loader-bar {
-    display: block;
-    height: 0.42rem;
-    width: 5.2rem;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, rgb(228 228 231 / 0.9), rgb(212 212 216 / 0.55), rgb(228 228 231 / 0.9));
-    background-size: 200% 100%;
-    animation: loader-sheen 1.3s infinite linear;
-  }
-
-  .assistant-loader-bar-short {
-    width: 3.7rem;
-    opacity: 0.85;
   }
 
   @keyframes typing-bounce {
@@ -293,24 +287,10 @@
     }
   }
 
-  @keyframes loader-sheen {
-    0% {
-      background-position: 100% 0;
-    }
-
-    100% {
-      background-position: -100% 0;
-    }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .typing-dot {
       animation: none;
       opacity: 0.75;
-    }
-
-    .assistant-loader-bar {
-      animation: none;
     }
   }
 </style>
