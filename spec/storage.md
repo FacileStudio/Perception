@@ -61,94 +61,53 @@ WHERE status = 'ready';
 
 `F32_BLOB(1024)` follows the recommended embedding dimension. If the embedding model or dimension changes, create a new embedding table or migration. Do not mutate vector dimensions in place.
 
-## Fact Tables
+---
 
-Each fact table stores provider-specific structured data and references the canonical event:
+## Facts Table
+
+All provider-specific structured data lives in one generic table. No per-provider fact tables exist.
 
 ```sql
-CREATE TABLE task_facts (
+CREATE TABLE dynamic_facts (
   event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  task_id TEXT,
-  task_title TEXT NOT NULL,
-  project_id TEXT,
-  project_name TEXT,
-  status TEXT,
-  assignee_name TEXT,
-  due_at TEXT,
-  completed_at TEXT
+  provider_type TEXT NOT NULL,
+  facts_json TEXT NOT NULL
 );
 
-CREATE TABLE contract_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  submission_id TEXT,
-  template_id TEXT,
-  template_name TEXT,
-  signer_email_hash TEXT,
-  status TEXT,
-  opened_at TEXT,
-  completed_at TEXT,
-  declined_at TEXT
-);
-
-CREATE TABLE client_activity_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  client_id TEXT,
-  client_name TEXT,
-  contact_id TEXT,
-  activity_type TEXT NOT NULL,
-  changed_fields_json TEXT NOT NULL
-);
-
-CREATE TABLE deployment_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  project_name TEXT,
-  application_name TEXT,
-  status TEXT,
-  build_url TEXT,
-  commit_sha TEXT
-);
-
-CREATE TABLE code_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  repository TEXT,
-  ref TEXT,
-  commit_sha TEXT,
-  commit_count INTEGER,
-  pull_request_id TEXT,
-  issue_id TEXT
-);
-
-CREATE TABLE email_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  message_id TEXT,
-  thread_id TEXT,
-  uid TEXT,
-  from_hash TEXT,
-  from_domain TEXT,
-  subject TEXT,
-  sent_at TEXT
-);
-
-CREATE TABLE service_health_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  service_id TEXT,
-  service_name TEXT,
-  url TEXT,
-  status TEXT,
-  duration_seconds INTEGER,
-  ping_ms INTEGER
-);
-
-CREATE TABLE schedule_facts (
-  event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
-  schedule_id TEXT,
-  project_name TEXT,
-  client_name TEXT,
-  started_at TEXT,
-  stopped_at TEXT,
-  duration_seconds INTEGER
-);
+CREATE INDEX dynamic_facts_provider_idx ON dynamic_facts(provider_type);
 ```
+
+`facts_json` stores the mapped key-value output of schema-driven payload extraction. Keys and types follow the `InferredFieldMapping` definitions in `provider_schemas`. For `quality = "degraded"` events, it stores the raw `payload.normalized` dump.
+
+---
+
+## Schema Registry Tables
+
+```sql
+CREATE TABLE provider_schemas (
+  id TEXT PRIMARY KEY,
+  provider_type TEXT NOT NULL,
+  event_type_pattern TEXT,
+  field_mappings_json TEXT NOT NULL,
+  searchable_text_template TEXT,
+  sample_keys_hash TEXT NOT NULL,
+  needs_review INTEGER NOT NULL DEFAULT 0,
+  inferred_at TEXT NOT NULL,
+  confirmed_at TEXT,
+  inferred_by TEXT
+);
+
+CREATE INDEX provider_schemas_lookup_idx
+ON provider_schemas(provider_type, event_type_pattern);
+```
+
+`event_type_pattern = null` is a wildcard — applies to all event types for that provider. Exact match wins over wildcard.
+
+`needs_review = 1` when incoming `payload.normalized` keys diverge from `sample_keys_hash`. Schema is still used but flagged for re-inference on the new keys.
+
+`field_mappings_json` is an array of `InferredFieldMapping`. Each mapping includes a `role` field (`status`, `id`, `name`, `date`, `url`, `count`, `other`) that lets the query and stats layers understand field semantics without provider-specific knowledge.
+
+---
 
 ## Operational Tables
 
