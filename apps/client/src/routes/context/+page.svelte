@@ -6,6 +6,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Input } from '$lib/components/ui/input';
   import { Button } from '$lib/components/ui/button';
+  import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
 
@@ -65,6 +66,11 @@
 
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
 </script>
+
+<svelte:head>
+  <title>{buildTitle('Context Without Archaeology')}</title>
+  <meta name="description" content="Inspect the event stream, filters, and quality signals feeding Perception." />
+</svelte:head>
 
 <div class="flex h-full flex-col">
   <div class="border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">

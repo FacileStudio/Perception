@@ -5,6 +5,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
+  import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
 
@@ -36,6 +37,11 @@
 
   onMount(() => loadStats());
 </script>
+
+<svelte:head>
+  <title>{buildTitle('Pulse of the System')}</title>
+  <meta name="description" content="Read Perception snapshots, trend windows, and signal health at a glance." />
+</svelte:head>
 
 <div class="flex h-full flex-col">
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">

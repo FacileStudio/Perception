@@ -5,6 +5,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Card } from '$lib/components/ui/card';
+  import { buildTitle } from '$lib/head';
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
 
   let password = $state('');
@@ -27,6 +28,11 @@
     }
   }
 </script>
+
+<svelte:head>
+  <title>{buildTitle('Enter the Signal')}</title>
+  <meta name="description" content="Sign in to Perception and skip the folklore." />
+</svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(228,228,231,0.9),_rgba(255,255,255,1)_45%)] px-4">
   <Card class="w-full max-w-sm rounded-[28px] border-zinc-200/80 p-8 shadow-[0_24px_80px_-48px_rgba(24,24,27,0.55)]">

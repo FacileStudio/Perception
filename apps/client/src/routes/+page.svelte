@@ -7,6 +7,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { Separator } from '$lib/components/ui/separator';
+  import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
 
@@ -96,6 +97,11 @@
   });
 </script>
 
+<svelte:head>
+  <title>{buildTitle('Interrogate the Noise')}</title>
+  <meta name="description" content="Chat with your operational memory without digging through the rubble." />
+</svelte:head>
+
 <div class="flex h-full bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,244,245,0.9))]">
   <div class="flex flex-1 flex-col">
     <div
@@ -104,7 +110,7 @@
     >
       {#if chatState.messages.length === 0}
         <div class="flex h-full items-center justify-center">
-          <div class="flex max-w-md flex-col items-center gap-4 rounded-[28px] border border-zinc-200/80 bg-white/90 px-8 py-10 text-center shadow-[0_28px_80px_-56px_rgba(24,24,27,0.45)]">
+          <div class="flex max-w-md flex-col items-center gap-4 px-8 py-10 text-center">
             <span class="flex size-14 items-center justify-center rounded-3xl bg-zinc-950 text-white">
               <Icon icon="solar:eye-bold-duotone" class="size-7" />
             </span>
@@ -126,7 +132,15 @@
             {:else}
               <div class="flex justify-start">
                 <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
-                  <span class="whitespace-pre-wrap">{msg.content}</span>{#if chatState.streaming && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
+                  {#if chatState.streaming && i === chatState.messages.length - 1 && !msg.content}
+                    <span class="inline-flex items-center gap-1.5 py-1" aria-label="Assistant is typing">
+                      <span class="typing-dot"></span>
+                      <span class="typing-dot"></span>
+                      <span class="typing-dot"></span>
+                    </span>
+                  {:else}
+                    <span class="whitespace-pre-wrap">{msg.content}</span>{#if chatState.streaming && i === chatState.messages.length - 1}<span class="animate-pulse">|</span>{/if}
+                  {/if}
                   {#if msg.sources && msg.sources.length > 0}
                     <div class="mt-3 flex flex-wrap gap-1.5">
                       {#each msg.sources as src}
@@ -201,3 +215,40 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .typing-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: rgb(113 113 122);
+    animation: typing-bounce 1.1s infinite ease-in-out;
+  }
+
+  .typing-dot:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .typing-dot:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes typing-bounce {
+    0%, 80%, 100% {
+      transform: translateY(0);
+      opacity: 0.45;
+    }
+
+    40% {
+      transform: translateY(-0.22rem);
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typing-dot {
+      animation: none;
+      opacity: 0.75;
+    }
+  }
+</style>
