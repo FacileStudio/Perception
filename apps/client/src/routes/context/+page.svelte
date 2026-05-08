@@ -108,7 +108,7 @@
         <option value="partial">Partial</option>
         <option value="degraded">Degraded</option>
       </select>
-      <span class="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-400 lg:ml-auto">
+      <span class="inline-flex items-center gap-2 text-xs text-zinc-400 lg:ml-auto">
         <Icon icon="solar:database-bold-duotone" class="size-4" />
         {eventsState.total} event{eventsState.total !== 1 ? 's' : ''}
       </span>

@@ -185,7 +185,7 @@
   {#if sourcesOpen && lastSources.length > 0}
     <div class="fixed inset-x-4 bottom-24 top-24 z-20 flex flex-col rounded-[28px] border border-zinc-200/80 bg-white/95 shadow-[0_32px_80px_-48px_rgba(24,24,27,0.55)] xl:static xl:inset-auto xl:bottom-auto xl:top-auto xl:w-80 xl:rounded-none xl:border-0 xl:border-l xl:shadow-none">
       <div class="flex items-center justify-between px-4 py-3">
-        <span class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+        <span class="inline-flex items-center gap-2 text-xs font-medium text-zinc-500">
           <Icon icon="solar:document-text-bold-duotone" class="size-4" />
           Sources
         </span>
