@@ -18,11 +18,11 @@ async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot>
 
   const [currResult, prevResult] = await Promise.all([
     db.execute({
-      sql: `SELECT entity_type, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND quality = 'complete' GROUP BY entity_type`,
+      sql: `SELECT entity_type, COUNT(*) as cnt FROM events WHERE occurred_at >= ? GROUP BY entity_type`,
       args: [windowStart],
     }),
     db.execute({
-      sql: `SELECT entity_type, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND occurred_at < ? AND quality = 'complete' GROUP BY entity_type`,
+      sql: `SELECT entity_type, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND occurred_at < ? GROUP BY entity_type`,
       args: [prevStart, windowStart],
     }),
   ]);
@@ -72,7 +72,6 @@ async function computeStatusHealth(windowDays: number): Promise<StatsSnapshot> {
           json_each(ps.field_mappings_json) AS fm
         WHERE json_extract(fm.value, '$.role') = 'status'
           AND e.occurred_at >= ?
-          AND e.quality = 'complete'
         GROUP BY status_value
       `,
       args: [windowStart],
@@ -105,7 +104,7 @@ async function computeActorActivity(windowDays: number): Promise<StatsSnapshot> 
   const windowEnd = nowIso();
 
   const result = await db.execute({
-    sql: `SELECT actor_name, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND actor_name IS NOT NULL AND quality = 'complete' GROUP BY actor_name ORDER BY cnt DESC LIMIT 20`,
+    sql: `SELECT actor_name, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND actor_name IS NOT NULL GROUP BY actor_name ORDER BY cnt DESC LIMIT 20`,
     args: [windowStart],
   });
 

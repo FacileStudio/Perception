@@ -55,8 +55,9 @@
 <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
   {#each cards as card}
     <Card class="rounded-[20px] border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
-      <div class="bg-zinc-100 rounded-xl p-2 w-fit mb-3">
-        <Icon icon={card.icon} class="size-5 text-zinc-600" />
+      <div class="flex items-start justify-between mb-3">
+        <div></div>
+        <Icon icon={card.icon} class="size-5 text-zinc-400" />
       </div>
       <p class="text-2xl font-semibold text-zinc-900">
         {card.value !== null ? card.value : '—'}
