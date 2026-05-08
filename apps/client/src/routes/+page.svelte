@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Interrogate the Noise')}</title>
+  <title>{buildTitle('Chat')}</title>
   <meta name="description" content="Chat with your operational memory without digging through the rubble." />
 </svelte:head>
 

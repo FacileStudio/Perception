@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Enter the Signal')}</title>
+  <title>{buildTitle('Login')}</title>
   <meta name="description" content="Sign in to Perception and skip the folklore." />
 </svelte:head>
 

@@ -68,7 +68,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Context Without Archaeology')}</title>
+  <title>{buildTitle('Context')}</title>
   <meta name="description" content="Inspect the event stream, filters, and quality signals feeding Perception." />
 </svelte:head>
 

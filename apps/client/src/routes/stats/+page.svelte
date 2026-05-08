@@ -39,7 +39,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Pulse of the System')}</title>
+  <title>{buildTitle('Stats')}</title>
   <meta name="description" content="Read Perception snapshots, trend windows, and signal health at a glance." />
 </svelte:head>
 
