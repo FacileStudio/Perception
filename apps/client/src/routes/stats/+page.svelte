@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type StatsSnapshot } from '$lib/api';
+  import { api, type StatsSnapshot, type TokenUsageRow } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
@@ -12,10 +12,24 @@
   import ActorActivityPanel from './_components/ActorActivityPanel.svelte';
 
   let snapshots = $state<StatsSnapshot[]>([]);
+  let usage = $state<TokenUsageRow[]>([]);
+  let totalCost = $state(0);
   let loading = $state(false);
   let error = $state('');
   let activeWindow = $state<'7d' | '30d'>('7d');
   let lastLoadedAt = 0;
+
+  function formatTokens(n: number) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return String(n);
+  }
+
+  function formatCost(n: number) {
+    if (n === 0) return '$0.00';
+    if (n < 0.001) return '<$0.001';
+    return '$' + n.toFixed(4);
+  }
 
   ensureSolar();
 
@@ -39,8 +53,10 @@
     loading = true;
     error = '';
     try {
-      const result = await api.stats.get();
-      snapshots = result.snapshots;
+      const [statsResult, usageResult] = await Promise.all([api.stats.get(), api.settings.usage()]);
+      snapshots = statsResult.snapshots;
+      usage = usageResult.usage;
+      totalCost = usageResult.total_cost_usd;
       lastLoadedAt = Date.now();
     } catch {
       error = 'Failed to load stats.';
@@ -100,34 +116,87 @@
         <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
-    {:else if snapshots.length === 0}
-      <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:chart-square-bold-duotone" class="size-8 text-zinc-300" />
-        <span class="text-sm text-zinc-400">No stats yet. Ingest some events first.</span>
-      </div>
     {:else}
       <div class="flex flex-col gap-5">
-        <SummaryCards {snapshots} window={activeWindow} />
+        {#if snapshots.length === 0}
+          <div class="flex flex-col items-center justify-center gap-2 py-16">
+            <Icon icon="solar:chart-square-bold-duotone" class="size-8 text-zinc-300" />
+            <span class="text-sm text-zinc-400">No stats yet. Ingest some events first.</span>
+          </div>
+        {:else}
+          <SummaryCards {snapshots} window={activeWindow} />
 
-        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {#if velocitySnap}
+          <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {#if velocitySnap}
+              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <EntityVelocityPanel snap={velocitySnap} />
+              </Card>
+            {/if}
+
+            {#if statusSnap}
+              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <StatusHealthPanel snap={statusSnap} />
+              </Card>
+            {/if}
+          </div>
+
+          {#if actorSnap}
             <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
-              <EntityVelocityPanel snap={velocitySnap} />
+              <ActorActivityPanel snap={actorSnap} />
             </Card>
           {/if}
-
-          {#if statusSnap}
-            <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
-              <StatusHealthPanel snap={statusSnap} />
-            </Card>
-          {/if}
-        </div>
-
-        {#if actorSnap}
-          <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
-            <ActorActivityPanel snap={actorSnap} />
-          </Card>
         {/if}
+
+        <section>
+          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Token Usage</h2>
+          {#if usage.length === 0}
+            <Card class="rounded-[20px] border-zinc-200/80 px-5 py-8 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
+              <div class="flex flex-col items-center gap-2 text-center">
+                <Icon icon="solar:chart-2-bold-duotone" class="size-8 text-zinc-300" />
+                <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
+              </div>
+            </Card>
+          {:else}
+            <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
+              <div class="divide-y divide-zinc-100">
+                {#each usage as row}
+                  <div class="flex flex-col gap-3 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                      <Icon
+                        icon={row.kind === 'llm' ? 'solar:brain-bold-duotone' : 'solar:layers-bold-duotone'}
+                        class="size-4 shrink-0 {row.kind === 'llm' ? 'text-violet-500' : 'text-blue-500'}"
+                      />
+                      <div class="min-w-0">
+                        <p class="truncate font-mono text-sm text-zinc-900">{row.model}</p>
+                        <p class="text-xs text-zinc-400">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between gap-4 text-right sm:justify-end sm:gap-6">
+                      <div>
+                        <p class="font-mono text-sm text-zinc-700">{formatTokens(row.input_tokens + row.output_tokens)}</p>
+                        <p class="text-xs text-zinc-400">
+                          {#if row.kind === 'llm'}
+                            {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
+                          {:else}
+                            total tokens
+                          {/if}
+                        </p>
+                      </div>
+                      <div class="w-20">
+                        <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-zinc-900' : 'text-zinc-400'}">{formatCost(row.cost_usd)}</p>
+                        <p class="text-xs text-zinc-400">estimated</p>
+                      </div>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+              <div class="flex items-center justify-between border-t border-zinc-200/80 px-5 py-3.5">
+                <span class="text-sm font-medium text-zinc-500">Total estimated cost</span>
+                <span class="font-mono text-sm font-semibold text-zinc-900">{formatCost(totalCost)}</span>
+              </div>
+            </Card>
+          {/if}
+        </section>
       </div>
     {/if}
   </div>

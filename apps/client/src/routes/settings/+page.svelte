@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type TokenUsageRow } from '$lib/api';
+  import { api } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -14,15 +14,12 @@
 
   let settings = $state<Record<string, string>>({});
   let sources = $state<SourceMap>({});
-  let usage = $state<TokenUsageRow[]>([]);
-  let totalCost = $state(0);
   let loading = $state(true);
   let saving = $state(false);
   let saved = $state(false);
   let error = $state('');
 
   let edits = $state<Record<string, string>>({});
-  let placeholders = $state<Record<string, string>>({});
 
   const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);
 
@@ -52,17 +49,12 @@
     loading = true;
     error = '';
     try {
-      const [settingsRes, usageRes] = await Promise.all([api.settings.get(), api.settings.usage()]);
+      const settingsRes = await api.settings.get();
       settings = settingsRes.settings;
       sources = settingsRes.sources;
-      usage = usageRes.usage;
-      totalCost = usageRes.total_cost_usd;
 
       for (const key of Object.keys(KEY_LABELS)) {
-        edits[key] = '';
-        if (SENSITIVE_KEYS.has(key) && settings[key]) {
-          placeholders[key] = settings[key];
-        }
+        edits[key] = settings[key] ?? '';
       }
     } catch {
       error = 'Failed to load settings.';
@@ -78,16 +70,16 @@
     try {
       const body: Record<string, string | null> = {};
       for (const [key, val] of Object.entries(edits)) {
-        if (val.trim() !== '') {
-          body[key] = val.trim();
+        const trimmed = val.trim();
+        if (SENSITIVE_KEYS.has(key) && trimmed.includes('•')) continue;
+        if (trimmed !== (settings[key] ?? '')) {
+          body[key] = trimmed === '' ? null : trimmed;
         }
       }
-      if (Object.keys(body).length > 0) {
-        await api.settings.update(body);
-        saved = true;
-        await load();
-        setTimeout(() => (saved = false), 2500);
-      }
+      await api.settings.update(body);
+      saved = true;
+      await load();
+      setTimeout(() => (saved = false), 2500);
     } catch {
       error = 'Failed to save settings.';
     } finally {
@@ -108,18 +100,6 @@
     if (src === 'db') return { label: 'dashboard', icon: 'solar:database-bold-duotone', cls: 'text-violet-600 bg-violet-50' };
     if (src === 'env') return { label: 'env var', icon: 'solar:server-bold-duotone', cls: 'text-blue-600 bg-blue-50' };
     return { label: 'default', icon: 'solar:info-circle-bold-duotone', cls: 'text-zinc-500 bg-zinc-100' };
-  }
-
-  function formatTokens(n: number) {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
-    return String(n);
-  }
-
-  function formatCost(n: number) {
-    if (n === 0) return '$0.00';
-    if (n < 0.001) return '<$0.001';
-    return '$' + n.toFixed(4);
   }
 
   onMount(() => load());
@@ -187,7 +167,7 @@
                   <Input
                     type="password"
                     bind:value={edits[key]}
-                    placeholder={placeholders[key] ?? (settings[key] ? settings[key] : 'Enter new value…')}
+                    placeholder="Enter new value…"
                     class="font-mono text-sm rounded-xl flex-1"
                   />
                   {#if sources[key] === 'db'}
@@ -202,9 +182,6 @@
                     </Button>
                   {/if}
                 </div>
-                {#if settings[key] && !edits[key]}
-                  <p class="mt-1.5 font-mono text-xs text-zinc-400">{settings[key]}</p>
-                {/if}
               </div>
             {/each}
           </Card>
@@ -286,57 +263,6 @@
               </div>
             {/each}
           </Card>
-        </section>
-
-        <section>
-          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Token Usage</h2>
-          {#if usage.length === 0}
-            <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] px-5 py-8">
-              <div class="flex flex-col items-center gap-2 text-center">
-                <Icon icon="solar:chart-2-bold-duotone" class="size-8 text-zinc-300" />
-                <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
-              </div>
-            </Card>
-          {:else}
-            <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
-              <div class="divide-y divide-zinc-100">
-                {#each usage as row}
-                  <div class="flex items-center justify-between gap-4 px-5 py-3.5">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <Icon
-                        icon={row.kind === 'llm' ? 'solar:brain-bold-duotone' : 'solar:layers-bold-duotone'}
-                        class="size-4 shrink-0 {row.kind === 'llm' ? 'text-violet-500' : 'text-blue-500'}"
-                      />
-                      <div class="min-w-0">
-                        <p class="font-mono text-sm text-zinc-900 truncate">{row.model}</p>
-                        <p class="text-xs text-zinc-400">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-6 shrink-0 text-right">
-                      <div>
-                        <p class="font-mono text-sm text-zinc-700">{formatTokens(row.input_tokens + row.output_tokens)}</p>
-                        <p class="text-xs text-zinc-400">
-                          {#if row.kind === 'llm'}
-                            {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
-                          {:else}
-                            total tokens
-                          {/if}
-                        </p>
-                      </div>
-                      <div class="w-20">
-                        <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-zinc-900' : 'text-zinc-400'}">{formatCost(row.cost_usd)}</p>
-                        <p class="text-xs text-zinc-400">estimated</p>
-                      </div>
-                    </div>
-                  </div>
-                {/each}
-              </div>
-              <div class="flex items-center justify-between border-t border-zinc-200/80 px-5 py-3.5">
-                <span class="text-sm font-medium text-zinc-500">Total estimated cost</span>
-                <span class="font-mono text-sm font-semibold text-zinc-900">{formatCost(totalCost)}</span>
-              </div>
-            </Card>
-          {/if}
         </section>
 
       </div>
