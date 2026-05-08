@@ -1,0 +1,33 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "${API_PORT:-8787}:8787"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - PERCEPTION_DATABASE_URL=file:/app/data/perception.db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8787}
+    ports:
+      - "${CLIENT_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped

@@ -1,0 +1,23 @@
+[tools]
+bun = "latest"
+node = "22"
+
+[tasks.dev]
+run = "bun run --filter=* dev"
+description = "Start all services in dev mode"
+
+[tasks.build]
+run = "bun run --filter=* build"
+description = "Build all services"
+
+[tasks.test]
+run = "bun test apps/api"
+description = "Run API tests"
+
+[tasks.typecheck]
+run = "bun run --filter=apps/api typecheck"
+description = "Type-check API"
+
+[tasks.lint]
+run = "bun run --filter=* lint"
+description = "Lint all"

@@ -1,0 +1,26 @@
+{
+  "name": "@perception/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "lint": "bunx @biomejs/biome lint src"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.12",
+    "@libsql/client": "^0.14.0",
+    "ai": "^4.3.16",
+    "hono": "^4.7.9",
+    "simple-statistics": "^7.8.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "bun-types": "latest",
+    "typescript": "^5.8.3"
+  }
+}
