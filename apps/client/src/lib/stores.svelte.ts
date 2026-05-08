@@ -1,7 +1,6 @@
 import { api, type ChatMessage, type ChatSessionSummary, type EventRow, type StatsSnapshot } from './api';
 
 export const auth = $state({ authenticated: false, checking: true });
-const ACTIVE_CHAT_SESSION_KEY = 'perception.active-chat-session';
 
 export async function checkAuth() {
   try {
@@ -26,27 +25,8 @@ export const chatState = $state({
   deletingSessionId: null as string | null,
 });
 
-function persistActiveSessionId(sessionId: string | null) {
-  if (typeof localStorage === 'undefined') {
-    return;
-  }
-  if (sessionId) {
-    localStorage.setItem(ACTIVE_CHAT_SESSION_KEY, sessionId);
-    return;
-  }
-  localStorage.removeItem(ACTIVE_CHAT_SESSION_KEY);
-}
-
-function readActiveSessionId(): string | null {
-  if (typeof localStorage === 'undefined') {
-    return null;
-  }
-  return localStorage.getItem(ACTIVE_CHAT_SESSION_KEY);
-}
-
 export function setActiveChatSession(sessionId: string | null) {
   chatState.sessionId = sessionId;
-  persistActiveSessionId(sessionId);
 }
 
 export function startNewChat() {
@@ -92,29 +72,6 @@ export async function openChatSession(sessionId: string) {
     chatState.streaming = false;
   } finally {
     chatState.loadingHistory = false;
-  }
-}
-
-export async function restoreChatSession() {
-  if (chatState.loadingHistory) {
-    return;
-  }
-  if (chatState.sessions.length === 0) {
-    await loadChatSessions();
-  }
-  if (chatState.messages.length > 0 && chatState.sessionId) {
-    return;
-  }
-  const preferredSessionId = chatState.sessionId ?? readActiveSessionId() ?? chatState.sessions[0]?.id ?? null;
-  if (!preferredSessionId) {
-    startNewChat();
-    return;
-  }
-  try {
-    await openChatSession(preferredSessionId);
-  } catch {
-    chatState.sessions = chatState.sessions.filter((session) => session.id !== preferredSessionId);
-    startNewChat();
   }
 }
 
