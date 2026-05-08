@@ -3,11 +3,14 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json ./
+COPY bun.lock ./
 COPY apps/api/package.json ./apps/api/
-RUN bun install --frozen-lockfile
+COPY apps/client/package.json ./apps/client/
+RUN bun install --frozen-lockfile --network-concurrency 8
 
 FROM base AS runner
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/bun.lock ./bun.lock
 COPY apps/api/src ./apps/api/src
 COPY apps/api/package.json ./apps/api/
 WORKDIR /app/apps/api

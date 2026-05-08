@@ -3,8 +3,9 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    ports:
-      - "${API_PORT:-8787}:8787"
+      network: host
+    expose:
+      - "8787"
     volumes:
       - ./data:/app/data
     env_file:
@@ -23,10 +24,11 @@ services:
     build:
       context: .
       dockerfile: apps/client/Dockerfile
+      network: host
       args:
         - VITE_API_URL=${VITE_API_URL:-http://localhost:8787}
-    ports:
-      - "${CLIENT_PORT:-3000}:3000"
+    expose:
+      - "3000"
     depends_on:
       api:
         condition: service_healthy

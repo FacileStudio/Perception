@@ -138,3 +138,13 @@ Unknown providers still create an `events` row at `quality = degraded` — no si
 - Local libSQL on la ruche, or Turso Cloud?
 
 Recommended defaults: separate service · no raw payloads in prod · IMAP headers v1 · Charles IDs when available + local resolver · start local libSQL, move to Turso only when remote sync is needed.
+
+---
+
+## Deploy notes
+
+- Base `docker-compose.yml` is Dokploy-oriented: app services use `expose`, not host `ports`
+- Local port publishing lives in `docker-compose.override.yml`
+- Dokploy Bun builds use `build.network: host` to avoid builder DNS/npm registry nonsense
+- `VITE_API_URL` must point at the public API URL seen by the browser
+- `CLIENT_ORIGIN` must match the public client origin for API CORS/session cookies

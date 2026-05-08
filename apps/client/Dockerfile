@@ -3,8 +3,10 @@ WORKDIR /app
 ARG VITE_API_URL=http://localhost:8787
 ENV VITE_API_URL=$VITE_API_URL
 COPY package.json ./
+COPY bun.lock ./
+COPY apps/api/package.json ./apps/api/
 COPY apps/client/package.json ./apps/client/
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --network-concurrency 8
 COPY apps/client/ ./apps/client/
 WORKDIR /app/apps/client
 RUN bun run build
