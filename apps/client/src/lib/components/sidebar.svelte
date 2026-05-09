@@ -5,10 +5,20 @@
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
+  import { auth } from '$lib/stores';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
 
   ensureSolar();
+
+  function initials(value: string): string {
+    const parts = value.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+
+  const label = $derived(auth.user?.name?.trim() || auth.user?.email || '');
 
   const navLinks = [
     { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat') },
@@ -46,7 +56,25 @@
 
   <Separator />
 
-  <div class="p-4">
+  <div class="flex flex-col gap-2 p-4">
+    {#if auth.user}
+      <div class="flex items-center gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/60 p-2.5">
+        <div
+          class="flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+          style="background-color: {auth.user.color}"
+        >
+          {initials(label)}
+        </div>
+        <div class="min-w-0 flex-1">
+          {#if auth.user.name}
+            <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name}</p>
+            <p class="truncate text-xs text-zinc-400">{auth.user.email}</p>
+          {:else}
+            <p class="truncate text-sm font-medium text-zinc-950">{auth.user.email}</p>
+          {/if}
+        </div>
+      </div>
+    {/if}
     <Button
       variant="ghost"
       size="sm"
