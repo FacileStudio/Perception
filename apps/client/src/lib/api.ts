@@ -22,6 +22,7 @@ export const api = {
       return request<{ events: EventRow[]; total: number }>(`/events${q}`);
     },
     get: (id: string) => request<{ event: EventRow; facts: Record<string, unknown> | null; embedding: { status: string; embedded_at: string | null } | null }>(`/events/${id}`),
+    delete: (id: string) => request<{ ok: boolean }>(`/events/${id}`, { method: 'DELETE' }),
   },
   chat: {
     send: (message: string, sessionId?: string) =>

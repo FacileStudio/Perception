@@ -13,29 +13,9 @@
   let viewMode = $state<'entities' | 'relations'>('entities');
   let drawMode: 'entities' | 'relations' = 'entities';
   let relationLegend = $state<[string, string][]>([]);
-  let resolving = $state(false);
-  let resolveResult = $state<number | null>(null);
-
   function setMode(m: 'entities' | 'relations') {
     viewMode = m;
     drawMode = m;
-  }
-
-  async function resolveAllRelations() {
-    resolving = true;
-    resolveResult = null;
-    try {
-      const { created } = await api.entities.resolveRelations();
-      resolveResult = created;
-      const data = await api.entities.graph();
-      edges = data.relations;
-      relationCount = edges.length;
-      buildRelationColors();
-    } catch {
-      resolveResult = -1;
-    }
-    resolving = false;
-    setTimeout(() => { resolveResult = null; }, 4000);
   }
 
   let container: HTMLDivElement;
@@ -465,21 +445,7 @@
           {relationCount} {relationCount === 1 ? 'relation' : 'relations'}
         </span>
       {/if}
-      <button
-        onclick={resolveAllRelations}
-        disabled={resolving}
-        class="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-500 transition-colors hover:border-zinc-300 hover:text-zinc-700 disabled:opacity-50"
-      >
-        {#if resolving}
-          <span class="size-3 animate-spin rounded-full border border-zinc-300 border-t-zinc-600"></span>
-          Resolving…
-        {:else if resolveResult !== null}
-          {resolveResult < 0 ? 'Error' : `+${resolveResult} relations`}
-        {:else}
-          Resolve missing relations
-        {/if}
-      </button>
-      <div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
+<div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
         {#if viewMode === 'entities'}
           {#each [['#6366f1','deploy / service'],['#7c3aed','contract'],['#059669','client'],['#2563eb','task'],['#db2777','person'],['#d97706','financial']] as [color, label]}
             <span class="flex items-center gap-1.5">

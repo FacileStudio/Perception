@@ -64,6 +64,21 @@
   onMount(() => loadEvents());
 
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
+
+  let deletingIds = $state(new Set<string>());
+
+  async function deleteEvent(id: string) {
+    deletingIds = new Set([...deletingIds, id]);
+    try {
+      await api.events.delete(id);
+      eventsState.events = eventsState.events.filter((e) => e.id !== id);
+      eventsState.total = Math.max(0, eventsState.total - 1);
+    } catch {
+      // silently keep the item in the list on failure
+    } finally {
+      deletingIds = new Set([...deletingIds].filter((x) => x !== id));
+    }
+  }
 </script>
 
 <svelte:head>
@@ -147,17 +162,26 @@
                   {/each}
                 </div>
               </div>
-              {#if event.url}
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+              <div class="flex shrink-0 items-center gap-1.5">
+                {#if event.url}
+                  <a
+                    href={event.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                  >
+                    <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
+                    Open
+                  </a>
+                {/if}
+                <button
+                  onclick={() => deleteEvent(event.id)}
+                  disabled={deletingIds.has(event.id)}
+                  class="inline-flex items-center rounded-full border border-transparent p-1.5 text-zinc-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                 >
-                  <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
-                  Open
-                </a>
-              {/if}
+                  <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-3.5" />
+                </button>
+              </div>
             </div>
           </Card>
         {/each}
