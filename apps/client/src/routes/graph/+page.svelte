@@ -32,7 +32,7 @@
   let hoveredEdge: EntityRelation | null = null;
   let draggedNode: SimNode | null = null;
   let animId: number;
-  let tickCount = 0;
+  let simAlpha = 1.0;
   let panX = 0;
   let panY = 0;
   let zoom = 1;
@@ -97,23 +97,25 @@
     ctx.fill();
   }
 
+  function reheat(target = 0.4) {
+    simAlpha = Math.max(simAlpha, target);
+  }
+
   function tick() {
-    if (nodes.length === 0) return;
+    if (nodes.length === 0 || simAlpha <= 0.001) return;
+    simAlpha = Math.max(0.001, simAlpha * 0.988);
+    const alpha = simAlpha;
     const cx = cw() / 2;
     const cy = ch() / 2;
-    const alpha = Math.max(0.02, 1 - tickCount / 280);
-    const repulsion = 3000 * alpha;
-    const gravity = 0.006 * alpha;
-    const damping = 0.78;
 
+    // Many-body repulsion: 1/d falloff (smooth, no close-range spikes)
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = (nodes[j].x - nodes[i].x) || 0.01;
         const dy = (nodes[j].y - nodes[i].y) || 0.01;
-        const d2 = Math.max(1, dx * dx + dy * dy);
-        const d = Math.sqrt(d2);
-        const minD = nodes[i].r + nodes[j].r + 14;
-        const f = d < minD ? (repulsion * 3) / d2 : repulsion / d2;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        if (d > 600) continue;
+        const f = (1400 * alpha) / d;
         const fx = (f * dx) / d;
         const fy = (f * dy) / d;
         nodes[i].vx -= fx;
@@ -123,6 +125,8 @@
       }
     }
 
+    // Spring force for linked pairs (alpha-scaled — fades with simulation)
+    const linkDist = 120;
     for (const edge of edges) {
       const s = nodes.find((n) => n.id === edge.from_id);
       const t = nodes.find((n) => n.id === edge.to_id);
@@ -130,24 +134,42 @@
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = 0.04 * (d - 160);
-      s.vx += (f * dx) / d;
-      s.vy += (f * dy) / d;
-      t.vx -= (f * dx) / d;
-      t.vy -= (f * dy) / d;
+      const f = 0.07 * alpha * (d - linkDist);
+      const fx = (f * dx) / d;
+      const fy = (f * dy) / d;
+      s.vx += fx;
+      s.vy += fy;
+      t.vx -= fx;
+      t.vy -= fy;
     }
 
+    // Hard collision — direct position correction, no force bounce
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = (nodes[j].x - nodes[i].x) || 0.01;
+        const dy = (nodes[j].y - nodes[i].y) || 0.01;
+        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const minD = nodes[i].r + nodes[j].r + 14;
+        if (d < minD) {
+          const push = (minD - d) * 0.5;
+          const nx = dx / d;
+          const ny = dy / d;
+          if (nodes[i] !== draggedNode) { nodes[i].x -= nx * push; nodes[i].y -= ny * push; }
+          if (nodes[j] !== draggedNode) { nodes[j].x += nx * push; nodes[j].y += ny * push; }
+        }
+      }
+    }
+
+    // Center gravity + velocity integration
     for (const node of nodes) {
       if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
-      node.vx += (cx - node.x) * gravity;
-      node.vy += (cy - node.y) * gravity;
-      node.vx *= damping;
-      node.vy *= damping;
+      node.vx += (cx - node.x) * 0.014 * alpha;
+      node.vy += (cy - node.y) * 0.014 * alpha;
+      node.vx *= 0.86;
+      node.vy *= 0.86;
       node.x += node.vx;
       node.y += node.vy;
     }
-
-    tickCount++;
   }
 
   function draw() {
@@ -405,6 +427,7 @@
   }
 
   function onMouseUp() {
+    if (draggedNode) reheat(0.4);
     draggedNode = null;
     isPanning = false;
     canvas.style.cursor = 'grab';
@@ -439,7 +462,7 @@
       cancelAnimationFrame(animId);
       nodes = [];
       edges = [];
-      tickCount = 0;
+      simAlpha = 1.0;
       loading = true;
       await loadGraph();
     } finally {
@@ -448,6 +471,7 @@
   }
 
   async function loadGraph() {
+    simAlpha = 1.0;
     try {
       const data = await api.entities.graph();
       const W = container?.clientWidth ?? 800;
