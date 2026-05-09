@@ -4,9 +4,12 @@
   import { auth } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
-  import { Card } from '$lib/components/ui/card';
+  import { Label } from '$lib/components/ui/label';
   import { buildTitle } from '$lib/head';
-  import PerceptionLogo from '$lib/components/perception-logo.svelte';
+  import { ensureSolar } from '$lib/solar';
+  import Icon from '@iconify/svelte';
+
+  ensureSolar();
 
   let password = $state('');
   let error = $state('');
@@ -20,7 +23,7 @@
     try {
       await api.auth.login(password);
       auth.authenticated = true;
-      goto('/');
+      goto('/chat');
     } catch {
       error = 'Invalid password.';
     } finally {
@@ -30,31 +33,63 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Login')}</title>
+  <title>{buildTitle('Sign in')}</title>
   <meta name="description" content="Sign in to Perception and skip the folklore." />
 </svelte:head>
 
-<div class="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(228,228,231,0.9),_rgba(255,255,255,1)_45%)] px-4">
-  <Card class="w-full max-w-sm rounded-[28px] border-zinc-200/80 p-8 shadow-[0_24px_80px_-48px_rgba(24,24,27,0.55)]">
-    <div class="mb-6">
-      <PerceptionLogo subtitle="" iconSizeClass="size-7" titleClass="text-2xl font-bold" />
-      <p class="mt-4 text-sm text-zinc-500">Enter your access password to continue.</p>
+<div class="flex min-h-screen">
+  <div class="hidden lg:flex lg:w-1/2 flex-col bg-zinc-950 px-12 py-10">
+    <a href="/" class="flex items-center gap-3 mb-auto">
+      <span class="flex items-center justify-center text-white size-10">
+        <Icon icon="solar:eye-bold-duotone" class="size-6" />
+      </span>
+      <span class="font-[Goga] text-xl tracking-tight text-white">Perception</span>
+    </a>
+
+    <div class="mb-auto">
+      <h2 class="font-[Goga] text-4xl text-white leading-tight tracking-tight">
+        Interrogate the noise.<br />See clearly.
+      </h2>
+      <p class="mt-4 text-sm text-white/50 max-w-xs leading-relaxed">
+        AI-powered operational memory for engineering teams.
+      </p>
     </div>
-    <form onsubmit={handleSubmit} class="flex flex-col gap-3">
-      <Input
-        type="password"
-        placeholder="Password"
-        bind:value={password}
-        disabled={loading}
-        autocomplete="current-password"
-        class="h-11 rounded-xl"
-      />
-      {#if error}
-        <p class="text-xs text-red-600">{error}</p>
-      {/if}
-      <Button type="submit" disabled={loading || !password.trim()} class="h-11 rounded-xl">
-        {loading ? 'Signing in...' : 'Sign in'}
-      </Button>
-    </form>
-  </Card>
+
+    <p class="text-xs text-white/30">
+      © {new Date().getFullYear()} Perception by Facile.
+    </p>
+  </div>
+
+  <div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
+    <div class="w-full max-w-sm">
+      <div class="mb-8">
+        <h1 class="font-[Goga] text-2xl tracking-tight text-foreground">Welcome back</h1>
+        <p class="mt-1.5 text-sm text-muted-foreground">
+          Enter your access password to continue.
+        </p>
+      </div>
+
+      <form onsubmit={handleSubmit} class="space-y-4">
+        <div class="space-y-1.5">
+          <Label for="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            bind:value={password}
+            disabled={loading}
+            autocomplete="current-password"
+          />
+        </div>
+
+        {#if error}
+          <p class="text-sm text-destructive">{error}</p>
+        {/if}
+
+        <Button type="submit" class="w-full" disabled={loading || !password.trim()}>
+          {loading ? 'Signing in...' : 'Sign in'}
+        </Button>
+      </form>
+    </div>
+  </div>
 </div>

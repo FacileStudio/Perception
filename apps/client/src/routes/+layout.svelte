@@ -24,7 +24,7 @@
   });
 
   $effect(() => {
-    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login') {
+    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/') {
       goto('/login');
     }
   });
@@ -41,11 +41,11 @@
   <div class="flex h-screen items-center justify-center">
     <span class="text-sm text-zinc-400">loading...</span>
   </div>
-{:else if !auth.authenticated && $page.url.pathname !== '/login'}
+{:else if !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/'}
   <div class="flex h-screen items-center justify-center">
     <span class="text-sm text-zinc-400">redirecting...</span>
   </div>
-{:else if $page.url.pathname === '/login'}
+{:else if $page.url.pathname === '/login' || $page.url.pathname === '/'}
   {@render children?.()}
 {:else}
   <div class="flex min-h-screen w-full flex-col bg-zinc-50/70 md:h-screen md:flex-row md:overflow-hidden">

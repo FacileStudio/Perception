@@ -1,66 +1,122 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { chatState, loadChatSessions, startNewChat } from '$lib/stores';
+  import { auth, checkAuth } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
-  import { ScrollArea } from '$lib/components/ui/scroll-area';
-  import ConversationList from '$lib/components/chat/conversation-list.svelte';
-  import { buildTitle } from '$lib/head';
-  import Icon from '@iconify/svelte';
+  import * as Card from '$lib/components/ui/card';
+  import { Separator } from '$lib/components/ui/separator';
+  import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import { ensureSolar } from '$lib/solar';
+  import Icon from '@iconify/svelte';
 
   ensureSolar();
 
-  onMount(() => {
-    startNewChat();
-    void loadChatSessions().catch(() => {});
-  });
+  let redirecting = $state(true);
 
-  function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  onMount(async () => {
+    await checkAuth();
+    if (auth.authenticated) {
+      goto('/chat');
+      return;
     }
-  }
-
-  function handleSend() {
-    if (!chatState.input.trim() || chatState.pending || chatState.streaming) return;
-    goto('/chat');
-  }
+    redirecting = false;
+  });
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Chat')}</title>
-  <meta name="description" content="Chat with your operational memory without digging through the rubble." />
+  <title>Perception — Operational Intelligence</title>
+  <meta name="description" content="Interrogate the noise. AI-powered memory for engineering teams." />
 </svelte:head>
 
-<ScrollArea class="flex-1 px-4 py-6 sm:px-6 bg-[linear-gradient(180deg,rgba(255,255,255,0.7),rgba(244,244,245,0.9))]">
-  <div class="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
-    <div class="flex min-h-[28dvh] items-center justify-center">
-      <div class="w-full flex flex-col gap-5">
-        <p class="font-[Goga] text-3xl tracking-tight text-zinc-950 sm:text-[2.2rem]">Interrogate the noise.</p>
-        <div class="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Ask about incidents, deploys, delivery drift, or team context..."
-            bind:value={chatState.input}
-            onkeydown={handleKeydown}
-            disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
-            class="h-[52px] flex-1 rounded-full border border-zinc-200/80 bg-white/90 px-5 text-[15px] text-zinc-950 placeholder:text-zinc-400 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.25)] backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-950/10 disabled:opacity-50"
-          />
-          <Button
-            onclick={handleSend}
-            disabled={chatState.pending || chatState.streaming || chatState.loadingHistory || !chatState.input.trim()}
-            class="h-[52px] shrink-0 rounded-full px-6"
-          >
-            <span class="inline-flex items-center gap-2">
-              <Icon icon="solar:plain-2-bold-duotone" class="size-4" />
-              Send
-            </span>
-          </Button>
-        </div>
+{#if !redirecting}
+<div class="min-h-screen bg-background text-foreground">
+  <header class="border-b border-border">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-10" titleClass="text-xl font-bold" />
+      <div class="flex items-center gap-2">
+        <Button href="/login">Sign in</Button>
       </div>
     </div>
-    <ConversationList />
-  </div>
-</ScrollArea>
+  </header>
+
+  <main>
+    <section class="mx-auto max-w-5xl px-6 py-24 text-center">
+      <h1 class="font-[Goga] text-5xl tracking-tight">
+        Interrogate the noise.
+      </h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
+        Perception is your team's operational memory. Ask questions about incidents, deployments,
+        and delivery drift — and get answers grounded in real context, not folklore.
+      </p>
+      <div class="mt-10 flex justify-center gap-3">
+        <Button size="lg" href="/login">
+          Get started
+          <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
+        </Button>
+      </div>
+    </section>
+
+    <Separator />
+
+    <section class="mx-auto max-w-5xl px-6 py-20">
+      <div class="grid gap-6 md:grid-cols-3">
+        <Card.Root class="border border-border">
+          <Card.Header>
+            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
+              <Icon icon="solar:eye-bold-duotone" class="size-5" />
+            </div>
+            <Card.Title>Contextual memory</Card.Title>
+            <Card.Description>
+              Ingests events, incidents, and alerts from your stack and indexes them as a living operational record.
+            </Card.Description>
+          </Card.Header>
+        </Card.Root>
+
+        <Card.Root class="border border-border">
+          <Card.Header>
+            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
+              <Icon icon="solar:chat-round-dots-bold-duotone" class="size-5" />
+            </div>
+            <Card.Title>AI-powered queries</Card.Title>
+            <Card.Description>
+              Ask in plain language. Get answers grounded in your actual history — not model hallucinations.
+            </Card.Description>
+          </Card.Header>
+        </Card.Root>
+
+        <Card.Root class="border border-border">
+          <Card.Header>
+            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
+              <Icon icon="solar:graph-new-bold-duotone" class="size-5" />
+            </div>
+            <Card.Title>Signal over noise</Card.Title>
+            <Card.Description>
+              Cuts through the alert fog. Delivery drift, recurring failures, and team patterns surfaced automatically.
+            </Card.Description>
+          </Card.Header>
+        </Card.Root>
+      </div>
+    </section>
+
+    <Separator />
+
+    <section class="mx-auto max-w-5xl px-6 py-20 text-center">
+      <h2 class="font-[Goga] text-3xl tracking-tight">
+        Ready to see clearly?
+      </h2>
+      <p class="mt-4 text-muted-foreground">
+        Self-hosted. No telemetry. Your data stays yours.
+      </p>
+      <Button class="mt-8" size="lg" href="/login">
+        Sign in
+      </Button>
+    </section>
+  </main>
+
+  <footer class="border-t border-border text-center text-muted">
+    <div class="mx-auto max-w-5xl px-6 py-6 text-sm text-muted-foreground">
+      © {new Date().getFullYear()} Perception by <a href="https://facile.studio" class="underline hover:cursor-pointer font-semibold">Facile.</a>
+    </div>
+  </footer>
+</div>
+{/if}
