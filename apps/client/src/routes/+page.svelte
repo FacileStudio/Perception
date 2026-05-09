@@ -32,9 +32,12 @@
 <div class="min-h-screen bg-background text-foreground">
   <header class="border-b border-border">
     <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-      <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-10" titleClass="text-xl font-bold" />
+      <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-6" titleClass="text-xl font-bold" class="gap-2" />
       <div class="flex items-center gap-2">
-        <Button href="/login">Sign in</Button>
+        <Button href="/login">
+          Sign in
+          <Icon icon="solar:login-3-bold" class="ml-1.5 size-4" />
+        </Button>
       </div>
     </div>
   </header>
@@ -103,6 +106,7 @@
       </p>
       <Button class="mt-8" size="lg" href="/login">
         Sign in
+        <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
       </Button>
     </section>
   </main>

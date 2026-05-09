@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { HTMLButtonAttributes } from 'svelte/elements';
+  import type { HTMLButtonAttributes, HTMLAnchorAttributes } from 'svelte/elements';
   import { twMerge } from 'tailwind-merge';
 
   type Variant = 'default' | 'outline' | 'ghost' | 'destructive';
@@ -10,10 +10,11 @@
     size = 'default',
     class: className = '',
     disabled = false,
+    href,
     onclick,
     children,
     ...rest
-  }: HTMLButtonAttributes & { variant?: Variant; size?: Size } = $props();
+  }: HTMLButtonAttributes & HTMLAnchorAttributes & { variant?: Variant; size?: Size } = $props();
 
   const base = 'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-900 disabled:pointer-events-none disabled:opacity-50';
   const variants: Record<Variant, string> = {
@@ -32,11 +33,17 @@
   const computedClass = twMerge(base, variants[variant], sizes[size], className);
 </script>
 
-<button
-  class={computedClass}
-  {disabled}
-  {onclick}
-  {...rest}
->
-  {@render children?.()}
-</button>
+{#if href}
+  <a {href} class={computedClass} {...rest}>
+    {@render children?.()}
+  </a>
+{:else}
+  <button
+    class={computedClass}
+    {disabled}
+    {onclick}
+    {...rest}
+  >
+    {@render children?.()}
+  </button>
+{/if}

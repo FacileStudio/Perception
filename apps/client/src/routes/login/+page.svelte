@@ -39,10 +39,8 @@
 
 <div class="flex min-h-screen">
   <div class="hidden lg:flex lg:w-1/2 flex-col bg-zinc-950 px-12 py-10">
-    <a href="/" class="flex items-center gap-3 mb-auto">
-      <span class="flex items-center justify-center text-white size-10">
-        <Icon icon="solar:eye-bold-duotone" class="size-6" />
-      </span>
+    <a href="/" class="flex items-center gap-2 mb-auto">
+      <Icon icon="solar:eye-bold-duotone" class="size-6 text-white" />
       <span class="font-[Goga] text-xl tracking-tight text-white">Perception</span>
     </a>
 
