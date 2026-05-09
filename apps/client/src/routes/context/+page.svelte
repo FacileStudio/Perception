@@ -64,6 +64,18 @@
   onMount(() => loadEvents());
 
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
+
+  const labelingIds = $state(new Set<string>());
+
+  async function labelEvent(event: import('$lib/api').EventRow) {
+    labelingIds.add(event.id);
+    try {
+      await api.events.label(event.id);
+      await loadEvents();
+    } finally {
+      labelingIds.delete(event.id);
+    }
+  }
 </script>
 
 <svelte:head>
@@ -147,17 +159,29 @@
                   {/each}
                 </div>
               </div>
-              {#if event.url}
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-                >
-                  <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
-                  Open
-                </a>
-              {/if}
+              <div class="flex shrink-0 items-center gap-2">
+                {#if !event.concepts?.length}
+                  <button
+                    onclick={() => labelEvent(event)}
+                    disabled={labelingIds.has(event.id)}
+                    class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-400 hover:text-zinc-600 disabled:opacity-40"
+                  >
+                    <Icon icon="solar:tag-bold-duotone" class="size-3.5" />
+                    {labelingIds.has(event.id) ? 'Labeling…' : 'Label'}
+                  </button>
+                {/if}
+                {#if event.url}
+                  <a
+                    href={event.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                  >
+                    <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
+                    Open
+                  </a>
+                {/if}
+              </div>
             </div>
           </Card>
         {/each}

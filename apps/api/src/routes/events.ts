@@ -4,6 +4,8 @@ import { rowToEvent } from '../db/row';
 import type { InValue } from '@libsql/client';
 import { requireSession } from '../security/session';
 import { EVENT_LIST_ORDER_BY } from '../events/order';
+import { labelEvent } from '../ontology/labels';
+import { lookupSchema } from '../schema-registry/lookup';
 
 export const eventsRoutes = new Hono();
 
@@ -134,4 +136,61 @@ eventsRoutes.get('/:id', async (c) => {
     : null;
 
   return c.json({ event, facts, embedding });
+});
+
+eventsRoutes.post('/:id/label', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const eventResult = await db.execute({ sql: 'SELECT * FROM events WHERE id = ?', args: [id] });
+  if (eventResult.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const event = rowToEvent(eventResult.rows[0] as unknown as Record<string, unknown>);
+  const schema = await lookupSchema(event.provider_type, event.event_type);
+
+  const envelope = {
+    schemaVersion: 1 as const,
+    id: event.id,
+    occurredAt: event.occurred_at,
+    emittedAt: event.emitted_at ?? event.occurred_at,
+    source: event.source as 'webhook' | 'website' | 'imap' | 'system' | 'test',
+    provider: { id: event.provider_id, type: event.provider_type, name: event.provider_name, tags: [] },
+    event: { type: event.event_type, title: event.title, messageHtml: null, messageText: null, url: event.url },
+    actor: event.actor_name ? { id: null, name: event.actor_name, email: null } : null,
+    subject: { type: event.entity_type, id: event.entity_id, name: event.entity_name, url: event.url },
+    payload: { normalized: {}, raw: null },
+    privacy: { containsPii: false, rawPayloadAllowed: false },
+  };
+
+  const extracted = {
+    event_type: event.event_type,
+    entity_type: event.entity_type,
+    entity_id: event.entity_id,
+    entity_name: event.entity_name,
+    actor_name: event.actor_name,
+    actor_email_hash: event.actor_email_hash,
+    url: event.url,
+    title: event.title,
+    summary: event.summary,
+    searchable_text: event.searchable_text,
+  };
+
+  const labeling = await labelEvent(envelope, extracted, schema);
+
+  const conceptIds = [
+    ...labeling.eventConceptIds,
+    ...labeling.fieldConceptIds,
+    labeling.entityConceptId,
+    labeling.relationConceptId,
+  ];
+
+  for (const conceptId of conceptIds) {
+    await db.execute({
+      sql: 'INSERT OR IGNORE INTO event_concepts (event_id, concept_id, confidence, source) VALUES (?, ?, ?, ?)',
+      args: [event.id, conceptId, 0.72, 'manual:retro'],
+    });
+  }
+
+  return c.json({ ok: true, concepts: conceptIds.length });
 });

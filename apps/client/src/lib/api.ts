@@ -22,6 +22,7 @@ export const api = {
       return request<{ events: EventRow[]; total: number }>(`/events${q}`);
     },
     get: (id: string) => request<{ event: EventRow; facts: Record<string, unknown> | null; embedding: { status: string; embedded_at: string | null } | null }>(`/events/${id}`),
+    label: (id: string) => request<{ ok: boolean; concepts: number }>(`/events/${id}/label`, { method: 'POST' }),
   },
   chat: {
     send: (message: string, sessionId?: string) =>
