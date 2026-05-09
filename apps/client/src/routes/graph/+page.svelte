@@ -407,7 +407,7 @@
   function onMouseUp() {
     draggedNode = null;
     isPanning = false;
-    canvas.style.cursor = hoveredNode ? 'grab' : 'grab';
+    canvas.style.cursor = 'grab';
   }
 
   function onMouseLeave() {
