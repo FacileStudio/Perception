@@ -101,13 +101,10 @@
 
       {#if auth.config.oidc_enabled}
         {#if !auth.config.sso_only}
-          <div class="relative my-6">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-zinc-200"></div>
-            </div>
-            <div class="relative flex justify-center text-xs">
-              <span class="bg-background px-2 text-muted-foreground">or continue with</span>
-            </div>
+          <div class="my-6 flex items-center gap-3">
+            <div class="h-px flex-1 bg-zinc-200"></div>
+            <span class="text-xs text-zinc-400">or continue with</span>
+            <div class="h-px flex-1 bg-zinc-200"></div>
           </div>
         {/if}
 
