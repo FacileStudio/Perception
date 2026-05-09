@@ -21,7 +21,7 @@ async function vectorLane(queryEmbedding: number[]): Promise<Array<EventRow & { 
     });
     return result.rows.map((r) => ({
       ...rowToEvent(r as unknown as Record<string, unknown>),
-      score: typeof r.score === 'number' ? r.score : 0,
+      score: typeof r.score === 'number' ? Math.max(0, 1 - r.score) : 0,
       source: 'vector' as const,
     }));
   } catch {
@@ -39,7 +39,7 @@ async function ftsLane(queryTerms: string[]): Promise<Array<EventRow & { score: 
     });
     return result.rows.map((r) => ({
       ...rowToEvent(r as unknown as Record<string, unknown>),
-      score: typeof r.score === 'number' ? r.score : 0,
+      score: typeof r.score === 'number' ? Math.min(2, Math.abs(r.score)) : 0,
       source: 'fts' as const,
     }));
   } catch {
@@ -109,7 +109,7 @@ async function recentLane(plan: QueryPlan): Promise<Array<EventRow & { score: nu
 
   return result.rows.map((r) => ({
     ...rowToEvent(r as unknown as Record<string, unknown>),
-    score: 0.4,
+    score: 0.1,
     source: 'sql' as const,
   }));
 }
