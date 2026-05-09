@@ -120,6 +120,8 @@ ingestRoutes.post('/', async (c) => {
     });
   }
 
+  let resolvedActor: { id: string; canonicalName: string } | null = null;
+  let actorRelationConceptId: string | null = null;
   if (envelope.actor?.name) {
     const actorLayer = {
       ...layer1,
@@ -129,16 +131,13 @@ ingestRoutes.post('/', async (c) => {
       url: null as string | null,
     };
     const actorLabeling = await labelEvent(envelope, actorLayer, null);
-    const resolvedActor = await resolveEventEntity(envelope, actorLayer, actorLabeling.entityConceptId);
+    resolvedActor = await resolveEventEntity(envelope, actorLayer, actorLabeling.entityConceptId);
     if (resolvedActor) {
+      actorRelationConceptId = actorLabeling.relationConceptId;
       await extractEntityRelations({
         id: resolvedActor.id,
         canonicalName: resolvedActor.canonicalName,
         capabilities: actorLabeling.entityCapabilities,
-      });
-      await db.execute({
-        sql: 'INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source) VALUES (?, ?, ?, ?, ?)',
-        args: [envelope.id, resolvedActor.id, actorLabeling.relationConceptId, 0.80, 'ingest:actor'],
       });
     }
   }
@@ -219,6 +218,10 @@ ingestRoutes.post('/', async (c) => {
     ...(resolvedEntity ? [{
       sql: 'INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source) VALUES (?, ?, ?, ?, ?)',
       args: [envelope.id, resolvedEntity.id, labeling.relationConceptId, 0.86, 'ingest:auto'],
+    }] : []),
+    ...(resolvedActor && actorRelationConceptId ? [{
+      sql: 'INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source) VALUES (?, ?, ?, ?, ?)',
+      args: [envelope.id, resolvedActor.id, actorRelationConceptId, 0.80, 'ingest:actor'],
     }] : []),
   ]);
 
