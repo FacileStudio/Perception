@@ -12,6 +12,8 @@ async function applySchemaToFacts(
     args: [providerType],
   });
 
+  const actorMapping = fieldMappings.find((m) => m.role === 'actor');
+
   for (const row of factsRows.rows) {
     const eventId = row.event_id as string;
     const existing = JSON.parse(row.facts_json as string) as Record<string, unknown>;
@@ -28,6 +30,16 @@ async function applySchemaToFacts(
       sql: 'UPDATE dynamic_facts SET facts_json = ? WHERE event_id = ?',
       args: [JSON.stringify(mapped), eventId],
     });
+
+    if (actorMapping) {
+      const actorVal = existing[actorMapping.source_key];
+      if (actorVal != null) {
+        await db.execute({
+          sql: 'UPDATE events SET actor_name = ? WHERE id = ? AND actor_name IS NULL',
+          args: [String(actorVal), eventId],
+        });
+      }
+    }
   }
 
   await db.execute({

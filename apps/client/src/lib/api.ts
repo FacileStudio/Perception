@@ -46,6 +46,9 @@ export const api = {
   entities: {
     graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
   },
+  admin: {
+    reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
+  },
 };
 
 export type EventRow = {
