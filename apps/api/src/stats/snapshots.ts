@@ -8,15 +8,16 @@ const EXPECTED_KINDS = [
   'actor_activity_7d', 'actor_activity_30d',
   'entity_coverage_7d', 'entity_coverage_30d',
   'top_entities_7d', 'top_entities_30d',
+  'event_volume_30d',
 ];
 
 export async function refreshSnapshots(): Promise<void> {
-  const [snapshots7, snapshots30] = await Promise.all([
-    computeAllStats(7),
-    computeAllStats(30),
+  const [[snapshots7, snapshots30], volumeSnap] = await Promise.all([
+    Promise.all([computeAllStats(7), computeAllStats(30)]),
+    import('./compute').then((m) => m.computeEventVolume().catch(() => null)),
   ]);
 
-  const all = [...snapshots7, ...snapshots30];
+  const all = [...snapshots7, ...snapshots30, ...(volumeSnap ? [volumeSnap] : [])];
 
   for (const snapshot of all) {
     await db.execute({

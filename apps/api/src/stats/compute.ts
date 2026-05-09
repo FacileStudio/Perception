@@ -224,6 +224,41 @@ async function computeTopEntities(windowDays: number): Promise<StatsSnapshot> {
   };
 }
 
+export async function computeEventVolume(): Promise<StatsSnapshot> {
+  const windowStart = daysAgoIso(30);
+  const windowEnd = nowIso();
+
+  const result = await db.execute({
+    sql: `SELECT date(occurred_at) AS day, COUNT(*) AS cnt
+          FROM events
+          WHERE occurred_at >= ?
+          GROUP BY day`,
+    args: [windowStart],
+  });
+
+  const counts: Record<string, number> = {};
+  for (const r of result.rows) counts[r.day as string] = Number(r.cnt);
+
+  const days: Array<{ date: string; count: number }> = [];
+  for (let i = 29; i >= 0; i--) {
+    const key = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    days.push({ date: key, count: counts[key] ?? 0 });
+  }
+
+  const total = days.reduce((s, d) => s + d.count, 0);
+
+  return {
+    id: randomUUID(),
+    kind: 'event_volume_30d',
+    window_start: windowStart,
+    window_end: windowEnd,
+    generated_at: nowIso(),
+    source_count: total,
+    min_sample_met: total > 0,
+    data: { days },
+  };
+}
+
 export async function computeAllStats(windowDays: number): Promise<StatsSnapshot[]> {
   const [entityVelocity, statusHealth, actorActivity, entityCoverage, topEntities] = await Promise.all([
     computeEntityVelocity(windowDays).catch(() => null),

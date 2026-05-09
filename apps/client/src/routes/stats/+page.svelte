@@ -11,6 +11,7 @@
   import StatusHealthPanel from './_components/StatusHealthPanel.svelte';
   import ActorActivityPanel from './_components/ActorActivityPanel.svelte';
   import TopEntitiesPanel from './_components/TopEntitiesPanel.svelte';
+  import EventVolumeChart from './_components/EventVolumeChart.svelte';
 
   let snapshots = $state<StatsSnapshot[]>([]);
   let usage = $state<TokenUsageRow[]>([]);
@@ -46,6 +47,7 @@
   const statusSnap = $derived(snapshots.find((s) => s.kind === `status_health_${activeWindow}`));
   const actorSnap = $derived(snapshots.find((s) => s.kind === `actor_activity_${activeWindow}`));
   const topEntitiesSnap = $derived(snapshots.find((s) => s.kind === `top_entities_${activeWindow}`));
+  const volumeSnap = $derived(snapshots.find((s) => s.kind === 'event_volume_30d'));
 
   const generatedAt = $derived(
     velocitySnap?.generated_at
@@ -143,6 +145,12 @@
           </div>
         {:else}
           <SummaryCards {snapshots} window={activeWindow} />
+
+          {#if volumeSnap}
+            <Card class="rounded-[24px] border-zinc-200/80 px-5 pb-4 pt-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <EventVolumeChart snap={volumeSnap} />
+            </Card>
+          {/if}
 
           <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {#if velocitySnap}
