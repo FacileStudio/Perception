@@ -11,6 +11,7 @@
     closed: '#059669', done: '#059669', completed: '#059669', merged: '#059669', resolved: '#059669', succeeded: '#059669', success: '#059669',
     blocked: '#ef4444', failed: '#ef4444', error: '#ef4444', cancelled: '#ef4444', rejected: '#ef4444', down: '#ef4444',
     pending: '#d97706', waiting: '#d97706', review: '#d97706', draft: '#d97706', queued: '#d97706',
+    timer_started: '#d97706', timer_stopped: '#6b7280', timer_fired: '#059669',
     paused: '#7c3aed', archived: '#6b7280', unknown: '#94a3b8',
   };
 
@@ -47,7 +48,7 @@
   const isEmpty = $derived(Object.keys(distribution).length === 0);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
     <Icon icon="solar:health-bold-duotone" class="size-4 text-zinc-500" />
     <span class="text-sm font-semibold text-zinc-900">Status Health</span>

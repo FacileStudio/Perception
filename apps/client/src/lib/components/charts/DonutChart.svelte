@@ -42,7 +42,7 @@
 {#if data.length === 0 || total === 0}
   <p class="text-sm text-zinc-400 text-center py-6">No data</p>
 {:else}
-  <svg viewBox="0 0 {size} {size}" class="w-full">
+  <svg viewBox="0 0 {size} {size}" class="mx-auto w-full max-w-[200px]">
     {#each slices() as s}
       <path d={s.path} fill={s.color} />
     {/each}

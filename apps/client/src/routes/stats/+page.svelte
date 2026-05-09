@@ -144,27 +144,27 @@
         {:else}
           <SummaryCards {snapshots} window={activeWindow} />
 
-          <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+          <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {#if velocitySnap}
-              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <EntityVelocityPanel snap={velocitySnap} />
               </Card>
             {/if}
 
             {#if statusSnap}
-              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <StatusHealthPanel snap={statusSnap} />
               </Card>
             {/if}
 
             {#if topEntitiesSnap}
-              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <TopEntitiesPanel snap={topEntitiesSnap} />
               </Card>
             {/if}
 
             {#if actorSnap}
-              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <ActorActivityPanel snap={actorSnap} />
               </Card>
             {/if}

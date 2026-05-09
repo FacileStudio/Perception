@@ -41,7 +41,7 @@
   const isEmpty = $derived(entities.length === 0);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
     <Icon icon="solar:buildings-2-bold-duotone" class="size-4 text-zinc-500" />
     <span class="text-sm font-semibold text-zinc-900">Top Entities</span>

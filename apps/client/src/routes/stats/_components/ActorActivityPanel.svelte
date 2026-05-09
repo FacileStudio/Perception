@@ -21,7 +21,7 @@
   const isEmpty = $derived(Object.keys(actors).length === 0);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
     <Icon icon="solar:users-group-rounded-bold-duotone" class="size-4 text-zinc-500" />
     <span class="text-sm font-semibold text-zinc-900">Actor Activity</span>
@@ -30,14 +30,16 @@
     {/if}
   </div>
 
-  <div class="bg-zinc-50 rounded-xl px-3 py-2 w-fit">
+  <div class="w-fit rounded-xl bg-zinc-50 px-3 py-2">
     <p class="text-xs text-zinc-400">Avg events/actor</p>
     <p class="font-mono text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
   </div>
 
   {#if isEmpty}
-    <p class="text-sm text-zinc-400 py-6 text-center">No actor data in this window</p>
+    <p class="flex flex-1 items-center justify-center text-sm text-zinc-400">No actor data in this window</p>
   {:else}
-    <HorizontalBar data={chartData} />
+    <div class="flex-1 min-h-[80px]">
+      <HorizontalBar data={chartData} />
+    </div>
   {/if}
 </div>

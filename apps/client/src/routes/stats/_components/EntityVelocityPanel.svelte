@@ -47,7 +47,7 @@
   const isEmpty = $derived(Object.keys(velocity).length === 0);
 </script>
 
-<div class="flex flex-col gap-4">
+<div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
     <Icon icon="solar:pulse-bold-duotone" class="size-4 text-zinc-500" />
     <span class="text-sm font-semibold text-zinc-900">Entity Velocity</span>
@@ -72,8 +72,10 @@
   </div>
 
   {#if isEmpty}
-    <p class="text-sm text-zinc-400 py-6 text-center">No entity data in this window</p>
+    <p class="flex flex-1 items-center justify-center text-sm text-zinc-400">No entity data in this window</p>
   {:else}
-    <BarChart data={chartData} height={150} />
+    <div class="flex-1 min-h-[120px]">
+      <BarChart data={chartData} height={150} />
+    </div>
   {/if}
 </div>
