@@ -5,6 +5,7 @@
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
+  import NodeDetailPane from '$lib/components/NodeDetailPane.svelte';
   ensureSolar();
 
   type SimNode = GraphEntity & { x: number; y: number; vx: number; vy: number; r: number };
@@ -52,6 +53,9 @@
   let zoom = 1;
   let isPanning = false;
   let panStart = { x: 0, y: 0, px: 0, py: 0 };
+  let mouseDownPos = { x: 0, y: 0 };
+  let mouseDownNode: SimNode | null = null;
+  let selectedNode = $state<SimNode | null>(null);
 
   const RELATION_PALETTE = [
     '#6366f1', '#059669', '#db2777', '#d97706', '#2563eb', '#7c3aed',
@@ -428,20 +432,33 @@
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+    mouseDownPos = { x: sx, y: sy };
     const hit = findHovered(sx, sy);
     if (hit) {
       draggedNode = hit;
+      mouseDownNode = hit;
       draggedNode.vx = 0;
       draggedNode.vy = 0;
       canvas.style.cursor = 'grabbing';
     } else {
+      mouseDownNode = null;
       isPanning = true;
       canvas.style.cursor = 'grabbing';
       panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
     }
   }
 
-  function onMouseUp() {
+  function onMouseUp(e: MouseEvent) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const dx = sx - mouseDownPos.x;
+    const dy = sy - mouseDownPos.y;
+    const moved = Math.sqrt(dx * dx + dy * dy);
+    if (moved < 5 && mouseDownNode) {
+      selectedNode = mouseDownNode;
+    }
+    mouseDownNode = null;
     if (draggedNode) reheat(0.4);
     draggedNode = null;
     isPanning = false;
@@ -486,6 +503,12 @@
         return { node, connections };
       })
       .sort((a, b) => b.node.event_count - a.node.event_count)
+  );
+
+  let selectedNodeConnections = $derived(
+    selectedNode
+      ? (adjacency.find((a) => a.node.id === selectedNode!.id)?.connections ?? [])
+      : []
   );
 
   async function refreshGraph() {
@@ -704,3 +727,9 @@
     </div>
   </div>
 </div>
+
+<NodeDetailPane
+  node={selectedNode}
+  connections={selectedNodeConnections}
+  onclose={() => (selectedNode = null)}
+/>

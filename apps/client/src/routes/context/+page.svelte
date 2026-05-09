@@ -9,6 +9,7 @@
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
+  import EventDetailPane from '$lib/components/EventDetailPane.svelte';
 
   const PAGE_SIZE = 20;
   let page = $state(1);
@@ -66,6 +67,7 @@
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
 
   let deletingIds = $state(new Set<string>());
+  let selectedEvent = $state<EventRow | null>(null);
 
   async function deleteEvent(id: string) {
     deletingIds = new Set([...deletingIds, id]);
@@ -78,6 +80,11 @@
     } finally {
       deletingIds = new Set([...deletingIds].filter((x) => x !== id));
     }
+  }
+
+  function onEventDeleted(id: string) {
+    eventsState.events = eventsState.events.filter((e) => e.id !== id);
+    eventsState.total = Math.max(0, eventsState.total - 1);
   }
 </script>
 
@@ -135,8 +142,14 @@
     {:else}
       <div class="flex flex-col gap-3">
         {#each eventsState.events as event}
-          <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
-            <div class="flex items-start justify-between gap-3">
+          <Card class="cursor-pointer rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow hover:shadow-[0_24px_56px_-36px_rgba(24,24,27,0.5)]">
+            <div
+              class="flex items-start justify-between gap-3"
+              role="button"
+              tabindex="0"
+              onclick={() => (selectedEvent = event)}
+              onkeydown={(e) => e.key === 'Enter' && (selectedEvent = event)}
+            >
               <div class="flex flex-1 flex-col gap-1.5">
                 <div class="flex items-center gap-2">
                   <Badge variant="secondary" class="font-mono">{event.provider_name}</Badge>
@@ -162,7 +175,7 @@
                   {/each}
                 </div>
               </div>
-              <div class="flex shrink-0 items-center gap-1.5">
+              <div class="flex shrink-0 items-center gap-1.5" role="presentation" onclick={(e) => e.stopPropagation()}>
                 {#if event.url}
                   <a
                     href={event.url}
@@ -199,3 +212,9 @@
     </div>
   {/if}
 </div>
+
+<EventDetailPane
+  event={selectedEvent}
+  onclose={() => (selectedEvent = null)}
+  ondelete={onEventDeleted}
+/>
