@@ -1,5 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+import { randomUUID } from 'crypto';
+import { db } from '../db/client';
 import { config } from '../config';
 import type { InferredFieldMapping } from '../types';
 
@@ -47,12 +49,19 @@ export async function inferSchema(
     'Return a JSON array of InferredFieldMapping objects — no markdown, no explanation.',
   ].join('\n');
 
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: anthropic(config.llmModel),
     system:
       'You are a schema inference engine. Map provider event payload fields to a structured field mapping schema. Return valid JSON only.',
     prompt: userPrompt,
   });
+
+  if (usage?.promptTokens || usage?.completionTokens) {
+    db.execute({
+      sql: `INSERT INTO token_usage (id, kind, model, session_id, input_tokens, output_tokens, occurred_at) VALUES (?, 'llm', ?, NULL, ?, ?, ?)`,
+      args: [randomUUID(), config.llmModel, usage.promptTokens ?? 0, usage.completionTokens ?? 0, new Date().toISOString()],
+    }).catch(() => {});
+  }
 
   let parsed: unknown;
   try {

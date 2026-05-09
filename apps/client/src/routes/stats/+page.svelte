@@ -10,6 +10,7 @@
   import EntityVelocityPanel from './_components/EntityVelocityPanel.svelte';
   import StatusHealthPanel from './_components/StatusHealthPanel.svelte';
   import ActorActivityPanel from './_components/ActorActivityPanel.svelte';
+  import TopEntitiesPanel from './_components/TopEntitiesPanel.svelte';
 
   let snapshots = $state<StatsSnapshot[]>([]);
   let usage = $state<TokenUsageRow[]>([]);
@@ -44,6 +45,7 @@
   const velocitySnap = $derived(snapshots.find((s) => s.kind === `entity_velocity_${activeWindow}`));
   const statusSnap = $derived(snapshots.find((s) => s.kind === `status_health_${activeWindow}`));
   const actorSnap = $derived(snapshots.find((s) => s.kind === `actor_activity_${activeWindow}`));
+  const topEntitiesSnap = $derived(snapshots.find((s) => s.kind === `top_entities_${activeWindow}`));
 
   const generatedAt = $derived(
     velocitySnap?.generated_at
@@ -146,13 +148,19 @@
                 <StatusHealthPanel snap={statusSnap} />
               </Card>
             {/if}
-          </div>
 
-          {#if actorSnap}
-            <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
-              <ActorActivityPanel snap={actorSnap} />
-            </Card>
-          {/if}
+            {#if topEntitiesSnap}
+              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <TopEntitiesPanel snap={topEntitiesSnap} />
+              </Card>
+            {/if}
+
+            {#if actorSnap}
+              <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <ActorActivityPanel snap={actorSnap} />
+              </Card>
+            {/if}
+          </div>
         {/if}
 
         <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
