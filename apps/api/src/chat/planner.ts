@@ -80,7 +80,8 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       maxTokens: 300,
     });
 
-    const raw = JSON.parse(text.trim());
+    const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const raw = JSON.parse(cleaned);
 
     const retrievalMode = ['full', 'history', 'light'].includes(raw.retrievalMode)
       ? (raw.retrievalMode as 'full' | 'history' | 'light')

@@ -248,17 +248,13 @@ chatRoutes.post('/', async (c) => {
     args: [buildSessionTitle(body.message), now, sessionId],
   });
 
-  const plan = await buildQueryPlan(body.message);
+  const [plan, queryEmbedding] = await Promise.all([
+    buildQueryPlan(body.message),
+    embedQuery(body.message).catch(() => [] as number[]),
+  ]);
+
   let context: RetrievalResult = { events: [], stats: [] };
-
   if (plan.requiresRetrieval) {
-    let queryEmbedding: number[] = [];
-    try {
-      queryEmbedding = await embedQuery(body.message);
-    } catch {
-      queryEmbedding = [];
-    }
-
     context = await retrieveContext(plan, queryEmbedding);
   }
   const stream = streamChat(sessionId, body.message, plan, context);
