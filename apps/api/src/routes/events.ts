@@ -196,6 +196,27 @@ async function retroLabel(event: ReturnType<typeof rowToEvent>): Promise<number>
   return conceptIds.length;
 }
 
+eventsRoutes.post('/resolve-entities', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const missing = await db.execute({
+    sql: `SELECT e.* FROM events e
+      WHERE EXISTS (SELECT 1 FROM event_concepts ec WHERE ec.event_id = e.id)
+      AND NOT EXISTS (SELECT 1 FROM event_entities ee WHERE ee.event_id = e.id)
+      ORDER BY e.occurred_at DESC LIMIT 500`,
+    args: [],
+  });
+
+  let resolved = 0;
+  for (const row of missing.rows) {
+    await retroLabel(rowToEvent(row as unknown as Record<string, unknown>));
+    resolved++;
+  }
+
+  return c.json({ ok: true, resolved });
+});
+
 eventsRoutes.post('/label-unlabeled', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
