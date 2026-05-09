@@ -134,6 +134,20 @@ CREATE TABLE IF NOT EXISTS entity_relations (
 );
       `,
     },
+    {
+      name: '004_users_and_oidc',
+      sql: `
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  name TEXT,
+  color TEXT NOT NULL DEFAULT '#818cf8',
+  source TEXT NOT NULL DEFAULT 'local',
+  created_at TEXT NOT NULL
+);
+ALTER TABLE sessions ADD COLUMN user_id TEXT
+      `,
+    },
   ];
 
   for (const migration of migrations) {
@@ -147,7 +161,7 @@ CREATE TABLE IF NOT EXISTS entity_relations (
         await db.execute(stmt);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes('libsql_vector_idx') || msg.includes('F32_BLOB') || msg.includes('near "WHERE"')) {
+        if (msg.includes('libsql_vector_idx') || msg.includes('F32_BLOB') || msg.includes('near "WHERE"') || msg.includes('duplicate column name')) {
           console.warn(`[migrations] skipped unsupported statement: ${stmt.slice(0, 80)}`);
           continue;
         }

@@ -7,13 +7,37 @@ import { randomUUID } from 'crypto';
 const SESSION_COOKIE = 'perception_session';
 const SESSION_TTL_HOURS = 24 * 7;
 
-export async function createSession(c: Context): Promise<string> {
+const USER_COLORS = ['#818cf8', '#f472b6', '#fb923c', '#34d399', '#60a5fa', '#a78bfa', '#f87171', '#22d3ee'];
+
+export async function upsertUser(email: string, source: 'local' | 'oidc', name?: string): Promise<string> {
+  const existing = await db.execute({
+    sql: 'SELECT id FROM users WHERE email = ?',
+    args: [email],
+  });
+  if (existing.rows.length > 0) {
+    if (name) {
+      await db.execute({ sql: 'UPDATE users SET name = ? WHERE email = ?', args: [name, email] });
+    }
+    return existing.rows[0].id as string;
+  }
+  const countRes = await db.execute('SELECT COUNT(*) as c FROM users');
+  const count = Number(countRes.rows[0].c ?? 0);
+  const color = USER_COLORS[count % USER_COLORS.length];
+  const id = randomUUID();
+  await db.execute({
+    sql: 'INSERT INTO users (id, email, name, color, source, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [id, email, name ?? null, color, source, new Date().toISOString()],
+  });
+  return id;
+}
+
+export async function createSession(c: Context, userId: string): Promise<string> {
   const id = randomUUID();
   const now = new Date();
   const expires = new Date(now.getTime() + SESSION_TTL_HOURS * 3600 * 1000);
   await db.execute({
-    sql: 'INSERT INTO sessions (id, created_at, expires_at) VALUES (?, ?, ?)',
-    args: [id, now.toISOString(), expires.toISOString()],
+    sql: 'INSERT INTO sessions (id, created_at, expires_at, user_id) VALUES (?, ?, ?, ?)',
+    args: [id, now.toISOString(), expires.toISOString(), userId],
   });
   const isSecure = !config.localDevAuthDisabled;
   setCookie(c, SESSION_COOKIE, id, {
@@ -26,14 +50,37 @@ export async function createSession(c: Context): Promise<string> {
   return id;
 }
 
-export async function getSession(c: Context): Promise<string | null> {
+export async function getSession(c: Context): Promise<{ sessionId: string; userId: string } | null> {
   const id = getCookie(c, SESSION_COOKIE);
   if (!id) return null;
   const result = await db.execute({
-    sql: 'SELECT id FROM sessions WHERE id = ? AND expires_at > ?',
+    sql: 'SELECT id, user_id FROM sessions WHERE id = ? AND expires_at > ?',
     args: [id, new Date().toISOString()],
   });
-  return result.rows.length > 0 ? id : null;
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  return { sessionId: row.id as string, userId: row.user_id as string };
+}
+
+export async function getSessionWithUser(c: Context): Promise<{ id: string; email: string; name: string | null; color: string; source: string } | null> {
+  if (config.localDevAuthDisabled) {
+    return { id: 'dev', email: 'dev@local', name: 'Dev User', color: '#818cf8', source: 'local' };
+  }
+  const session = await getSession(c);
+  if (!session) return null;
+  const result = await db.execute({
+    sql: 'SELECT id, email, name, color, source FROM users WHERE id = ?',
+    args: [session.userId],
+  });
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string | null,
+    color: row.color as string,
+    source: row.source as string,
+  };
 }
 
 export async function destroySession(c: Context): Promise<void> {

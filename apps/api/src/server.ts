@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin';
 import { statsRoutes } from './routes/stats';
 import { settingsRoutes } from './routes/settings';
 import { entitiesRoutes } from './routes/entities';
+import { usersRoutes } from './routes/users';
 import { config } from './config';
 
 const app = new Hono();
@@ -44,6 +45,7 @@ app.route('/admin', adminRoutes);
 app.route('/stats', statsRoutes);
 app.route('/settings', settingsRoutes);
 app.route('/entities', entitiesRoutes);
+app.route('/users', usersRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);

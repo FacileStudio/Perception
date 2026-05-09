@@ -17,4 +17,10 @@ export const config = {
   storeRawPayloads: process.env.PERCEPTION_STORE_RAW_PAYLOADS === 'true',
   emailBodyIndexing: process.env.PERCEPTION_EMAIL_BODY_INDEXING === 'true',
   retentionDays: parseInt(process.env.PERCEPTION_RETENTION_DAYS ?? '365', 10),
+  oidcIssuer: process.env.OIDC_ISSUER ?? '',
+  oidcClientId: process.env.OIDC_CLIENT_ID ?? '',
+  oidcClientSecret: process.env.OIDC_CLIENT_SECRET ?? '',
+  oidcRedirectUrl: process.env.OIDC_REDIRECT_URL ?? '',
+  oidcSuccessUrl: process.env.OIDC_SUCCESS_URL ?? '',
+  ssoOnly: process.env.SSO_ONLY === 'true',
 } as const;

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { config } from '../config';
-import { createSession, destroySession, requireSession } from '../security/session';
+import { createSession, destroySession, upsertUser, getSessionWithUser } from '../security/session';
+import { isOIDCEnabled, initiateOIDCLogin, handleOIDCCallback } from '../security/oidc';
 
 export const authRoutes = new Hono();
 
@@ -18,21 +19,31 @@ function checkRateLimit(ip: string): boolean {
   return true;
 }
 
-authRoutes.post('/login', async (c) => {
-  const ip = c.req.header('x-forwarded-for') ?? 'unknown';
-  if (!checkRateLimit(ip)) {
-    return c.json({ error: 'rate_limited' }, 429);
-  }
-  const body = await c.req.json().catch(() => null);
-  if (!body || typeof body.password !== 'string') {
-    return c.json({ error: 'invalid_body' }, 400);
-  }
-  if (!config.adminPassword || body.password !== config.adminPassword) {
-    return c.json({ error: 'unauthorized' }, 401);
-  }
-  await createSession(c);
-  return c.json({ ok: true });
+authRoutes.get('/config', (c) => {
+  return c.json({
+    sso_only: config.ssoOnly,
+    oidc_enabled: isOIDCEnabled(),
+  });
 });
+
+if (!config.ssoOnly) {
+  authRoutes.post('/login', async (c) => {
+    const ip = c.req.header('x-forwarded-for') ?? 'unknown';
+    if (!checkRateLimit(ip)) {
+      return c.json({ error: 'rate_limited' }, 429);
+    }
+    const body = await c.req.json().catch(() => null);
+    if (!body || typeof body.password !== 'string') {
+      return c.json({ error: 'invalid_body' }, 400);
+    }
+    if (!config.adminPassword || body.password !== config.adminPassword) {
+      return c.json({ error: 'unauthorized' }, 401);
+    }
+    const userId = await upsertUser(config.adminUsername, 'local');
+    await createSession(c, userId);
+    return c.json({ ok: true });
+  });
+}
 
 authRoutes.post('/logout', async (c) => {
   await destroySession(c);
@@ -40,6 +51,34 @@ authRoutes.post('/logout', async (c) => {
 });
 
 authRoutes.get('/status', async (c) => {
-  const authenticated = await requireSession(c);
-  return c.json({ authenticated });
+  const user = await getSessionWithUser(c);
+  if (!user) {
+    return c.json({ authenticated: false, user: null });
+  }
+  return c.json({ authenticated: true, user });
 });
+
+if (isOIDCEnabled()) {
+  authRoutes.get('/oidc', async (c) => {
+    try {
+      return await initiateOIDCLogin(c);
+    } catch (err) {
+      console.error('[oidc] login initiation failed', err);
+      return c.json({ error: 'oidc_unavailable' }, 503);
+    }
+  });
+
+  authRoutes.get('/oidc/callback', async (c) => {
+    try {
+      const { email, name } = await handleOIDCCallback(c);
+      const userId = await upsertUser(email, 'oidc', name);
+      await createSession(c, userId);
+      const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
+      return c.redirect(`${successUrl}/chat`);
+    } catch (err) {
+      console.error('[oidc] callback failed', err);
+      const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
+      return c.redirect(`${successUrl}/login?error=oidc_failed`);
+    }
+  });
+}

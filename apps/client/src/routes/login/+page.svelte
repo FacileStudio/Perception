@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { api } from '$lib/api';
-  import { auth } from '$lib/stores';
+  import { auth, loadAuthConfig } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
@@ -11,9 +13,15 @@
 
   ensureSolar();
 
+  const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8787';
+
   let password = $state('');
-  let error = $state('');
+  let error = $state($page.url.searchParams.get('error') === 'oidc_failed' ? 'SSO login failed. Please try again.' : '');
   let loading = $state(false);
+
+  onMount(async () => {
+    await loadAuthConfig();
+  });
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
@@ -63,31 +71,54 @@
       <div class="mb-8">
         <h1 class="font-[Goga] text-2xl tracking-tight text-foreground">Welcome back</h1>
         <p class="mt-1.5 text-sm text-muted-foreground">
-          Enter your access password to continue.
+          {auth.config.sso_only ? 'Sign in with your organization account.' : 'Enter your access password to continue.'}
         </p>
       </div>
 
-      <form onsubmit={handleSubmit} class="space-y-4">
-        <div class="space-y-1.5">
-          <Label for="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            bind:value={password}
-            disabled={loading}
-            autocomplete="current-password"
-          />
-        </div>
+      {#if error}
+        <p class="mb-4 text-sm text-destructive">{error}</p>
+      {/if}
 
-        {#if error}
-          <p class="text-sm text-destructive">{error}</p>
+      {#if !auth.config.sso_only}
+        <form onsubmit={handleSubmit} class="space-y-4">
+          <div class="space-y-1.5">
+            <Label for="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              bind:value={password}
+              disabled={loading}
+              autocomplete="current-password"
+            />
+          </div>
+
+          <Button type="submit" class="w-full" disabled={loading || !password.trim()}>
+            {loading ? 'Signing in...' : 'Sign in'}
+          </Button>
+        </form>
+      {/if}
+
+      {#if auth.config.oidc_enabled}
+        {#if !auth.config.sso_only}
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-zinc-200"></div>
+            </div>
+            <div class="relative flex justify-center text-xs">
+              <span class="bg-background px-2 text-muted-foreground">or continue with</span>
+            </div>
+          </div>
         {/if}
 
-        <Button type="submit" class="w-full" disabled={loading || !password.trim()}>
-          {loading ? 'Signing in...' : 'Sign in'}
-        </Button>
-      </form>
+        <a
+          href="{API_BASE}/auth/oidc"
+          class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-50"
+        >
+          <Icon icon="solar:key-bold-duotone" class="size-4" />
+          Sign in with SSO
+        </a>
+      {/if}
     </div>
   </div>
 </div>

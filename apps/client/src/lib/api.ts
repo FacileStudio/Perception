@@ -14,7 +14,12 @@ export const api = {
   auth: {
     login: (password: string) => request('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
     logout: () => request('/auth/logout', { method: 'POST' }),
-    status: () => request<{ authenticated: boolean }>('/auth/status'),
+    status: () => request<{ authenticated: boolean; user: AuthUser | null }>('/auth/status'),
+    config: () => request<{ sso_only: boolean; oidc_enabled: boolean }>('/auth/config'),
+  },
+  users: {
+    list: () => request<{ users: AuthUser[] }>('/users'),
+    me: () => request<{ user: AuthUser }>('/users/me'),
   },
   events: {
     list: (params?: Record<string, string>) => {
@@ -52,6 +57,15 @@ export const api = {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
     reprocessEntities: () => request<{ actors_created: number; events_linked: number; relations_added: number }>('/admin/reprocess-entities', { method: 'POST' }),
   },
+};
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name: string | null;
+  color: string;
+  source: string;
+  created_at?: string;
 };
 
 export type EventRow = {

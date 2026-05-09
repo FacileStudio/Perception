@@ -15,6 +15,7 @@
     { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
     { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph' },
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
+    { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone', match: (p: string) => p === '/users' },
     { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone', match: (p: string) => p === '/settings' },
   ];
 </script>
