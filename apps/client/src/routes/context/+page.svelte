@@ -35,7 +35,6 @@
         offset: String((page - 1) * PAGE_SIZE),
       };
       if (eventsState.query) params.q = eventsState.query;
-      if (eventsState.providerFilter) params.provider_type = eventsState.providerFilter;
       if (eventsState.qualityFilter) params.quality = eventsState.qualityFilter;
 
       const result = await api.events.list(params);
@@ -104,15 +103,9 @@
           placeholder="Search events..."
           bind:value={eventsState.query}
           oninput={onFilterChange}
-          class="h-11 rounded-full bg-zinc-50 pl-10"
+          class="h-11 !rounded-full bg-zinc-50 pl-10"
         />
       </label>
-      <Input
-        placeholder="Provider (e.g. github)"
-        bind:value={eventsState.providerFilter}
-        oninput={onFilterChange}
-        class="h-11 rounded-full bg-zinc-50 w-40"
-      />
       <select
         bind:value={eventsState.qualityFilter}
         onchange={onFilterChange}
