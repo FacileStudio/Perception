@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
   import { chatState, loadChatSessions, openChatSession } from '$lib/stores';
   import { buildTitle } from '$lib/head';
   import ChatView from '$lib/components/chat/chat-view.svelte';
@@ -17,6 +18,7 @@
         try {
           await loadChatSessions();
         } catch {}
+        goto('/chat');
       }
     })();
   });
