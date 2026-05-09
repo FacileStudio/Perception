@@ -9,6 +9,7 @@
   let container: HTMLDivElement | undefined = $state();
   let canvas: HTMLCanvasElement | undefined = $state();
   let loading = $state(true);
+  let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
   let tooltipNode: SimNode | null = $state(null);
@@ -56,7 +57,7 @@
   }
 
   function radiusFor(count: number): number {
-    return Math.max(10, Math.min(36, 10 + Math.sqrt(count) * 4.2));
+    return Math.max(12, Math.min(40, 12 + Math.sqrt(count) * 4.2));
   }
 
   function cw(): number { return canvas?.offsetWidth ?? 800; }
@@ -140,7 +141,7 @@
       ctx.beginPath();
       ctx.moveTo(s.x, s.y);
       ctx.lineTo(t.x, t.y);
-      ctx.strokeStyle = active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.08)';
+      ctx.strokeStyle = active ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.09)';
       ctx.lineWidth = active ? 1.5 : 1;
       ctx.stroke();
     }
@@ -151,23 +152,23 @@
 
       ctx.beginPath();
       ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-      ctx.fillStyle = isHovered ? color + 'dd' : color + 'cc';
+      ctx.fillStyle = color;
       ctx.fill();
 
       if (isHovered) {
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
         ctx.lineWidth = 2;
         ctx.stroke();
       }
 
-      if (node.r >= 14 || isHovered) {
-        const fontSize = Math.min(11, node.r * 0.66);
+      if (node.r >= 18) {
+        const fontSize = Math.min(11, node.r * 0.55);
         ctx.font = `500 ${fontSize}px system-ui,sans-serif`;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const label = node.canonical_name.length > 16
-          ? node.canonical_name.slice(0, 14) + '\u2026'
+        const label = node.canonical_name.length > 14
+          ? node.canonical_name.slice(0, 12) + '\u2026'
           : node.canonical_name;
         ctx.fillText(label, node.x, node.y);
       }
@@ -207,6 +208,7 @@
     const dpr = window.devicePixelRatio || 1;
     const w = container.clientWidth;
     const h = container.clientHeight;
+    if (w === 0 || h === 0) return;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     canvas.style.width = `${w}px`;
@@ -234,7 +236,6 @@
 
   function onMouseUp() { isPanning = false; }
   function onMouseLeave() { hoveredNode = null; tooltipNode = null; isPanning = false; }
-
   function onWheel(e: WheelEvent) {
     e.preventDefault();
     zoom = Math.max(0.15, Math.min(5, zoom * (e.deltaY > 0 ? 0.9 : 1.11)));
@@ -256,14 +257,17 @@
       edges = data.relations;
       entityCount = nodes.length;
       relationCount = edges.length;
-    } catch {}
+      empty = nodes.length === 0;
+    } catch {
+      empty = true;
+    }
     loading = false;
     loop();
   }
 
   onMount(() => {
     resizeCanvas();
-    const ro = new ResizeObserver(resizeCanvas);
+    const ro = new ResizeObserver(() => { resizeCanvas(); });
     if (container) ro.observe(container);
     loadGraph();
     return () => { cancelAnimationFrame(animId); ro.disconnect(); };
@@ -298,40 +302,41 @@
   </div>
 
   <div bind:this={container} class="relative min-h-0 flex-1">
+    <canvas
+      bind:this={canvas}
+      class="absolute inset-0 block"
+      onmousemove={onMouseMove}
+      onmousedown={onMouseDown}
+      onmouseup={onMouseUp}
+      onmouseleave={onMouseLeave}
+      onwheel={onWheel}
+      style="cursor:{tooltipNode ? 'pointer' : isPanning ? 'grabbing' : 'grab'}"
+    ></canvas>
+
     {#if loading}
-      <div class="absolute inset-0 flex items-center justify-center bg-zinc-100">
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-zinc-100">
         <span class="text-sm text-zinc-400">Loading graph…</span>
       </div>
-    {:else if nodes.length === 0}
-      <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-100">
+    {:else if empty}
+      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-100">
         <span class="text-sm text-zinc-500">No entities resolved yet.</span>
-        <span class="text-xs text-zinc-400">Entities are extracted automatically as events are ingested.</span>
+        <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
       </div>
-    {:else}
-      <canvas
-        bind:this={canvas}
-        class="absolute inset-0 block"
-        onmousemove={onMouseMove}
-        onmousedown={onMouseDown}
-        onmouseup={onMouseUp}
-        onmouseleave={onMouseLeave}
-        onwheel={onWheel}
-        style="cursor:{tooltipNode ? 'pointer' : isPanning ? 'grabbing' : 'grab'}"
-      ></canvas>
-      {#if tooltipNode}
-        <div
-          class="pointer-events-none absolute z-10 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 shadow-lg"
-          style="left:{tooltipX}px;top:{tooltipY}px;transform:translateY(-50%)"
-        >
-          <p class="text-sm font-medium text-zinc-900">{tooltipNode.canonical_name}</p>
-          <p class="mt-0.5 font-mono text-[11px] text-zinc-400">{tooltipNode.type_label}</p>
-          <div class="mt-1.5 flex items-center gap-2 text-[11px] text-zinc-400">
-            <span>{tooltipNode.event_count} {tooltipNode.event_count === 1 ? 'event' : 'events'}</span>
-            <span>·</span>
-            <span>{(tooltipNode.confidence * 100).toFixed(0)}% confidence</span>
-          </div>
+    {/if}
+
+    {#if tooltipNode}
+      <div
+        class="pointer-events-none absolute z-10 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 shadow-lg"
+        style="left:{tooltipX}px;top:{tooltipY}px;transform:translateY(-50%)"
+      >
+        <p class="text-sm font-medium text-zinc-900">{tooltipNode.canonical_name}</p>
+        <p class="mt-0.5 font-mono text-[11px] text-zinc-400">{tooltipNode.type_label}</p>
+        <div class="mt-1.5 flex items-center gap-2 text-[11px] text-zinc-400">
+          <span>{tooltipNode.event_count} {tooltipNode.event_count === 1 ? 'event' : 'events'}</span>
+          <span>·</span>
+          <span>{(tooltipNode.confidence * 100).toFixed(0)}% confidence</span>
         </div>
-      {/if}
+      </div>
     {/if}
   </div>
 </div>
