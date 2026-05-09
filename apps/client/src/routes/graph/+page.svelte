@@ -15,12 +15,22 @@
   let relationCount = $state(0);
   let refreshing = $state(false);
   let confirmOpen = $state(false);
-  let viewMode = $state<'entities' | 'relations'>('entities');
+  let viewMode = $state<'entities' | 'relations' | 'list'>('entities');
   let drawMode: 'entities' | 'relations' = 'entities';
   let relationLegend = $state<[string, string][]>([]);
-  function setMode(m: 'entities' | 'relations') {
+  let paused = false;
+  function setMode(m: 'entities' | 'relations' | 'list') {
     viewMode = m;
-    drawMode = m;
+    if (m === 'list') {
+      paused = true;
+      cancelAnimationFrame(animId);
+    } else {
+      drawMode = m;
+      if (paused) {
+        paused = false;
+        loop();
+      }
+    }
   }
 
   let container: HTMLDivElement;
@@ -281,6 +291,7 @@
   }
 
   function loop() {
+    if (paused) return;
     tick();
     draw();
     animId = requestAnimationFrame(loop);
@@ -458,6 +469,25 @@
     relationLegend = labels.map((l) => [relationColors.get(l)!, l.replace(/_/g, ' ')] as [string, string]);
   }
 
+  let adjacency = $derived(
+    nodes
+      .map((node) => {
+        const connections = edges.flatMap((e) => {
+          if (e.from_id === node.id) {
+            const other = nodes.find((n) => n.id === e.to_id);
+            return other ? [{ other, label: e.label }] : [];
+          }
+          if (e.to_id === node.id) {
+            const other = nodes.find((n) => n.id === e.from_id);
+            return other ? [{ other, label: e.label }] : [];
+          }
+          return [];
+        });
+        return { node, connections };
+      })
+      .sort((a, b) => b.node.event_count - a.node.event_count)
+  );
+
   async function refreshGraph() {
     if (refreshing) return;
     refreshing = true;
@@ -572,7 +602,42 @@
         <Icon icon="solar:graph-linear" class="size-3.5" />
         Relations
       </button>
+      <button
+        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+        onclick={() => setMode('list')}
+      >
+        <Icon icon="solar:list-linear" class="size-3.5" />
+        List
+      </button>
     </div>
+
+    {#if viewMode === 'list'}
+      <div class="absolute inset-0 z-10 overflow-y-auto p-4">
+        <div class="mx-auto max-w-2xl space-y-2 pb-4">
+          {#each adjacency as { node, connections }}
+            <div class="rounded-xl border border-zinc-200/80 bg-white px-4 py-3 shadow-sm">
+              <div class="flex items-center gap-2.5">
+                <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(node.type_label)}"></span>
+                <span class="text-sm font-medium text-zinc-900">{node.canonical_name}</span>
+                <span class="ml-auto font-mono text-[11px] text-zinc-400">{node.type_label}</span>
+                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">{node.event_count} {node.event_count === 1 ? 'event' : 'events'}</span>
+              </div>
+              {#if connections.length > 0}
+                <div class="mt-2 space-y-1 border-t border-zinc-100 pt-2">
+                  {#each connections as { other, label }}
+                    <div class="flex items-center gap-2 text-xs">
+                      <span class="text-zinc-300">→</span>
+                      <span class="font-medium text-zinc-700">{other.canonical_name}</span>
+                      <span class="ml-auto font-mono text-[10px] text-zinc-400">{label.replace(/_/g, ' ')}</span>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     <canvas
       bind:this={canvas}
