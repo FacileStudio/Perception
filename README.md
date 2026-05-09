@@ -70,6 +70,23 @@ Dashboard → POST /chat
 
 ---
 
+## SDK
+
+[**perception-js**](https://github.com/FacileStudio/perception-js) is the official TypeScript SDK for sending custom events to Perception from any Node, Bun, or Edge runtime. Use it to instrument key business logic — onboarding steps, billing events, deploys, contract signings — and make them queryable through Perception's chat interface.
+
+```ts
+import { ingest } from 'perception-js'
+
+ingest("subscription.upgraded", { from: "free", to: "pro" }, {
+  actor: { id: userId, email },
+  subject: { type: "organization", id: orgId, name: orgName },
+})
+```
+
+Install: `bun add github:FacileStudio/perception-js`
+
+---
+
 ## Providers supported
 
 `vikunja` · `docuseal` · `charles` · `dokploy` · `git` · `uptime-kuma` · `imap` · `sablier` · `website`
