@@ -6,17 +6,21 @@
 
   type SimNode = GraphEntity & { x: number; y: number; vx: number; vy: number; r: number };
 
-  let container: HTMLDivElement | undefined = $state();
-  let canvas: HTMLCanvasElement | undefined = $state();
+  // Only $state for slow-changing template data — nothing that changes on every mouse event
   let loading = $state(true);
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
-  let tooltipNode: SimNode | null = $state(null);
-  let tooltipX = $state(0);
-  let tooltipY = $state(0);
-  let isPanning = $state(false);
 
+  // Plain refs — no reactivity, managed imperatively
+  let container: HTMLDivElement;
+  let canvas: HTMLCanvasElement;
+  let tooltip: HTMLDivElement;
+  let tooltipName: HTMLParagraphElement;
+  let tooltipType: HTMLParagraphElement;
+  let tooltipMeta: HTMLParagraphElement;
+
+  // Simulation state — plain variables
   let nodes: SimNode[] = [];
   let edges: EntityRelation[] = [];
   let hoveredNode: SimNode | null = null;
@@ -25,6 +29,7 @@
   let panX = 0;
   let panY = 0;
   let zoom = 1;
+  let isPanning = false;
   let panStart = { x: 0, y: 0, px: 0, py: 0 };
 
   const COLORS: [string, string][] = [
@@ -57,7 +62,7 @@
   }
 
   function radiusFor(count: number): number {
-    return Math.max(12, Math.min(40, 12 + Math.sqrt(count) * 4.2));
+    return Math.max(8, Math.min(40, 8 + Math.sqrt(count) * 4.2));
   }
 
   function cw(): number { return canvas?.offsetWidth ?? 800; }
@@ -141,7 +146,7 @@
       ctx.beginPath();
       ctx.moveTo(s.x, s.y);
       ctx.lineTo(t.x, t.y);
-      ctx.strokeStyle = active ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.09)';
+      ctx.strokeStyle = active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.08)';
       ctx.lineWidth = active ? 1.5 : 1;
       ctx.stroke();
     }
@@ -156,21 +161,13 @@
       ctx.fill();
 
       if (isHovered) {
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.r + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.3;
+        ctx.lineWidth = 3;
         ctx.stroke();
-      }
-
-      if (node.r >= 18) {
-        const fontSize = Math.min(11, node.r * 0.55);
-        ctx.font = `500 ${fontSize}px system-ui,sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const label = node.canonical_name.length > 14
-          ? node.canonical_name.slice(0, 12) + '\u2026'
-          : node.canonical_name;
-        ctx.fillText(label, node.x, node.y);
+        ctx.globalAlpha = 1;
       }
     }
 
@@ -203,6 +200,20 @@
     return best;
   }
 
+  function showTooltip(node: SimNode, sx: number, sy: number) {
+    if (!tooltip) return;
+    tooltipName.textContent = node.canonical_name;
+    tooltipType.textContent = node.type_label;
+    tooltipMeta.textContent = `${node.event_count} ${node.event_count === 1 ? 'event' : 'events'} · ${(node.confidence * 100).toFixed(0)}% confidence`;
+    tooltip.style.display = 'block';
+    tooltip.style.left = `${sx + 14}px`;
+    tooltip.style.top = `${sy}px`;
+  }
+
+  function hideTooltip() {
+    if (tooltip) tooltip.style.display = 'none';
+  }
+
   function resizeCanvas() {
     if (!canvas || !container) return;
     const dpr = window.devicePixelRatio || 1;
@@ -211,18 +222,17 @@
     if (w === 0 || h === 0) return;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
-    canvas.style.width = `${w}px`;
-    canvas.style.height = `${h}px`;
   }
 
   function onMouseMove(e: MouseEvent) {
-    const rect = canvas!.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
-    hoveredNode = findHovered(sx, sy);
-    tooltipNode = hoveredNode;
-    tooltipX = sx + 14;
-    tooltipY = sy;
+    const hit = findHovered(sx, sy);
+    hoveredNode = hit;
+    canvas.style.cursor = hit ? 'pointer' : isPanning ? 'grabbing' : 'grab';
+    if (hit) showTooltip(hit, sx, sy);
+    else hideTooltip();
     if (isPanning) {
       panX = panStart.px + (e.clientX - panStart.x);
       panY = panStart.py + (e.clientY - panStart.y);
@@ -231,11 +241,21 @@
 
   function onMouseDown(e: MouseEvent) {
     isPanning = true;
+    canvas.style.cursor = 'grabbing';
     panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
   }
 
-  function onMouseUp() { isPanning = false; }
-  function onMouseLeave() { hoveredNode = null; tooltipNode = null; isPanning = false; }
+  function onMouseUp() {
+    isPanning = false;
+    canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+  }
+
+  function onMouseLeave() {
+    hoveredNode = null;
+    isPanning = false;
+    hideTooltip();
+  }
+
   function onWheel(e: WheelEvent) {
     e.preventDefault();
     zoom = Math.max(0.15, Math.min(5, zoom * (e.deltaY > 0 ? 0.9 : 1.11)));
@@ -267,8 +287,8 @@
 
   onMount(() => {
     resizeCanvas();
-    const ro = new ResizeObserver(() => { resizeCanvas(); });
-    if (container) ro.observe(container);
+    const ro = new ResizeObserver(resizeCanvas);
+    ro.observe(container);
     loadGraph();
     return () => { cancelAnimationFrame(animId); ro.disconnect(); };
   });
@@ -301,42 +321,39 @@
     </div>
   </div>
 
-  <div bind:this={container} class="relative min-h-0 flex-1">
+  <div bind:this={container} class="relative min-h-0 flex-1 bg-[#f4f4f5]">
+    <!-- canvas always in DOM, no reactive expressions on it -->
     <canvas
       bind:this={canvas}
       class="absolute inset-0 block"
+      style="width:100%;height:100%;cursor:grab"
       onmousemove={onMouseMove}
       onmousedown={onMouseDown}
       onmouseup={onMouseUp}
       onmouseleave={onMouseLeave}
       onwheel={onWheel}
-      style="cursor:{tooltipNode ? 'pointer' : isPanning ? 'grabbing' : 'grab'}"
     ></canvas>
 
     {#if loading}
-      <div class="pointer-events-none absolute inset-0 flex items-center justify-center bg-zinc-100">
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
         <span class="text-sm text-zinc-400">Loading graph…</span>
       </div>
     {:else if empty}
-      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-zinc-100">
+      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
         <span class="text-sm text-zinc-500">No entities resolved yet.</span>
         <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
       </div>
     {/if}
 
-    {#if tooltipNode}
-      <div
-        class="pointer-events-none absolute z-10 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 shadow-lg"
-        style="left:{tooltipX}px;top:{tooltipY}px;transform:translateY(-50%)"
-      >
-        <p class="text-sm font-medium text-zinc-900">{tooltipNode.canonical_name}</p>
-        <p class="mt-0.5 font-mono text-[11px] text-zinc-400">{tooltipNode.type_label}</p>
-        <div class="mt-1.5 flex items-center gap-2 text-[11px] text-zinc-400">
-          <span>{tooltipNode.event_count} {tooltipNode.event_count === 1 ? 'event' : 'events'}</span>
-          <span>·</span>
-          <span>{(tooltipNode.confidence * 100).toFixed(0)}% confidence</span>
-        </div>
-      </div>
-    {/if}
+    <!-- tooltip managed imperatively, no Svelte reactivity -->
+    <div
+      bind:this={tooltip}
+      class="pointer-events-none absolute z-10 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 shadow-lg"
+      style="display:none;transform:translateY(-50%)"
+    >
+      <p bind:this={tooltipName} class="text-sm font-medium text-zinc-900"></p>
+      <p bind:this={tooltipType} class="mt-0.5 font-mono text-[11px] text-zinc-400"></p>
+      <p bind:this={tooltipMeta} class="mt-1.5 text-[11px] text-zinc-400"></p>
+    </div>
   </div>
 </div>
