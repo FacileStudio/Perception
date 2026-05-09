@@ -101,7 +101,10 @@ ingestRoutes.post('/', async (c) => {
     const actorMapping = schema.field_mappings.find((m) => m.role === 'actor');
     if (actorMapping) {
       const val = envelope.payload.normalized[actorMapping.source_key];
-      if (val != null) layer1.actor_name = String(val);
+      if (val != null) {
+        const strVal = String(val);
+        if (!/^[0-9a-f]{64}$/i.test(strVal)) layer1.actor_name = strVal;
+      }
     }
   }
 

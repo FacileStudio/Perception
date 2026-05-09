@@ -3,6 +3,9 @@ import { db } from '../db/client';
 import { inferSchema } from './infer';
 import type { InferredFieldMapping } from '../types';
 
+const SHA256_RE = /^[0-9a-f]{64}$/i;
+const EMAIL_RE = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/;
+
 async function applySchemaToFacts(
   providerType: string,
   fieldMappings: InferredFieldMapping[],
@@ -34,10 +37,13 @@ async function applySchemaToFacts(
     if (actorMapping) {
       const actorVal = existing[actorMapping.source_key];
       if (actorVal != null) {
-        await db.execute({
-          sql: 'UPDATE events SET actor_name = ? WHERE id = ? AND actor_name IS NULL',
-          args: [String(actorVal), eventId],
-        });
+        const strVal = String(actorVal);
+        if (!SHA256_RE.test(strVal)) {
+          await db.execute({
+            sql: 'UPDATE events SET actor_name = ? WHERE id = ? AND actor_name IS NULL',
+            args: [strVal, eventId],
+          });
+        }
       }
     }
   }
@@ -46,6 +52,24 @@ async function applySchemaToFacts(
     sql: "UPDATE events SET quality = 'complete' WHERE id IN (SELECT event_id FROM dynamic_facts WHERE provider_type = ?)",
     args: [providerType],
   });
+}
+
+async function backfillActorFromText(): Promise<void> {
+  const rows = await db.execute({
+    sql: `SELECT id, title, summary FROM events
+          WHERE actor_name IS NULL OR length(actor_name) = 64`,
+    args: [],
+  });
+
+  for (const row of rows.rows) {
+    const text = `${row.title ?? ''} ${row.summary ?? ''}`;
+    const m = text.match(EMAIL_RE);
+    if (!m) continue;
+    await db.execute({
+      sql: 'UPDATE events SET actor_name = ? WHERE id = ?',
+      args: [m[0], row.id],
+    });
+  }
 }
 
 async function backfillUnconfirmedSchemas(): Promise<void> {
@@ -62,6 +86,7 @@ async function backfillUnconfirmedSchemas(): Promise<void> {
 export const schemaInferenceWorker = {
   async run(): Promise<void> {
     await backfillUnconfirmedSchemas();
+    await backfillActorFromText();
 
     const pending = await db.execute(
       "SELECT * FROM schema_inference_jobs WHERE status = 'pending' LIMIT 3",

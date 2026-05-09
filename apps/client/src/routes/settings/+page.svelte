@@ -21,8 +21,6 @@
 
   let edits = $state<Record<string, string>>({});
   let showSensitive = $state<Record<string, boolean>>({});
-  let reinferring = $state(false);
-  let reinferred = $state(false);
 
   const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);
 
@@ -103,20 +101,6 @@
     if (src === 'db') return { label: 'dashboard', icon: 'solar:database-bold-duotone', cls: 'text-violet-600 bg-violet-50' };
     if (src === 'env') return { label: 'env var', icon: 'solar:server-bold-duotone', cls: 'text-blue-600 bg-blue-50' };
     return { label: 'default', icon: 'solar:info-circle-bold-duotone', cls: 'text-zinc-500 bg-zinc-100' };
-  }
-
-  async function reinferSchemas() {
-    reinferring = true;
-    reinferred = false;
-    try {
-      await api.admin.reinferSchemas();
-      reinferred = true;
-      setTimeout(() => (reinferred = false), 3000);
-    } catch {
-      error = 'Failed to queue schema re-inference.';
-    } finally {
-      reinferring = false;
-    }
   }
 
   onMount(() => load());
@@ -289,28 +273,6 @@
                 </div>
               </div>
             {/each}
-          </Card>
-        </section>
-
-        <section>
-          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Maintenance</h2>
-          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
-            <div class="flex items-center justify-between px-5 py-4">
-              <div>
-                <span class="text-sm font-medium text-zinc-900">Re-infer schemas</span>
-                <p class="text-xs text-zinc-400 mt-0.5">Queue re-inference for all provider schemas — picks up new field roles like actor detection</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onclick={reinferSchemas}
-                disabled={reinferring}
-                class="shrink-0 rounded-xl gap-2"
-              >
-                <Icon icon={reinferred ? 'solar:check-circle-bold-duotone' : 'solar:refresh-bold-duotone'} class="size-4 {reinferring ? 'animate-spin' : ''}" />
-                {reinferring ? 'Queuing…' : reinferred ? 'Queued!' : 'Re-infer'}
-              </Button>
-            </div>
           </Card>
         </section>
 
