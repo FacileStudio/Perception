@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { db } from '../db/client';
 import { requireSession } from '../security/session';
+import { extractAllMissingRelations } from '../entities/link';
 
 export const entitiesRoutes = new Hono();
 
@@ -49,4 +50,12 @@ entitiesRoutes.get('/graph', async (c) => {
       confidence: r.confidence as number,
     })),
   });
+});
+
+entitiesRoutes.post('/relations/resolve-all', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const created = await extractAllMissingRelations();
+  return c.json({ created });
 });

@@ -8,6 +8,7 @@ import { mapPayload } from '../ingest/mapper';
 import { lookupSchema, computeKeysHash, markNeedsReview } from '../schema-registry/lookup';
 import { labelEvent } from '../ontology/labels';
 import { resolveEventEntity } from '../entities/resolver';
+import { extractEntityRelations } from '../entities/link';
 import type { NookEventEnvelope } from '../types';
 import { config } from '../config';
 
@@ -110,6 +111,14 @@ ingestRoutes.post('/', async (c) => {
 
   const labeling = await labelEvent(envelope, layer1, schema);
   const resolvedEntity = await resolveEventEntity(envelope, layer1, labeling.entityConceptId);
+
+  if (resolvedEntity) {
+    await extractEntityRelations({
+      id: resolvedEntity.id,
+      canonicalName: resolvedEntity.canonicalName,
+      capabilities: labeling.entityCapabilities,
+    });
+  }
 
   const payloadHash = createHash('sha256')
     .update(JSON.stringify(redacted))

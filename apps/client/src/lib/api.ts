@@ -45,6 +45,7 @@ export const api = {
   },
   entities: {
     graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
+    resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
   },
   admin: {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
