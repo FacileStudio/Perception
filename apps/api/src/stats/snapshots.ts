@@ -2,6 +2,14 @@ import { db } from '../db/client';
 import type { StatsSnapshot } from '../types';
 import { computeAllStats } from './compute';
 
+const EXPECTED_KINDS = [
+  'entity_velocity_7d', 'entity_velocity_30d',
+  'status_health_7d', 'status_health_30d',
+  'actor_activity_7d', 'actor_activity_30d',
+  'entity_coverage_7d', 'entity_coverage_30d',
+  'top_entities_7d', 'top_entities_30d',
+];
+
 export async function refreshSnapshots(): Promise<void> {
   const [snapshots7, snapshots30] = await Promise.all([
     computeAllStats(7),
@@ -36,9 +44,18 @@ export async function refreshSnapshots(): Promise<void> {
   }
 }
 
+export async function hasAllExpectedKinds(): Promise<boolean> {
+  const result = await db.execute({
+    sql: `SELECT DISTINCT kind FROM stats_snapshots`,
+    args: [],
+  });
+  const existing = new Set(result.rows.map((r) => r.kind as string));
+  return EXPECTED_KINDS.every((k) => existing.has(k));
+}
+
 export async function getLatestSnapshots(): Promise<StatsSnapshot[]> {
   const result = await db.execute({
-    sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 20`,
+    sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 50`,
     args: [],
   });
 

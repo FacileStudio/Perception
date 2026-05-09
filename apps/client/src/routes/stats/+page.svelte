@@ -58,12 +58,12 @@
       : null
   );
 
-  async function loadStats() {
+  async function loadStats(forceRefresh = false) {
     if (loading) return;
     loading = true;
     error = '';
     try {
-      const [statsResult, usageResult] = await Promise.all([api.stats.get(), api.settings.usage()]);
+      const [statsResult, usageResult] = await Promise.all([api.stats.get(forceRefresh), api.settings.usage()]);
       snapshots = statsResult.snapshots;
       usage = usageResult.usage;
       totalCost = usageResult.total_cost_usd;
@@ -112,6 +112,14 @@
       {/if}
     </div>
     <div class="flex items-center gap-2">
+      <button
+        onclick={() => loadStats(true)}
+        disabled={loading}
+        class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-40"
+      >
+        <Icon icon="solar:refresh-bold-duotone" class="size-3.5 {loading ? 'animate-spin' : ''}" />
+        Refresh
+      </button>
       <WindowToggle window={activeWindow} onchange={(w) => (activeWindow = w)} />
     </div>
   </div>

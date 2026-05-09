@@ -46,6 +46,21 @@ function includesAny(text: string, needles: string[]): boolean {
   return needles.some((needle) => text.includes(needle));
 }
 
+const ENTITY_TYPE_KEYWORDS = [
+  'task', 'submission', 'contract', 'deployment', 'service', 'monitor',
+  'client', 'invoice', 'payment', 'document', 'form', 'issue', 'alert',
+  'repository', 'branch', 'commit', 'release', 'build', 'pipeline',
+  'organization', 'account', 'contact', 'person', 'user',
+];
+
+function inferEntityTypeFromEventType(eventType: string): string | null {
+  const parts = eventType.toLowerCase().split(/[._\-\s]+/);
+  for (const part of parts) {
+    if (ENTITY_TYPE_KEYWORDS.includes(part)) return part;
+  }
+  return null;
+}
+
 function capabilitiesForEntity(label: string, context: string): string[] {
   const text = `${label} ${context}`;
   const capabilities = ['identity'];
@@ -180,7 +195,10 @@ async function ensureConcept(seed: ConceptSeed): Promise<string> {
 }
 
 function entitySeed(envelope: NookEventEnvelope, extracted: Omit<ExtractedEvent, 'facts' | 'quality'>): ConceptSeed {
-  const label = normalizeLabel(extracted.entity_type || envelope.subject.type || 'unknown_entity');
+  const rawType = extracted.entity_type || envelope.subject.type || '';
+  const isUnknown = !rawType || rawType.toLowerCase() === 'unknown';
+  const inferredType = isUnknown ? inferEntityTypeFromEventType(envelope.event.type) : null;
+  const label = normalizeLabel(inferredType ?? rawType || 'unknown_entity');
   const context = [
     envelope.provider.type,
     envelope.provider.name,

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { requireSession } from '../security/session';
-import { getLatestSnapshotGeneratedAt, getLatestSnapshots, refreshSnapshots } from '../stats/snapshots';
+import { getLatestSnapshotGeneratedAt, getLatestSnapshots, hasAllExpectedKinds, refreshSnapshots } from '../stats/snapshots';
 
 export const statsRoutes = new Hono();
 
@@ -14,8 +14,9 @@ statsRoutes.get('/', async (c) => {
   const latestGeneratedAt = await getLatestSnapshotGeneratedAt();
   const shouldBootstrap = latestGeneratedAt === null;
   const isStale = latestGeneratedAt !== null && Date.now() - new Date(latestGeneratedAt).getTime() > STATS_STALE_MS;
+  const missingKinds = !shouldBootstrap && !(await hasAllExpectedKinds());
 
-  if (forceRefresh || shouldBootstrap || isStale) {
+  if (forceRefresh || shouldBootstrap || isStale || missingKinds) {
     await refreshSnapshots();
   }
 
