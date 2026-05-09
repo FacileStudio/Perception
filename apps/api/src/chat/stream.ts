@@ -57,7 +57,9 @@ export function streamChat(
   const contextBlock = buildContextBlock(context.events, context.stats);
   const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
-  const sources: ChatSource[] = plan.requiresRetrieval ? context.events.slice(0, 10).map((e) => ({
+  const signalEvents = context.events.filter((e) => e.lanes.some((l) => l !== 'sql'));
+  const sourcePool = signalEvents.length > 0 ? signalEvents : context.events;
+  const sources: ChatSource[] = plan.requiresRetrieval ? sourcePool.slice(0, 5).map((e) => ({
     event_id: e.id,
     provider_name: e.provider_name,
     occurred_at: e.occurred_at,
