@@ -612,7 +612,7 @@
     </div>
 
     {#if viewMode === 'list'}
-      <div class="absolute inset-0 z-10 overflow-y-auto p-4">
+      <div class="absolute inset-0 z-10 overflow-y-auto p-4 pt-16">
         <div class="mx-auto max-w-2xl space-y-2 pb-4">
           {#each adjacency as { node, connections }}
             <div class="rounded-xl border border-zinc-200/80 bg-white px-4 py-3 shadow-sm">
