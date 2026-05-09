@@ -66,6 +66,10 @@
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
 
   const labelingIds = $state(new Set<string>());
+  let labelingAll = $state(false);
+  let labeledCount = $state<number | null>(null);
+
+  const unlabeledOnPage = $derived(eventsState.events.filter((e) => !e.concepts?.length).length);
 
   async function labelEvent(event: import('$lib/api').EventRow) {
     labelingIds.add(event.id);
@@ -74,6 +78,18 @@
       await loadEvents();
     } finally {
       labelingIds.delete(event.id);
+    }
+  }
+
+  async function labelAllUnlabeled() {
+    labelingAll = true;
+    labeledCount = null;
+    try {
+      const result = await api.events.labelUnlabeled();
+      labeledCount = result.labeled;
+      await loadEvents();
+    } finally {
+      labelingAll = false;
     }
   }
 </script>
@@ -130,6 +146,26 @@
         <span class="text-sm text-zinc-400">No events found.</span>
       </div>
     {:else}
+      {#if unlabeledOnPage > 0}
+        <div class="mb-3 flex items-center gap-3">
+          <button
+            onclick={labelAllUnlabeled}
+            disabled={labelingAll}
+            class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-500 shadow-sm transition-colors hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-50"
+          >
+            {#if labelingAll}
+              <Icon icon="solar:refresh-bold-duotone" class="size-3.5 animate-spin" />
+              Labeling all…
+            {:else}
+              <Icon icon="solar:tags-bold-duotone" class="size-3.5" />
+              Label all unlabeled
+            {/if}
+          </button>
+          {#if labeledCount !== null}
+            <span class="text-xs text-zinc-400">{labeledCount} event{labeledCount !== 1 ? 's' : ''} labeled</span>
+          {/if}
+        </div>
+      {/if}
       <div class="flex flex-col gap-3">
         {#each eventsState.events as event}
           <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
@@ -163,10 +199,13 @@
                 {#if !event.concepts?.length}
                   <button
                     onclick={() => labelEvent(event)}
-                    disabled={labelingIds.has(event.id)}
+                    disabled={labelingIds.has(event.id) || labelingAll}
                     class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-400 hover:text-zinc-600 disabled:opacity-40"
                   >
-                    <Icon icon="solar:tag-bold-duotone" class="size-3.5" />
+                    <Icon
+                      icon={labelingIds.has(event.id) ? 'solar:refresh-bold-duotone' : 'solar:tag-bold-duotone'}
+                      class="size-3.5 {labelingIds.has(event.id) ? 'animate-spin' : ''}"
+                    />
                     {labelingIds.has(event.id) ? 'Labeling…' : 'Label'}
                   </button>
                 {/if}

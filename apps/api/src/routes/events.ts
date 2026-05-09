@@ -138,6 +138,67 @@ eventsRoutes.get('/:id', async (c) => {
   return c.json({ event, facts, embedding });
 });
 
+eventsRoutes.post('/label-unlabeled', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const unlabeled = await db.execute({
+    sql: `SELECT e.* FROM events e WHERE NOT EXISTS (SELECT 1 FROM event_concepts ec WHERE ec.event_id = e.id) ORDER BY e.occurred_at DESC LIMIT 500`,
+    args: [],
+  });
+
+  let labeled = 0;
+  for (const row of unlabeled.rows) {
+    const event = rowToEvent(row as unknown as Record<string, unknown>);
+    const schema = await lookupSchema(event.provider_type, event.event_type);
+
+    const envelope = {
+      schemaVersion: 1 as const,
+      id: event.id,
+      occurredAt: event.occurred_at,
+      emittedAt: event.emitted_at ?? event.occurred_at,
+      source: event.source as 'webhook' | 'website' | 'imap' | 'system' | 'test',
+      provider: { id: event.provider_id, type: event.provider_type, name: event.provider_name, tags: [] },
+      event: { type: event.event_type, title: event.title, messageHtml: null, messageText: null, url: event.url },
+      actor: event.actor_name ? { id: null, name: event.actor_name, email: null } : null,
+      subject: { type: event.entity_type, id: event.entity_id, name: event.entity_name, url: event.url },
+      payload: { normalized: {}, raw: null },
+      privacy: { containsPii: false, rawPayloadAllowed: false },
+    };
+
+    const extracted = {
+      event_type: event.event_type,
+      entity_type: event.entity_type,
+      entity_id: event.entity_id,
+      entity_name: event.entity_name,
+      actor_name: event.actor_name,
+      actor_email_hash: event.actor_email_hash,
+      url: event.url,
+      title: event.title,
+      summary: event.summary,
+      searchable_text: event.searchable_text,
+    };
+
+    const labeling = await labelEvent(envelope, extracted, schema);
+    const conceptIds = [
+      ...labeling.eventConceptIds,
+      ...labeling.fieldConceptIds,
+      labeling.entityConceptId,
+      labeling.relationConceptId,
+    ];
+
+    for (const conceptId of conceptIds) {
+      await db.execute({
+        sql: 'INSERT OR IGNORE INTO event_concepts (event_id, concept_id, confidence, source) VALUES (?, ?, ?, ?)',
+        args: [event.id, conceptId, 0.72, 'manual:retro'],
+      });
+    }
+    labeled++;
+  }
+
+  return c.json({ ok: true, labeled });
+});
+
 eventsRoutes.post('/:id/label', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
