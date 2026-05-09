@@ -120,6 +120,29 @@ ingestRoutes.post('/', async (c) => {
     });
   }
 
+  if (envelope.actor?.name) {
+    const actorLayer = {
+      ...layer1,
+      entity_type: 'person',
+      entity_id: envelope.actor.id ?? null,
+      entity_name: envelope.actor.name,
+      url: null as string | null,
+    };
+    const actorLabeling = await labelEvent(envelope, actorLayer, null);
+    const resolvedActor = await resolveEventEntity(envelope, actorLayer, actorLabeling.entityConceptId);
+    if (resolvedActor) {
+      await extractEntityRelations({
+        id: resolvedActor.id,
+        canonicalName: resolvedActor.canonicalName,
+        capabilities: actorLabeling.entityCapabilities,
+      });
+      await db.execute({
+        sql: 'INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source) VALUES (?, ?, ?, ?, ?)',
+        args: [envelope.id, resolvedActor.id, actorLabeling.relationConceptId, 0.80, 'ingest:actor'],
+      });
+    }
+  }
+
   const payloadHash = createHash('sha256')
     .update(JSON.stringify(redacted))
     .digest('hex');

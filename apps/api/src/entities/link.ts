@@ -15,15 +15,18 @@ type RelationRule = {
 };
 
 const RULES: RelationRule[] = [
-  { fromCap: 'source_code',      toCap: 'service',          label: 'deployed_from',   confidence: 0.82 },
-  { fromCap: 'work_item',        toCap: 'service',          label: 'references',      confidence: 0.72 },
-  { fromCap: 'work_item',        toCap: 'source_code',      label: 'references',      confidence: 0.72 },
-  { fromCap: 'document',         toCap: 'organization',     label: 'issued_to',       confidence: 0.74 },
-  { fromCap: 'document',         toCap: 'service',          label: 'references',      confidence: 0.68 },
-  { fromCap: 'financial_record', toCap: 'organization',     label: 'billed_to',       confidence: 0.78 },
-  { fromCap: 'financial_record', toCap: 'document',         label: 'related_to',      confidence: 0.68 },
-  { fromCap: 'person',           toCap: 'organization',     label: 'member_of',       confidence: 0.68 },
-  { fromCap: 'person',           toCap: 'document',         label: 'associated_with', confidence: 0.66 },
+  { fromCap: 'source_code',      toCap: 'service',            label: 'deployed_from',   confidence: 0.82 },
+  { fromCap: 'work_item',        toCap: 'service',            label: 'references',      confidence: 0.72 },
+  { fromCap: 'work_item',        toCap: 'source_code',        label: 'references',      confidence: 0.72 },
+  { fromCap: 'work_item',        toCap: 'organization',       label: 'belongs_to',      confidence: 0.70 },
+  { fromCap: 'work_item',        toCap: 'commercial_account', label: 'belongs_to',      confidence: 0.68 },
+  { fromCap: 'document',         toCap: 'organization',       label: 'issued_to',       confidence: 0.74 },
+  { fromCap: 'document',         toCap: 'service',            label: 'references',      confidence: 0.68 },
+  { fromCap: 'financial_record', toCap: 'organization',       label: 'billed_to',       confidence: 0.78 },
+  { fromCap: 'financial_record', toCap: 'document',           label: 'related_to',      confidence: 0.68 },
+  { fromCap: 'person',           toCap: 'organization',       label: 'member_of',       confidence: 0.68 },
+  { fromCap: 'person',           toCap: 'document',           label: 'associated_with', confidence: 0.66 },
+  { fromCap: 'person',           toCap: 'work_item',          label: 'authored',        confidence: 0.74 },
 ];
 
 const NAME_SIMILARITY_THRESHOLD = 0.5;

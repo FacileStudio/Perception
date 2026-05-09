@@ -71,7 +71,7 @@ function capabilitiesForEntity(label: string, context: string): string[] {
   if (includesAny(text, ['person', 'contact', 'signer', 'user', 'actor', 'assignee'])) {
     capabilities.push('person');
   }
-  if (includesAny(text, ['contract', 'document', 'docuseal', 'form', 'submission', 'signature', 'agreement'])) {
+  if (includesAny(text, ['contract', 'document', 'docuseal', 'form', 'submission', 'signature', 'agreement', 'email', 'message', 'mail'])) {
     capabilities.push('document');
   }
   if (includesAny(text, ['service', 'website', 'endpoint', 'monitor', 'deployment', 'deploy', 'app'])) {
