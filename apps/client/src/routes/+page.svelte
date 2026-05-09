@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { auth, checkAuth } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
-  import * as Card from '$lib/components/ui/card';
+  import { Card } from '$lib/components/ui/card';
   import { Separator } from '$lib/components/ui/separator';
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import { ensureSolar } from '$lib/solar';
@@ -60,41 +60,35 @@
 
     <section class="mx-auto max-w-5xl px-6 py-20">
       <div class="grid gap-6 md:grid-cols-3">
-        <Card.Root class="border border-border">
-          <Card.Header>
-            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
-              <Icon icon="solar:eye-bold-duotone" class="size-5" />
-            </div>
-            <Card.Title>Contextual memory</Card.Title>
-            <Card.Description>
-              Ingests events, incidents, and alerts from your stack and indexes them as a living operational record.
-            </Card.Description>
-          </Card.Header>
-        </Card.Root>
+        <Card class="p-6">
+          <div class="mb-3 flex size-10 items-center justify-center rounded-md border border-border">
+            <Icon icon="solar:eye-bold-duotone" class="size-5" />
+          </div>
+          <p class="font-semibold text-foreground">Contextual memory</p>
+          <p class="mt-1.5 text-sm text-muted-foreground">
+            Ingests events, incidents, and alerts from your stack and indexes them as a living operational record.
+          </p>
+        </Card>
 
-        <Card.Root class="border border-border">
-          <Card.Header>
-            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
-              <Icon icon="solar:chat-round-dots-bold-duotone" class="size-5" />
-            </div>
-            <Card.Title>AI-powered queries</Card.Title>
-            <Card.Description>
-              Ask in plain language. Get answers grounded in your actual history — not model hallucinations.
-            </Card.Description>
-          </Card.Header>
-        </Card.Root>
+        <Card class="p-6">
+          <div class="mb-3 flex size-10 items-center justify-center rounded-md border border-border">
+            <Icon icon="solar:chat-round-dots-bold-duotone" class="size-5" />
+          </div>
+          <p class="font-semibold text-foreground">AI-powered queries</p>
+          <p class="mt-1.5 text-sm text-muted-foreground">
+            Ask in plain language. Get answers grounded in your actual history — not model hallucinations.
+          </p>
+        </Card>
 
-        <Card.Root class="border border-border">
-          <Card.Header>
-            <div class="mb-2 flex size-10 items-center justify-center rounded-md border border-border">
-              <Icon icon="solar:graph-new-bold-duotone" class="size-5" />
-            </div>
-            <Card.Title>Signal over noise</Card.Title>
-            <Card.Description>
-              Cuts through the alert fog. Delivery drift, recurring failures, and team patterns surfaced automatically.
-            </Card.Description>
-          </Card.Header>
-        </Card.Root>
+        <Card class="p-6">
+          <div class="mb-3 flex size-10 items-center justify-center rounded-md border border-border">
+            <Icon icon="solar:graph-new-bold-duotone" class="size-5" />
+          </div>
+          <p class="font-semibold text-foreground">Signal over noise</p>
+          <p class="mt-1.5 text-sm text-muted-foreground">
+            Cuts through the alert fog. Delivery drift, recurring failures, and team patterns surfaced automatically.
+          </p>
+        </Card>
       </div>
     </section>
 
