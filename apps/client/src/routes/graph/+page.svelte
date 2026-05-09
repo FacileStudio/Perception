@@ -576,7 +576,7 @@
   </div>
 
   <div bind:this={container} class="relative min-h-0 flex-1 bg-[#f4f4f5]">
-    <div class="absolute right-3 top-3 z-10 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
+    <div class="absolute right-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
         class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {refreshing ? 'text-zinc-400' : 'text-zinc-500 hover:text-zinc-800'} disabled:cursor-not-allowed"
         onclick={() => { if (!refreshing) confirmOpen = true; }}
@@ -587,7 +587,7 @@
       </button>
     </div>
 
-    <div class="absolute left-3 top-3 z-10 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
+    <div class="absolute left-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
         class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
         onclick={() => setMode('entities')}
@@ -642,7 +642,7 @@
     <canvas
       bind:this={canvas}
       class="absolute inset-0 block"
-      style="width:100%;height:100%;cursor:grab"
+      style="width:100%;height:100%;cursor:grab;display:{viewMode === 'list' ? 'none' : 'block'}"
       onmousemove={onMouseMove}
       onmousedown={onMouseDown}
       onmouseup={onMouseUp}
