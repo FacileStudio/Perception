@@ -248,7 +248,7 @@ chatRoutes.post('/', async (c) => {
     args: [buildSessionTitle(body.message), now, sessionId],
   });
 
-  const plan = buildQueryPlan(body.message);
+  const plan = await buildQueryPlan(body.message);
   let context: RetrievalResult = { events: [], stats: [] };
 
   if (plan.requiresRetrieval) {

@@ -1,4 +1,6 @@
-import { extractQueryTerms, inferQueryCapabilities } from '../ontology/query';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { generateText } from 'ai';
+import { getEffectiveSetting } from '../db/settings';
 
 export type QueryPlan = {
   timeWindow: { from: string; to: string } | null;
@@ -14,245 +16,90 @@ export type QueryPlan = {
   rawMessage: string;
 };
 
-const PROVIDER_KEYWORDS: Record<string, string> = {
-  'dokploy': 'dokploy',
-  'vikunja': 'vikunja',
-  'charles': 'charles',
-  'docuseal': 'docuseal',
-  'uptime-kuma': 'uptime-kuma',
-  'imap': 'imap',
-  'mail': 'imap',
-  'mails': 'imap',
-  'courriel': 'imap',
-  'courriels': 'imap',
-  'git': 'git',
-  'github': 'git',
-  'sablier': 'sablier',
-  'website': 'website',
-};
+const PLANNER_SYSTEM = `You are a query planner for Perception, an operational intelligence assistant for Facile.
+Your job: analyze the user message (in ANY language) and output a JSON query plan.
 
-const ENTITY_KEYWORDS: Record<string, string> = {
-  task: 'task',
-  tasks: 'task',
-  tâche: 'task',
-  tâches: 'task',
-  contract: 'contract',
-  contracts: 'contract',
-  contrat: 'contract',
-  contrats: 'contract',
-  deployment: 'deployment',
-  deployments: 'deployment',
-  déploiement: 'deployment',
-  déploiements: 'deployment',
-  service: 'service',
-  services: 'service',
-  email: 'email',
-  emails: 'email',
-  mail: 'email',
-  mails: 'email',
-  courriel: 'email',
-  courriels: 'email',
-  client: 'client',
-  clients: 'client',
-};
+Available data providers: imap, git, dokploy, vikunja, charles, docuseal, uptime-kuma, sablier, website
+Available entity types: email, task, contract, deployment, service, client
+Available ontology capabilities: organization, commercial_account, document, can_have_contracts, financial_record, money, work_item, service, person
 
-const SQL_KEYWORDS = ['count', 'how many', 'list all', 'unsigned', 'overdue', 'combien'];
-const STATS_KEYWORDS = ['trend', 'summary', 'week', 'cadence', 'health', 'tendance', 'résumé', 'semaine'];
-const RECENCY_KEYWORDS = [
-  'recent', 'recently', 'latest', 'new', 'happened', 'activity', 'updates',
-  'récent', 'récents', 'récente', 'récentes', 'récemment', 'dernier', 'derniers',
-  'dernière', 'dernières', 'nouveau', 'nouvel', 'nouvelle', 'nouveaux',
-];
-const QUESTION_STARTERS = [
-  'what', 'why', 'how', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'is', 'are', 'do', 'does', 'did',
-  'qui', 'quoi', 'quand', 'où', 'comment', 'combien', 'quel', 'quelle', 'quels', 'quelles', 'est-ce',
-];
-const COMMAND_STARTERS = [
-  'show', 'list', 'tell', 'explain', 'summarize', 'find', 'check', 'compare', 'drill', 'dig', 'give',
-  'montre', 'liste', 'dis', 'explique', 'résume', 'cherche', 'trouve', 'regarde', 'vérifie', 'affiche',
-];
-const COMMAND_PHRASES = [
-  'show me', 'tell me', 'list', 'summarize', 'find', 'check', 'compare', 'drill into', 'dig into', 'give me',
-  'montre moi', 'dis moi', 'regarde dans', 'cherche dans', 'trouve moi',
-];
-const LIGHT_REPLY_TOKENS = new Set([
-  'ok', 'okay', 'yeah', 'yep', 'yup', 'nice', 'cool', 'wow', 'wild', 'crazy', 'insane',
-  'perfect', 'great', 'thanks', 'thank', 'you', 'gotcha', 'gotit', 'lol', 'lmao', 'oof',
-  'brutal', 'nuts', 'sick', 'damn', 'whoa', 'woah', 'sheesh', 'clean', 'solid', 'true',
-  'fair', 'exactly', 'same', 'indeed', 'thats', 'that', 'this', 'its', 'it', 'is', 'was',
-  'really', 'very', 'so', 'super', 'actually', 'honestly', 'pretty', 'kindof', 'kinda', 'hell',
-  'ha', 'haha', 'jesus',
-]);
-const HISTORY_ONLY_PATTERNS = [
-  /^why\b/,
-  /^how so\b/,
-  /^how come\b/,
-  /^what do you mean\b/,
-  /^which one\b/,
-  /^which ones\b/,
-  /^what changed\b/,
-  /^what specifically\b/,
-  /^and then\b/,
-  /^and why\b/,
-  /^wait what\b/,
-  /^really\b/,
-];
+Output a single JSON object — no markdown, no code fences, no explanation:
 
-function normalizeIntentText(message: string): string {
-  return message
-    .toLowerCase()
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+{
+  "retrievalMode": "full" | "history" | "light",
+  "providerFilters": string[],
+  "entityHints": string[],
+  "timeWindow": { "from": "ISO8601", "to": "ISO8601" } | null,
+  "requiresSqlFacts": boolean,
+  "requiresStats": boolean,
+  "prefersRecency": boolean,
+  "queryTerms": string[],
+  "capabilities": string[]
 }
 
-function tokenizeIntent(message: string): string[] {
-  const normalized = normalizeIntentText(message);
-  return normalized ? normalized.split(' ') : [];
-}
+Field rules:
+- retrievalMode:
+    "light"   → pure reaction or acknowledgment, zero new data needed (ok, cool, thanks, lol, nice)
+    "history" → follow-up answerable from conversation context (why?, which one?, and then?)
+    "full"    → needs fresh data from the database (default when in doubt)
+- providerFilters: providers relevant to the query. Empty array = no filter = search all providers.
+- entityHints: entity types relevant to the query. Empty array = no filter.
+- timeWindow: only set if the message explicitly references a time period. Use the current datetime to compute ISO 8601 from/to values (e.g. "today", "this week", "last 7 days"). Null otherwise.
+- requiresSqlFacts: true if asking for exact counts, lists, or enumerations.
+- requiresStats: true if asking for trends, summaries, cadence, or health metrics.
+- prefersRecency: true if asking about recent, latest, or new activity.
+- queryTerms: key content search terms extracted from the message. Lowercase. No stop words. No language-specific articles or prepositions. Max 10 terms.
+- capabilities: ontology capabilities relevant to the query. Empty if none clearly apply.`;
 
-function hasQuestionSignal(message: string): boolean {
-  const normalized = normalizeIntentText(message);
-  const tokens = tokenizeIntent(message);
-  const first = tokens[0] ?? '';
-
-  return (
-    message.includes('?') ||
-    QUESTION_STARTERS.includes(first) ||
-    COMMAND_STARTERS.includes(first) ||
-    COMMAND_PHRASES.some((phrase) => normalized.includes(phrase))
-  );
-}
-
-function hasExplicitEvidenceSignal(message: string): boolean {
-  const lower = message.toLowerCase();
-  const normalized = normalizeIntentText(message);
-
-  return (
-    /\d/.test(message) ||
-    Object.keys(PROVIDER_KEYWORDS).some((keyword) => lower.includes(keyword)) ||
-    Object.keys(ENTITY_KEYWORDS).some((keyword) => lower.includes(keyword)) ||
-    SQL_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
-    STATS_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
-    RECENCY_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
-    normalized.includes('main') ||
-    normalized.includes('deploy') ||
-    normalized.includes('build') ||
-    normalized.includes('commit')
-  );
-}
-
-function isLikelyLightReply(message: string): boolean {
-  const tokens = tokenizeIntent(message);
-  if (tokens.length === 0 || tokens.length > 6) {
-    return false;
-  }
-  if (hasQuestionSignal(message) || hasExplicitEvidenceSignal(message)) {
-    return false;
-  }
-  return tokens.every((token) => LIGHT_REPLY_TOKENS.has(token));
-}
-
-function isLikelyHistoryOnlyFollowup(message: string): boolean {
-  const normalized = normalizeIntentText(message);
-  const tokens = tokenizeIntent(message);
-  if (tokens.length === 0 || tokens.length > 8) {
-    return false;
-  }
-  if (hasExplicitEvidenceSignal(message)) {
-    return false;
-  }
-  return HISTORY_ONLY_PATTERNS.some((pattern) => pattern.test(normalized));
-}
-
-function detectRetrievalMode(message: string): 'full' | 'history' | 'light' {
-  if (isLikelyLightReply(message)) {
-    return 'light';
-  }
-  if (isLikelyHistoryOnlyFollowup(message)) {
-    return 'history';
-  }
-  return 'full';
-}
-
-function startOfDay(d: Date): string {
-  const copy = new Date(d);
-  copy.setUTCHours(0, 0, 0, 0);
-  return copy.toISOString();
-}
-
-function endOfDay(d: Date): string {
-  const copy = new Date(d);
-  copy.setUTCHours(23, 59, 59, 999);
-  return copy.toISOString();
-}
-
-function detectTimeWindow(msg: string): { from: string; to: string } | null {
-  const lower = msg.toLowerCase();
-  const now = new Date();
-
-  if (lower.includes('today')) {
-    return { from: startOfDay(now), to: endOfDay(now) };
-  }
-
-  if (lower.includes('this week')) {
-    const dayOfWeek = now.getUTCDay();
-    const monday = new Date(now.getTime() - dayOfWeek * 86400000);
-    const sunday = new Date(monday.getTime() + 6 * 86400000);
-    return { from: startOfDay(monday), to: endOfDay(sunday) };
-  }
-
-  if (lower.includes('last 7 days')) {
-    const from = new Date(now.getTime() - 7 * 86400000);
-    return { from: from.toISOString(), to: now.toISOString() };
-  }
-
-  if (lower.includes('last 30 days')) {
-    const from = new Date(now.getTime() - 30 * 86400000);
-    return { from: from.toISOString(), to: now.toISOString() };
-  }
-
-  if (lower.includes('recent') || lower.includes('recently') || lower.includes('latest')) {
-    const from = new Date(now.getTime() - 3 * 86400000);
-    return { from: from.toISOString(), to: now.toISOString() };
-  }
-
-  return null;
-}
-
-export function buildQueryPlan(message: string): QueryPlan {
-  const lower = message.toLowerCase();
-
-  const timeWindow = detectTimeWindow(message);
-
-  const providerFilters = Array.from(new Set(
-    Object.entries(PROVIDER_KEYWORDS)
-      .filter(([keyword]) => lower.includes(keyword))
-      .map(([, provider]) => provider),
-  ));
-
-  const entitySet = new Set<string>();
-  for (const [keyword, entity] of Object.entries(ENTITY_KEYWORDS)) {
-    if (lower.includes(keyword)) entitySet.add(entity);
-  }
-
-  const requiresSqlFacts = SQL_KEYWORDS.some((kw) => lower.includes(kw));
-  const requiresStats = STATS_KEYWORDS.some((kw) => lower.includes(kw));
-  const prefersRecency = RECENCY_KEYWORDS.some((kw) => lower.includes(kw));
-  const retrievalMode = detectRetrievalMode(message);
-
+function fallbackPlan(message: string): QueryPlan {
   return {
-    timeWindow,
-    providerFilters,
-    entityHints: Array.from(entitySet),
-    queryTerms: extractQueryTerms(message),
-    capabilities: inferQueryCapabilities(message),
-    requiresSqlFacts,
-    requiresStats,
-    prefersRecency,
-    retrievalMode,
-    requiresRetrieval: retrievalMode === 'full',
+    timeWindow: null,
+    providerFilters: [],
+    entityHints: [],
+    queryTerms: [],
+    capabilities: [],
+    requiresSqlFacts: false,
+    requiresStats: false,
+    prefersRecency: false,
+    retrievalMode: 'full',
+    requiresRetrieval: true,
     rawMessage: message,
   };
+}
+
+export async function buildQueryPlan(message: string): Promise<QueryPlan> {
+  try {
+    const apiKey = await getEffectiveSetting('anthropic_api_key');
+    const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
+    const now = new Date().toISOString();
+
+    const { text } = await generateText({
+      model: anthropic('claude-haiku-4-5-20251001'),
+      system: PLANNER_SYSTEM,
+      prompt: `Current datetime: ${now}\n\nUser message: ${message}`,
+      maxTokens: 300,
+    });
+
+    const raw = JSON.parse(text.trim());
+
+    const retrievalMode = ['full', 'history', 'light'].includes(raw.retrievalMode)
+      ? (raw.retrievalMode as 'full' | 'history' | 'light')
+      : 'full';
+
+    return {
+      timeWindow: raw.timeWindow && typeof raw.timeWindow === 'object' ? raw.timeWindow : null,
+      providerFilters: Array.isArray(raw.providerFilters) ? raw.providerFilters : [],
+      entityHints: Array.isArray(raw.entityHints) ? raw.entityHints : [],
+      queryTerms: Array.isArray(raw.queryTerms) ? raw.queryTerms : [],
+      capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : [],
+      requiresSqlFacts: Boolean(raw.requiresSqlFacts),
+      requiresStats: Boolean(raw.requiresStats),
+      prefersRecency: Boolean(raw.prefersRecency),
+      retrievalMode,
+      requiresRetrieval: retrievalMode === 'full',
+      rawMessage: message,
+    };
+  } catch {
+    return fallbackPlan(message);
+  }
 }
