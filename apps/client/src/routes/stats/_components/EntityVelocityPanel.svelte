@@ -6,7 +6,23 @@
 
   let { snap }: { snap: StatsSnapshot } = $props();
 
-  type VelocityEntry = { current: number; previous: number; delta: number };
+  type VelocityEntry = { current: number; previous: number; delta: number }
+
+  const ENTITY_COLORS: [string, string][] = [
+    ['deployment', '#6366f1'], ['service', '#6366f1'], ['monitor', '#6366f1'],
+    ['contract', '#7c3aed'], ['document', '#7c3aed'], ['submission', '#7c3aed'],
+    ['client', '#059669'], ['organization', '#059669'], ['company', '#059669'], ['account', '#059669'],
+    ['task', '#2563eb'], ['work_item', '#2563eb'], ['issue', '#2563eb'],
+    ['person', '#db2777'], ['contact', '#db2777'], ['signer', '#db2777'],
+    ['invoice', '#d97706'], ['payment', '#d97706'], ['financial', '#d97706'],
+  ]
+
+  function entityColor(label: string): string {
+    for (const [key, color] of ENTITY_COLORS) {
+      if (label.includes(key)) return color
+    }
+    return '#6b7280'
+  };
 
   const velocity = $derived(
     (snap.data.velocity ?? {}) as Record<string, VelocityEntry>
@@ -24,6 +40,7 @@
       label,
       current: v.current,
       previous: v.previous,
+      color: entityColor(label),
     }))
   );
 

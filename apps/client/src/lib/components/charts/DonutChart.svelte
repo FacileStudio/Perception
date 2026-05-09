@@ -8,8 +8,8 @@
   const innerR = $derived(size * 0.26)
 
   const DEFAULT_COLORS = [
-    '#18181b', '#3b82f6', '#10b981', '#f59e0b',
-    '#ef4444', '#8b5cf6', '#71717a', '#d4d4d8'
+    '#6366f1', '#7c3aed', '#059669', '#2563eb',
+    '#db2777', '#d97706', '#6b7280', '#94a3b8',
   ]
 
   type Slice = { path: string; color: string; label: string; value: number; pct: number }

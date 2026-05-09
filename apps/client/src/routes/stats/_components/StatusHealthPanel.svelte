@@ -7,14 +7,25 @@
   let { snap }: { snap: StatsSnapshot } = $props();
 
   const STATUS_COLORS: Record<string, string> = {
-    open: '#3b82f6', active: '#3b82f6', in_progress: '#3b82f6',
-    closed: '#10b981', done: '#10b981', completed: '#10b981', merged: '#10b981',
-    blocked: '#ef4444', failed: '#ef4444', error: '#ef4444',
-    pending: '#f59e0b', waiting: '#f59e0b', review: '#f59e0b',
+    open: '#2563eb', active: '#2563eb', in_progress: '#2563eb', running: '#2563eb', started: '#2563eb',
+    closed: '#059669', done: '#059669', completed: '#059669', merged: '#059669', resolved: '#059669', succeeded: '#059669', success: '#059669',
+    blocked: '#ef4444', failed: '#ef4444', error: '#ef4444', cancelled: '#ef4444', rejected: '#ef4444', down: '#ef4444',
+    pending: '#d97706', waiting: '#d97706', review: '#d97706', draft: '#d97706', queued: '#d97706',
+    paused: '#7c3aed', archived: '#6b7280', unknown: '#94a3b8',
   };
 
+  const STATUS_FALLBACK = ['#6366f1', '#7c3aed', '#059669', '#2563eb', '#db2777', '#d97706'];
+  const seenFallback: Record<string, string> = {};
+  let fallbackIdx = 0;
+
   function statusColor(s: string): string {
-    return STATUS_COLORS[s.toLowerCase()] ?? '#71717a';
+    const key = s.toLowerCase();
+    if (STATUS_COLORS[key]) return STATUS_COLORS[key];
+    if (!seenFallback[key]) {
+      seenFallback[key] = STATUS_FALLBACK[fallbackIdx % STATUS_FALLBACK.length];
+      fallbackIdx++;
+    }
+    return seenFallback[key];
   }
 
   const distribution = $derived(

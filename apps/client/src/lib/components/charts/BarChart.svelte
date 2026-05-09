@@ -1,6 +1,8 @@
 <script lang="ts">
-  type BarData = { label: string; current: number; previous?: number }
+  type BarData = { label: string; current: number; previous?: number; color?: string }
   let { data, height = 180 }: { data: BarData[]; height?: number } = $props()
+
+  const PALETTE = ['#6366f1','#7c3aed','#059669','#2563eb','#db2777','#d97706','#6b7280','#94a3b8']
 
   const PAD = { top: 16, right: 8, bottom: 36, left: 36 }
   const chartW = 500 - PAD.left - PAD.right
@@ -66,7 +68,7 @@
         y={barY}
         width={barW}
         height={barH}
-        fill="#18181b"
+        fill={d.color ?? PALETTE[i % PALETTE.length]}
         rx="3"
       />
 
@@ -94,7 +96,7 @@
 
     {#if hasPrev}
       {@const legendX = 500 - PAD.right - 8}
-      <rect x={legendX - 60} y={PAD.top} width="8" height="8" fill="#18181b" rx="2" />
+      <rect x={legendX - 60} y={PAD.top} width="8" height="8" fill={data[0]?.color ?? PALETTE[0]} rx="2" />
       <text x={legendX - 60 + 10} y={PAD.top + 4} dominant-baseline="middle" font-size="9" fill="#71717a">current</text>
       <rect x={legendX - 60} y={PAD.top + 12} width="8" height="8" fill="#d4d4d8" rx="2" />
       <text x={legendX - 60 + 10} y={PAD.top + 16} dominant-baseline="middle" font-size="9" fill="#71717a">previous</text>
