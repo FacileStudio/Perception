@@ -3,6 +3,9 @@
   import { api } from '$lib/api';
   import type { GraphEntity, EntityRelation } from '$lib/api';
   import { buildTitle } from '$lib/head';
+  import Icon from '@iconify/svelte';
+  import { ensureSolar } from '$lib/solar';
+  ensureSolar();
 
   type SimNode = GraphEntity & { x: number; y: number; vx: number; vy: number; r: number };
 
@@ -545,21 +548,30 @@
   <div bind:this={container} class="relative min-h-0 flex-1 bg-[#f4f4f5]">
     <div class="absolute right-3 top-3 z-10 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
-        class="rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {refreshing ? 'text-zinc-400' : 'text-zinc-500 hover:text-zinc-800'} disabled:cursor-not-allowed"
+        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {refreshing ? 'text-zinc-400' : 'text-zinc-500 hover:text-zinc-800'} disabled:cursor-not-allowed"
         onclick={() => { if (!refreshing) confirmOpen = true; }}
         disabled={refreshing}
-      >{refreshing ? 'Refreshing…' : 'Refresh graph'}</button>
+      >
+        <Icon icon="solar:refresh-linear" class="size-3.5" />
+        {refreshing ? 'Refreshing…' : 'Refresh graph'}
+      </button>
     </div>
 
     <div class="absolute left-3 top-3 z-10 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
-        class="rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
         onclick={() => setMode('entities')}
-      >Entities</button>
+      >
+        <Icon icon="solar:layers-minimalistic-linear" class="size-3.5" />
+        Entities
+      </button>
       <button
-        class="rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'relations' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'relations' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
         onclick={() => setMode('relations')}
-      >Relations</button>
+      >
+        <Icon icon="solar:graph-linear" class="size-3.5" />
+        Relations
+      </button>
     </div>
 
     <canvas
@@ -598,13 +610,19 @@
           </p>
           <div class="mt-5 flex justify-end gap-2">
             <button
-              class="rounded-lg border border-zinc-200 px-3.5 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
+              class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3.5 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
               onclick={() => { confirmOpen = false; }}
-            >Cancel</button>
+            >
+              <Icon icon="solar:close-circle-linear" class="size-3.5" />
+              Cancel
+            </button>
             <button
-              class="rounded-lg bg-zinc-900 px-3.5 py-2 text-xs font-medium text-white transition-colors hover:bg-zinc-700"
+              class="flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3.5 py-2 text-xs font-medium text-white transition-colors hover:bg-zinc-700"
               onclick={() => { confirmOpen = false; refreshGraph(); }}
-            >Yes, refresh</button>
+            >
+              <Icon icon="solar:refresh-linear" class="size-3.5" />
+              Yes, refresh
+            </button>
           </div>
         </div>
       </div>
