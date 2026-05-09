@@ -43,7 +43,11 @@ Field rules:
     "history" → follow-up answerable from conversation context (why?, which one?, and then?)
     "full"    → needs fresh data from the database (default when in doubt)
 - providerFilters: providers relevant to the query. Empty array = no filter = search all providers.
+  Use ["imap"] when the question is about personal facts, shared secrets, game results, passwords, codes, or anything
+  typically communicated between people (e.g. "what is the secret animal?", "what did Yann say?", "what's the code word?",
+  "did I get a reply?"). When in doubt about where the info lives and it could plausibly be in an email, include "imap".
 - entityHints: entity types relevant to the query. Empty array = no filter.
+  Use ["email"] alongside providerFilters: ["imap"] for personal communication queries.
 - timeWindow: only set if the message explicitly references a time period. Use the current datetime to compute ISO 8601 from/to values (e.g. "today", "this week", "last 7 days"). Null otherwise.
 - requiresSqlFacts: true if asking for exact counts, lists, or enumerations.
 - requiresStats: true if asking for trends, summaries, cadence, or health metrics.
