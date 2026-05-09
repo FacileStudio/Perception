@@ -11,7 +11,13 @@
   let entityCount = $state(0);
   let relationCount = $state(0);
   let viewMode = $state<'entities' | 'relations'>('entities');
+  let drawMode: 'entities' | 'relations' = 'entities';
   let relationLegend = $state<[string, string][]>([]);
+
+  function setMode(m: 'entities' | 'relations') {
+    viewMode = m;
+    drawMode = m;
+  }
 
   let container: HTMLDivElement;
   let canvas: HTMLCanvasElement;
@@ -149,7 +155,7 @@
     if (!ctx) return;
     const W = cw();
     const H = ch();
-    const mode = viewMode;
+    const mode = drawMode;
 
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -340,7 +346,7 @@
     const hit = findHovered(sx, sy);
     hoveredNode = hit;
 
-    if (viewMode === 'relations' && !hit) {
+    if (drawMode === 'relations' && !hit) {
       hoveredEdge = findHoveredEdge(sx, sy);
     } else {
       hoveredEdge = null;
@@ -464,11 +470,11 @@
     <div class="absolute left-3 top-3 z-10 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
         class="rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => viewMode = 'entities'}
+        onclick={() => setMode('entities')}
       >Entities</button>
       <button
         class="rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'relations' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => viewMode = 'relations'}
+        onclick={() => setMode('relations')}
       >Relations</button>
     </div>
 
