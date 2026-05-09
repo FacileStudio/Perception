@@ -43,6 +43,9 @@ export const api = {
     update: (body: Record<string, string | null>) => request<{ ok: boolean }>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
     usage: () => request<{ usage: TokenUsageRow[]; total_cost_usd: number }>('/settings/usage'),
   },
+  entities: {
+    graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
+  },
 };
 
 export type EventRow = {
@@ -83,6 +86,21 @@ export type TokenUsageRow = {
   output_tokens: number;
   calls: number;
   cost_usd: number;
+};
+
+export type GraphEntity = {
+  id: string;
+  canonical_name: string;
+  type_label: string;
+  confidence: number;
+  event_count: number;
+};
+
+export type EntityRelation = {
+  from_id: string;
+  to_id: string;
+  label: string;
+  confidence: number;
 };
 
 export type ChatSessionDetail = {

@@ -13,6 +13,7 @@
   const navLinks = [
     { href: '/', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p === '/' || p.startsWith('/chat') },
     { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
+    { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph' },
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
     { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone', match: (p: string) => p === '/settings' },
   ];

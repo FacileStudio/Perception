@@ -7,6 +7,7 @@ import type { ChatSource } from '../types';
 import type { QueryPlan } from './planner';
 import type { RetrievalResult } from './retrieve';
 import { buildSystemPrompt, buildContextBlock } from './prompt';
+import { fetchSystemSummary } from './retrieve';
 
 interface ChatMessageRow {
   role: 'user' | 'assistant';
@@ -68,8 +69,13 @@ export function streamChat(
     async start(controller) {
       try {
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ session_id: sessionId })}\n\n`));
-        const history = trimLatestUserEcho(await loadHistory(sessionId), message);
-        const promptMessage = plan.requiresRetrieval ? `${contextBlock}\n\nUser question: ${message}` : message;
+        const [history, systemSummary] = await Promise.all([
+          loadHistory(sessionId).then((h) => trimLatestUserEcho(h, message)),
+          plan.requiresRetrieval ? fetchSystemSummary() : Promise.resolve(''),
+        ]);
+        const promptMessage = plan.requiresRetrieval
+          ? `${systemSummary}\n\n${contextBlock}\n\nUser question: ${message}`
+          : message;
 
         const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
           ...history,

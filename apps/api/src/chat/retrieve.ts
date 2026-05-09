@@ -264,6 +264,33 @@ function mergeAndRank(
   return ranked.slice(0, 25);
 }
 
+export async function fetchSystemSummary(): Promise<string> {
+  const [eventsRow, entitiesRow, providers, entityTypes, eventCats] = await Promise.all([
+    db.execute(`SELECT COUNT(*) AS total, MIN(occurred_at) AS oldest, MAX(occurred_at) AS newest FROM events`),
+    db.execute(`SELECT COUNT(*) AS total FROM entities`),
+    db.execute(`SELECT provider_name, COUNT(*) AS cnt FROM events GROUP BY provider_name ORDER BY cnt DESC LIMIT 10`),
+    db.execute(`SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id WHERE oc.kind = 'entity_type' GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`),
+    db.execute(`SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id WHERE oc.kind = 'event_category' GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`),
+  ]);
+
+  const total = eventsRow.rows[0]?.total ?? 0;
+  const oldest = (eventsRow.rows[0]?.oldest as string | null)?.slice(0, 10) ?? '';
+  const newest = (eventsRow.rows[0]?.newest as string | null)?.slice(0, 10) ?? '';
+  const entityCount = entitiesRow.rows[0]?.total ?? 0;
+
+  const providerList = providers.rows.map((r) => `${r.provider_name} (${r.cnt})`).join(', ') || 'none';
+  const entityTypeList = entityTypes.rows.map((r) => `${r.label} (${r.cnt})`).join(', ') || 'none';
+  const eventCatList = eventCats.rows.map((r) => `${r.label} (${r.cnt})`).join(', ') || 'none';
+
+  return [
+    `[KNOWLEDGE_BASE generated_at=${new Date().toISOString()} total_events=${total} total_entities=${entityCount} date_range=${oldest}/${newest}]`,
+    `Providers: ${providerList}`,
+    `Entity types: ${entityTypeList}`,
+    `Event categories: ${eventCatList}`,
+    `[/KNOWLEDGE_BASE]`,
+  ].join('\n');
+}
+
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
   const shouldRunRecentLane = plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
 
