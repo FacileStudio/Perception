@@ -131,7 +131,7 @@ function hasExplicitEvidenceSignal(message: string): boolean {
 
   return (
     /\d/.test(message) ||
-    KNOWN_PROVIDERS.some((provider) => lower.includes(provider)) ||
+    Object.keys(PROVIDER_KEYWORDS).some((keyword) => lower.includes(keyword)) ||
     Object.keys(ENTITY_KEYWORDS).some((keyword) => lower.includes(keyword)) ||
     SQL_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
     STATS_KEYWORDS.some((keyword) => lower.includes(keyword)) ||
