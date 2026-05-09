@@ -198,7 +198,7 @@ function entitySeed(envelope: NookEventEnvelope, extracted: Omit<ExtractedEvent,
   const rawType = extracted.entity_type || envelope.subject.type || '';
   const isUnknown = !rawType || rawType.toLowerCase() === 'unknown';
   const inferredType = isUnknown ? inferEntityTypeFromEventType(envelope.event.type) : null;
-  const label = normalizeLabel(inferredType ?? rawType || 'unknown_entity');
+  const label = normalizeLabel(inferredType ?? (rawType || 'unknown_entity'));
   const context = [
     envelope.provider.type,
     envelope.provider.name,
