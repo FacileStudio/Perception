@@ -14,32 +14,67 @@ export type QueryPlan = {
   rawMessage: string;
 };
 
-const KNOWN_PROVIDERS = [
-  'dokploy', 'vikunja', 'charles', 'docuseal',
-  'uptime-kuma', 'imap', 'git', 'sablier', 'website',
-];
+const PROVIDER_KEYWORDS: Record<string, string> = {
+  'dokploy': 'dokploy',
+  'vikunja': 'vikunja',
+  'charles': 'charles',
+  'docuseal': 'docuseal',
+  'uptime-kuma': 'uptime-kuma',
+  'imap': 'imap',
+  'mail': 'imap',
+  'mails': 'imap',
+  'courriel': 'imap',
+  'courriels': 'imap',
+  'git': 'git',
+  'github': 'git',
+  'sablier': 'sablier',
+  'website': 'website',
+};
 
 const ENTITY_KEYWORDS: Record<string, string> = {
   task: 'task',
   tasks: 'task',
+  tâche: 'task',
+  tâches: 'task',
   contract: 'contract',
   contracts: 'contract',
+  contrat: 'contract',
+  contrats: 'contract',
   deployment: 'deployment',
   deployments: 'deployment',
+  déploiement: 'deployment',
+  déploiements: 'deployment',
   service: 'service',
   services: 'service',
   email: 'email',
   emails: 'email',
+  mail: 'email',
+  mails: 'email',
+  courriel: 'email',
+  courriels: 'email',
   client: 'client',
   clients: 'client',
 };
 
-const SQL_KEYWORDS = ['count', 'how many', 'list all', 'unsigned', 'overdue'];
-const STATS_KEYWORDS = ['trend', 'summary', 'week', 'cadence', 'health'];
-const RECENCY_KEYWORDS = ['recent', 'recently', 'latest', 'new', 'happened', 'activity', 'updates'];
-const QUESTION_STARTERS = ['what', 'why', 'how', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'is', 'are', 'do', 'does', 'did'];
-const COMMAND_STARTERS = ['show', 'list', 'tell', 'explain', 'summarize', 'find', 'check', 'compare', 'drill', 'dig', 'give'];
-const COMMAND_PHRASES = ['show me', 'tell me', 'list', 'summarize', 'find', 'check', 'compare', 'drill into', 'dig into', 'give me'];
+const SQL_KEYWORDS = ['count', 'how many', 'list all', 'unsigned', 'overdue', 'combien'];
+const STATS_KEYWORDS = ['trend', 'summary', 'week', 'cadence', 'health', 'tendance', 'résumé', 'semaine'];
+const RECENCY_KEYWORDS = [
+  'recent', 'recently', 'latest', 'new', 'happened', 'activity', 'updates',
+  'récent', 'récents', 'récente', 'récentes', 'récemment', 'dernier', 'derniers',
+  'dernière', 'dernières', 'nouveau', 'nouvel', 'nouvelle', 'nouveaux',
+];
+const QUESTION_STARTERS = [
+  'what', 'why', 'how', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'is', 'are', 'do', 'does', 'did',
+  'qui', 'quoi', 'quand', 'où', 'comment', 'combien', 'quel', 'quelle', 'quels', 'quelles', 'est-ce',
+];
+const COMMAND_STARTERS = [
+  'show', 'list', 'tell', 'explain', 'summarize', 'find', 'check', 'compare', 'drill', 'dig', 'give',
+  'montre', 'liste', 'dis', 'explique', 'résume', 'cherche', 'trouve', 'regarde', 'vérifie', 'affiche',
+];
+const COMMAND_PHRASES = [
+  'show me', 'tell me', 'list', 'summarize', 'find', 'check', 'compare', 'drill into', 'dig into', 'give me',
+  'montre moi', 'dis moi', 'regarde dans', 'cherche dans', 'trouve moi',
+];
 const LIGHT_REPLY_TOKENS = new Set([
   'ok', 'okay', 'yeah', 'yep', 'yup', 'nice', 'cool', 'wow', 'wild', 'crazy', 'insane',
   'perfect', 'great', 'thanks', 'thank', 'you', 'gotcha', 'gotit', 'lol', 'lmao', 'oof',
@@ -191,7 +226,11 @@ export function buildQueryPlan(message: string): QueryPlan {
 
   const timeWindow = detectTimeWindow(message);
 
-  const providerFilters = KNOWN_PROVIDERS.filter((p) => lower.includes(p));
+  const providerFilters = Array.from(new Set(
+    Object.entries(PROVIDER_KEYWORDS)
+      .filter(([keyword]) => lower.includes(keyword))
+      .map(([, provider]) => provider),
+  ));
 
   const entitySet = new Set<string>();
   for (const [keyword, entity] of Object.entries(ENTITY_KEYWORDS)) {

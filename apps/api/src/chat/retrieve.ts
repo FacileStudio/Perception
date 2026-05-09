@@ -29,11 +29,13 @@ async function vectorLane(queryEmbedding: number[]): Promise<Array<EventRow & { 
   }
 }
 
-async function ftsLane(message: string): Promise<Array<EventRow & { score: number; source: 'fts' }>> {
+async function ftsLane(queryTerms: string[]): Promise<Array<EventRow & { score: number; source: 'fts' }>> {
+  if (queryTerms.length === 0) return [];
   try {
+    const ftsQuery = queryTerms.map((t) => `"${t.replace(/"/g, '')}"`).join(' OR ');
     const result = await db.execute({
       sql: `SELECT e.*, rank AS score FROM event_fts JOIN events e ON e.rowid = event_fts.rowid WHERE event_fts MATCH ? LIMIT 20`,
-      args: [message],
+      args: [ftsQuery],
     });
     return result.rows.map((r) => ({
       ...rowToEvent(r as unknown as Record<string, unknown>),
@@ -292,11 +294,11 @@ export async function fetchSystemSummary(): Promise<string> {
 }
 
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
-  const shouldRunRecentLane = plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
+  const shouldRunRecentLane = plan.retrievalMode === 'full' || plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
 
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     vectorLane(queryEmbedding),
-    ftsLane(plan.rawMessage),
+    ftsLane(plan.queryTerms),
     plan.requiresSqlFacts ? sqlLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
     shouldRunRecentLane ? recentLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
     entityLane(plan),

@@ -2,6 +2,10 @@ const STOP_WORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'by', 'can', 'for', 'from', 'how', 'in', 'is', 'it',
   'last', 'latest', 'list', 'me', 'new', 'of', 'on', 'or', 'recent', 'recently', 'show',
   'the', 'this', 'to', 'what', 'when', 'where', 'which', 'who', 'with',
+  'ce', 'cet', 'cette', 'ces', 'dans', 'des', 'du', 'elle', 'elles', 'est', 'eux',
+  'il', 'ils', 'je', 'la', 'le', 'les', 'leur', 'leurs', 'lui', 'ma', 'mes', 'mon',
+  'nous', 'par', 'pas', 'pour', 'que', 'qui', 'sa', 'ses', 'son', 'sur', 'ta', 'tes',
+  'ton', 'tu', 'un', 'une', 'vous', 'y',
 ]);
 
 function uniq(values: string[]): string[] {
