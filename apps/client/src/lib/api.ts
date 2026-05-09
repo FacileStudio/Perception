@@ -22,9 +22,6 @@ export const api = {
       return request<{ events: EventRow[]; total: number }>(`/events${q}`);
     },
     get: (id: string) => request<{ event: EventRow; facts: Record<string, unknown> | null; embedding: { status: string; embedded_at: string | null } | null }>(`/events/${id}`),
-    label: (id: string) => request<{ ok: boolean; concepts: number }>(`/events/${id}/label`, { method: 'POST' }),
-    labelUnlabeled: () => request<{ ok: boolean; labeled: number }>('/events/label-unlabeled', { method: 'POST' }),
-    resolveEntities: () => request<{ ok: boolean; resolved: number }>('/events/resolve-entities', { method: 'POST' }),
   },
   chat: {
     send: (message: string, sessionId?: string) =>

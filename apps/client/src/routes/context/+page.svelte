@@ -64,46 +64,6 @@
   onMount(() => loadEvents());
 
   const totalPages = $derived(Math.ceil(eventsState.total / PAGE_SIZE));
-
-  const labelingIds = $state(new Set<string>());
-  let labelingAll = $state(false);
-  let labeledCount = $state<number | null>(null);
-  let resolvingEntities = $state(false);
-  let resolvedCount = $state<number | null>(null);
-
-  async function labelEvent(event: import('$lib/api').EventRow) {
-    labelingIds.add(event.id);
-    try {
-      await api.events.label(event.id);
-      await loadEvents();
-    } finally {
-      labelingIds.delete(event.id);
-    }
-  }
-
-  async function labelAllUnlabeled() {
-    labelingAll = true;
-    labeledCount = null;
-    try {
-      const result = await api.events.labelUnlabeled();
-      labeledCount = result.labeled;
-      await loadEvents();
-    } finally {
-      labelingAll = false;
-    }
-  }
-
-  async function resolveEntities() {
-    resolvingEntities = true;
-    resolvedCount = null;
-    try {
-      const result = await api.events.resolveEntities();
-      resolvedCount = result.resolved;
-      await loadEvents();
-    } finally {
-      resolvingEntities = false;
-    }
-  }
 </script>
 
 <svelte:head>
@@ -158,40 +118,6 @@
         <span class="text-sm text-zinc-400">No events found.</span>
       </div>
     {:else}
-      <div class="mb-3 flex flex-wrap items-center gap-2">
-        <button
-          onclick={labelAllUnlabeled}
-          disabled={labelingAll || resolvingEntities}
-          class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-500 shadow-sm transition-colors hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-50"
-        >
-          {#if labelingAll}
-            <Icon icon="solar:refresh-bold-duotone" class="size-3.5 animate-spin" />
-            Labeling…
-          {:else}
-            <Icon icon="solar:tags-bold-duotone" class="size-3.5" />
-            Label all unlabeled
-          {/if}
-        </button>
-        {#if labeledCount !== null}
-          <span class="text-xs text-zinc-400">{labeledCount} labeled</span>
-        {/if}
-        <button
-          onclick={resolveEntities}
-          disabled={resolvingEntities || labelingAll}
-          class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-500 shadow-sm transition-colors hover:border-zinc-400 hover:text-zinc-700 disabled:opacity-50"
-        >
-          {#if resolvingEntities}
-            <Icon icon="solar:refresh-bold-duotone" class="size-3.5 animate-spin" />
-            Resolving…
-          {:else}
-            <Icon icon="solar:link-round-bold-duotone" class="size-3.5" />
-            Resolve missing relations
-          {/if}
-        </button>
-        {#if resolvedCount !== null}
-          <span class="text-xs text-zinc-400">{resolvedCount} resolved</span>
-        {/if}
-      </div>
       <div class="flex flex-col gap-3">
         {#each eventsState.events as event}
           <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
@@ -221,32 +147,17 @@
                   {/each}
                 </div>
               </div>
-              <div class="flex shrink-0 items-center gap-2">
-                {#if !event.concepts?.length}
-                  <button
-                    onclick={() => labelEvent(event)}
-                    disabled={labelingIds.has(event.id) || labelingAll}
-                    class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-400 transition-colors hover:border-zinc-400 hover:text-zinc-600 disabled:opacity-40"
-                  >
-                    <Icon
-                      icon={labelingIds.has(event.id) ? 'solar:refresh-bold-duotone' : 'solar:tag-bold-duotone'}
-                      class="size-3.5 {labelingIds.has(event.id) ? 'animate-spin' : ''}"
-                    />
-                    {labelingIds.has(event.id) ? 'Labeling…' : 'Label'}
-                  </button>
-                {/if}
-                {#if event.url}
-                  <a
-                    href={event.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
-                  >
-                    <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
-                    Open
-                  </a>
-                {/if}
-              </div>
+              {#if event.url}
+                <a
+                  href={event.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex shrink-0 items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
+                >
+                  <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
+                  Open
+                </a>
+              {/if}
             </div>
           </Card>
         {/each}
