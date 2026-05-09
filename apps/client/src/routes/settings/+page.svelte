@@ -55,7 +55,7 @@
       sources = settingsRes.sources;
 
       for (const key of Object.keys(KEY_LABELS)) {
-        edits[key] = settings[key] ?? '';
+        edits[key] = SENSITIVE_KEYS.has(key) ? '' : (settings[key] ?? '');
       }
     } catch {
       error = 'Failed to load settings.';
