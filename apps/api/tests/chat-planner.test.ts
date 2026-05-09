@@ -3,7 +3,7 @@ import { buildQueryPlan } from '../src/chat/planner';
 
 describe('chat planner', () => {
   test('returns a valid full-mode plan shape', async () => {
-    const plan = await buildQueryPlan('what happened recently on dokploy?');
+    const plan = await buildQueryPlan('what happened recently?');
     expect(plan).toHaveProperty('retrievalMode');
     expect(plan).toHaveProperty('providerFilters');
     expect(plan).toHaveProperty('queryTerms');
