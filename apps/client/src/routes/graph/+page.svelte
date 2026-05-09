@@ -30,6 +30,7 @@
   let edges: EntityRelation[] = [];
   let hoveredNode: SimNode | null = null;
   let hoveredEdge: EntityRelation | null = null;
+  let draggedNode: SimNode | null = null;
   let animId: number;
   let tickCount = 0;
   let panX = 0;
@@ -137,6 +138,7 @@
     }
 
     for (const node of nodes) {
+      if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
       node.vx += (cx - node.x) * gravity;
       node.vy += (cy - node.y) * gravity;
       node.vx *= damping;
@@ -213,6 +215,7 @@
 
     for (const node of nodes) {
       const isHovered = hoveredNode?.id === node.id;
+      const isDragged = draggedNode?.id === node.id;
       const color = colorFor(node.type_label);
 
       ctx.beginPath();
@@ -220,7 +223,15 @@
       ctx.fillStyle = color;
       ctx.fill();
 
-      if (isHovered) {
+      if (isDragged) {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.r + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (isHovered) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.r + 3, 0, Math.PI * 2);
         ctx.strokeStyle = color;
@@ -343,6 +354,18 @@
     const rect = canvas.getBoundingClientRect();
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
+
+    if (draggedNode) {
+      const { x, y } = screenToWorld(sx, sy);
+      draggedNode.x = x;
+      draggedNode.y = y;
+      draggedNode.vx = 0;
+      draggedNode.vy = 0;
+      canvas.style.cursor = 'grabbing';
+      showTooltip(draggedNode, sx, sy);
+      return;
+    }
+
     const hit = findHovered(sx, sy);
     hoveredNode = hit;
 
@@ -352,8 +375,7 @@
       hoveredEdge = null;
     }
 
-    const hasInteraction = hit || hoveredEdge;
-    canvas.style.cursor = hasInteraction ? 'pointer' : isPanning ? 'grabbing' : 'grab';
+    canvas.style.cursor = hit ? 'grab' : hoveredEdge ? 'pointer' : isPanning ? 'grabbing' : 'grab';
 
     if (hit) showTooltip(hit, sx, sy);
     else if (hoveredEdge) showEdgeTooltip(hoveredEdge);
@@ -366,17 +388,30 @@
   }
 
   function onMouseDown(e: MouseEvent) {
-    isPanning = true;
-    canvas.style.cursor = 'grabbing';
-    panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const hit = findHovered(sx, sy);
+    if (hit) {
+      draggedNode = hit;
+      draggedNode.vx = 0;
+      draggedNode.vy = 0;
+      canvas.style.cursor = 'grabbing';
+    } else {
+      isPanning = true;
+      canvas.style.cursor = 'grabbing';
+      panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
+    }
   }
 
   function onMouseUp() {
+    draggedNode = null;
     isPanning = false;
-    canvas.style.cursor = hoveredNode ? 'pointer' : 'grab';
+    canvas.style.cursor = hoveredNode ? 'grab' : 'grab';
   }
 
   function onMouseLeave() {
+    draggedNode = null;
     hoveredNode = null;
     hoveredEdge = null;
     isPanning = false;
