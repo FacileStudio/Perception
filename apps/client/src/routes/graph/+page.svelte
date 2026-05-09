@@ -169,6 +169,15 @@
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
+
+      const label = node.canonical_name.length > 12
+        ? node.canonical_name.slice(0, 10) + '\u2026'
+        : node.canonical_name;
+      ctx.font = `${isHovered ? 500 : 400} 10px system-ui,sans-serif`;
+      ctx.fillStyle = isHovered ? '#18181b' : '#52525b';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(label, node.x, node.y + node.r + 4);
     }
 
     ctx.restore();
