@@ -32,7 +32,7 @@ export type InferredFieldMapping = {
   source_key: string;
   target_key: string;
   type: "text" | "date_iso" | "number" | "boolean" | "hash_email";
-  role: "status" | "id" | "name" | "date" | "url" | "count" | "other";
+  role: "status" | "id" | "name" | "actor" | "date" | "url" | "count" | "other";
   confidence: number;
 };
 

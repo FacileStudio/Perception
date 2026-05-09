@@ -96,6 +96,15 @@ ingestRoutes.post('/', async (c) => {
   }
 
   const { facts, quality } = mapPayload(envelope, schema);
+
+  if (!layer1.actor_name && schema) {
+    const actorMapping = schema.field_mappings.find((m) => m.role === 'actor');
+    if (actorMapping) {
+      const val = envelope.payload.normalized[actorMapping.source_key];
+      if (val != null) layer1.actor_name = String(val);
+    }
+  }
+
   const labeling = await labelEvent(envelope, layer1, schema);
   const resolvedEntity = await resolveEventEntity(envelope, layer1, labeling.entityConceptId);
 

@@ -10,7 +10,7 @@ type InferredFieldMapping = {
   source_key: string;       // key in the normalized payload
   target_key: string;       // snake_case semantic target
   type: "text" | "date_iso" | "number" | "boolean" | "hash_email";
-  role: "status" | "id" | "name" | "date" | "url" | "count" | "other";
+  role: "status" | "id" | "name" | "actor" | "date" | "url" | "count" | "other";
   confidence: number;       // 0.0 to 1.0
 };
 `.trim();
@@ -24,7 +24,7 @@ function isValidMapping(
   if (typeof obj.source_key !== 'string' || !validKeys.has(obj.source_key)) return false;
   if (typeof obj.target_key !== 'string' || !/^[a-z][a-z0-9_]*$/.test(obj.target_key)) return false;
   if (!['text', 'date_iso', 'number', 'boolean', 'hash_email'].includes(obj.type as string)) return false;
-  if (!['status', 'id', 'name', 'date', 'url', 'count', 'other'].includes(obj.role as string)) return false;
+  if (!['status', 'id', 'name', 'actor', 'date', 'url', 'count', 'other'].includes(obj.role as string)) return false;
   if (typeof obj.confidence !== 'number' || obj.confidence < 0 || obj.confidence > 1) return false;
   return true;
 }
@@ -52,7 +52,9 @@ export async function inferSchema(
   const { text, usage } = await generateText({
     model: anthropic(config.llmModel),
     system:
-      'You are a schema inference engine. Map provider event payload fields to a structured field mapping schema. Return valid JSON only.',
+      'You are a schema inference engine. Map provider event payload fields to a structured field mapping schema. Return valid JSON only.\n' +
+      'Role guidance: use "actor" for fields that identify the human or system who triggered/initiated the event (e.g. triggered_by, user, initiator, created_by, actor, sender, author). ' +
+      'Use "status" for fields representing state. Use "name" for entity/subject names. Use "id" for identifiers. Use "other" when unsure.',
     prompt: userPrompt,
   });
 
