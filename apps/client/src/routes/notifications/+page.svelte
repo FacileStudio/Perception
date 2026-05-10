@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { api, type NotificationRow } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
@@ -88,12 +88,16 @@
     notifStore.refresh();
   }
 
+  let mounted = false;
+
   $effect(() => {
     filter;
-    load();
+    if (mounted) untrack(() => load());
   });
 
   onMount(() => {
+    mounted = true;
+    load();
     notifStore.refresh();
   });
 </script>
