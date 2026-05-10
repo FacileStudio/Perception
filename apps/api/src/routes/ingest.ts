@@ -12,6 +12,25 @@ import { extractEntityRelations } from '../entities/link';
 import type { NookEventEnvelope } from '../types';
 import { config } from '../config';
 
+function extractStringField(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const val = payload[key];
+    if (typeof val === 'string' && val.trim()) return val.trim();
+  }
+  return null;
+}
+
+function extractDateField(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const val = payload[key];
+    if (typeof val === 'string' && val.trim()) {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    }
+  }
+  return null;
+}
+
 export const ingestRoutes = new Hono();
 
 ingestRoutes.post('/', async (c) => {
@@ -98,6 +117,10 @@ ingestRoutes.post('/', async (c) => {
 
   const { facts, quality } = mapPayload(envelope, schema);
 
+  const normalizedStatus = extractStringField(envelope.payload.normalized, ['status', 'state']) ?? null;
+  const normalizedDueAt = extractDateField(envelope.payload.normalized, ['dueDate', 'due_date', 'due_at', 'deadline']) ?? null;
+  const normalizedCompletedAt = extractDateField(envelope.payload.normalized, ['completedDate', 'completed_date', 'completed_at', 'completedAt']) ?? null;
+
   if (!layer1.actor_name && schema) {
     const actorMapping = schema.field_mappings.find((m) => m.role === 'actor');
     if (actorMapping) {
@@ -170,9 +193,10 @@ ingestRoutes.post('/', async (c) => {
       sql: `INSERT INTO events (
         id, schema_version, source, provider_id, provider_type, provider_name,
         event_type, entity_type, entity_id, entity_name, actor_name, actor_email_hash,
+        status, due_at, completed_at,
         occurred_at, emitted_at, ingested_at, url, title, summary, searchable_text,
         payload_redacted_json, payload_hash, quality
-      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         envelope.id,
         envelope.source,
@@ -185,6 +209,9 @@ ingestRoutes.post('/', async (c) => {
         layer1.entity_name,
         layer1.actor_name,
         layer1.actor_email_hash,
+        normalizedStatus,
+        normalizedDueAt,
+        normalizedCompletedAt,
         envelope.occurredAt,
         envelope.emittedAt,
         now,
