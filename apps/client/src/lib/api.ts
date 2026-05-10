@@ -54,6 +54,19 @@ export const api = {
     update: (body: Record<string, string | null>) => request<{ ok: boolean }>('/settings', { method: 'PUT', body: JSON.stringify(body) }),
     usage: () => request<{ usage: TokenUsageRow[]; total_cost_usd: number }>('/settings/usage'),
   },
+  notifications: {
+    list: (filter?: 'all' | 'unread' | 'read', limit = 50, offset = 0) => {
+      const params = new URLSearchParams();
+      if (filter && filter !== 'all') params.set('filter', filter);
+      if (limit !== 50) params.set('limit', String(limit));
+      if (offset > 0) params.set('offset', String(offset));
+      const q = params.toString();
+      return request<{ notifications: NotificationRow[]; total: number }>(`/notifications${q ? '?' + q : ''}`);
+    },
+    unreadCount: () => request<{ count: number }>('/notifications/unread-count'),
+    markRead: (id: string) => request<{ ok: boolean }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+    markAllRead: () => request<{ ok: boolean; marked: number }>('/notifications/read-all', { method: 'PATCH' }),
+  },
   entities: {
     graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
     resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
@@ -141,6 +154,19 @@ export type ChatSessionDetail = {
   created_at: string;
   updated_at: string;
   messages: ChatMessageRecord[];
+};
+
+export type NotificationRow = {
+  id: string;
+  type: string;
+  severity: 'info' | 'warning' | 'critical';
+  title: string;
+  message: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  read_at: string | null;
 };
 
 export type WorkerRun = {

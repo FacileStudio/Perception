@@ -5,7 +5,7 @@
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
-  import { auth } from '$lib/stores';
+  import { auth, notifications } from '$lib/stores';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
 
@@ -20,13 +20,22 @@
 
   const label = $derived(auth.user?.name?.trim() || auth.user?.email || '');
 
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    notifications.refresh();
+    const interval = setInterval(() => notifications.refresh(), 60_000);
+    return () => clearInterval(interval);
+  });
+
   const navLinks = [
-    { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat') },
-    { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
-    { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph' },
-    { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
-    { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone', match: (p: string) => p === '/users' },
-    { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone', match: (p: string) => p === '/settings' },
+    { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat'), badge: 0 },
+    { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context', badge: 0 },
+    { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph', badge: 0 },
+    { href: '/notifications', label: 'Notifications', icon: 'solar:bell-bold-duotone', match: (p: string) => p === '/notifications', badge: 0 },
+    { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats', badge: 0 },
+    { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone', match: (p: string) => p === '/users', badge: 0 },
+    { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone', match: (p: string) => p === '/settings', badge: 0 },
   ];
 </script>
 
@@ -44,12 +53,18 @@
   <nav class="flex flex-1 flex-col gap-1 px-3">
     {#each navLinks as link}
       {@const active = link.match($page.url.pathname)}
+      {@const unread = link.href === '/notifications' ? notifications.unreadCount : 0}
       <a
         href={link.href}
         class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950'}"
       >
         <Icon icon={link.icon} class="size-4 shrink-0 {active ? 'text-white' : ''}" />
         {link.label}
+        {#if unread > 0}
+          <span class="ml-auto inline-flex size-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        {/if}
       </a>
     {/each}
   </nav>

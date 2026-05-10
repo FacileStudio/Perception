@@ -176,6 +176,25 @@ CREATE TABLE IF NOT EXISTS worker_runs (
 CREATE INDEX IF NOT EXISTS worker_runs_worker_idx ON worker_runs(worker_name, started_at DESC)
       `,
     },
+    {
+      name: '008_notifications',
+      sql: `
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK(severity IN ('info','warning','critical')),
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  entity_id TEXT,
+  entity_name TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE INDEX IF NOT EXISTS notifications_created_idx ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications(read_at)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

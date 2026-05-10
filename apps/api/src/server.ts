@@ -14,6 +14,7 @@ import { statsRoutes } from './routes/stats';
 import { settingsRoutes } from './routes/settings';
 import { entitiesRoutes } from './routes/entities';
 import { usersRoutes } from './routes/users';
+import { notificationsRoutes } from './routes/notifications';
 import { config } from './config';
 
 const app = new Hono();
@@ -46,6 +47,7 @@ app.route('/stats', statsRoutes);
 app.route('/settings', settingsRoutes);
 app.route('/entities', entitiesRoutes);
 app.route('/users', usersRoutes);
+app.route('/notifications', notificationsRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);
@@ -61,16 +63,19 @@ const { embeddingWorker } = await import('./embeddings/worker');
 const { schemaInferenceWorker } = await import('./schema-registry/worker');
 const { upliftWorker } = await import('./ingest/uplift-worker');
 const { crossLinkWorker } = await import('./entities/cross-link-worker');
+const { notificationWorker } = await import('./notifications/worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
 registerWorker({ name: 'uplift', description: 'Upgrades degraded events with confirmed schemas', intervalMs: 6 * 60 * 60 * 1000, run: upliftWorker.run });
 registerWorker({ name: 'cross-link', description: 'Discovers cross-provider entity relationships', intervalMs: 12 * 60 * 60 * 1000, run: crossLinkWorker.run });
+registerWorker({ name: 'notifications', description: 'Evaluates anomalies and generates alerts', intervalMs: 24 * 60 * 60 * 1000, run: notificationWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
 scheduleWorker('uplift', 30_000);
 scheduleWorker('cross-link', 60_000);
+scheduleWorker('notifications', 120_000);
 
 export default {
   port: config.port,

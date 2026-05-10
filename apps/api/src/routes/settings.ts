@@ -15,6 +15,7 @@ const ALLOWED_KEYS = [
   'store_raw_payloads',
   'email_body_indexing',
   'workers_paused',
+  'notification_webhook_url',
 ];
 
 const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);

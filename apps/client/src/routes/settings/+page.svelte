@@ -33,6 +33,7 @@
     retention_days: 'Retention Days',
     store_raw_payloads: 'Store Raw Payloads',
     email_body_indexing: 'Email Body Indexing',
+    notification_webhook_url: 'Notification Webhook URL',
   };
 
   const KEY_DESCRIPTIONS: Record<string, string> = {
@@ -44,6 +45,7 @@
     retention_days: 'How many days to keep events',
     store_raw_payloads: 'Store full ingest payloads (true/false)',
     email_body_indexing: 'Index email bodies for search (true/false)',
+    notification_webhook_url: 'POST alerts to this URL (e.g. Nook webhook for Matrix)',
   };
 
   async function load() {

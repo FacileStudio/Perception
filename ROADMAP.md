@@ -89,7 +89,7 @@ Build the entity graph, temporal comparison, and proactive alerting.
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 2.1 | Cross-entity relationship graph | High | — |
-| [ ] | 2.2 | Proactive digests | Medium | 1.2 |
+| [x] | 2.2 | Proactive digests | Medium | 1.2 |
 | [x] | 2.3 | Self-correcting retrieval (Corrective RAG) | Medium | 1.2, 1.5 |
 | [x] | 2.4 | Temporal diff queries | Medium | 1.2 |
 
@@ -108,13 +108,13 @@ Build the entity graph, temporal comparison, and proactive alerting.
 
 ### 2.2 Proactive Digests
 
-- [ ] Anomaly evaluator: entity velocity spike (current > mean + 2σ), service health degradation (>30% shift to error states), client silence (zero activity for 2+ weeks), actor absence (1+ week)
-- [ ] `notifications` table: `id`, `type`, `entity_id`, `message`, `created_at`, `read_at`
-- [ ] Migration for `notifications`
-- [ ] Scheduled worker (daily): evaluate anomalies, insert notifications
-- [ ] Webhook delivery adapter (POST to configurable URL with structured payload)
-- [ ] In-app notification feed in frontend sidebar
-- [ ] Optional: email delivery adapter via `vero`
+- [x] Anomaly evaluator: entity velocity spike (current > mean + 2σ), service health degradation (>30% shift to error states), client silence (zero activity for 2+ weeks), actor absence (1+ week)
+- [x] `notifications` table: `id`, `type`, `severity`, `title`, `message`, `entity_id`, `entity_name`, `metadata_json`, `created_at`, `read_at`
+- [x] Migration for `notifications`
+- [x] Scheduled worker (daily): evaluate anomalies, deduplicate, insert notifications
+- [x] Webhook delivery adapter (POST to configurable URL with structured payload)
+- [x] Dedicated `/notifications` page with read/unread filtering and mark-as-read
+- [x] Unread badge count in sidebar navigation
 
 ---
 
