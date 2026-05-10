@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import type { GraphEntity } from '$lib/api';
+  import { api, type GraphEntity, type EntityCommunity } from '$lib/api';
   import Icon from '@iconify/svelte';
 
   type Connection = { other: GraphEntity; label: string };
@@ -15,6 +15,22 @@
     connections: Connection[];
     onclose: () => void;
   } = $props();
+
+  let community = $state<EntityCommunity | null>(null);
+  let loadingCommunity = $state(false);
+
+  $effect(() => {
+    if (node) {
+      loadingCommunity = true;
+      community = null;
+      api.entities.community(node.id)
+        .then((res) => { community = res.community; })
+        .catch(() => { community = null; })
+        .finally(() => { loadingCommunity = false; });
+    } else {
+      community = null;
+    }
+  });
 
   const COLORS: [string, string][] = [
     ['deployment', '#6366f1'],
@@ -94,6 +110,36 @@
           </p>
         </div>
       </div>
+
+      {#if loadingCommunity}
+        <div class="flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3">
+          <Icon icon="solar:refresh-bold-duotone" class="size-4 animate-spin text-violet-400" />
+          <span class="text-xs text-violet-400">Loading community...</span>
+        </div>
+      {:else if community}
+        <div>
+          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+            Community
+          </p>
+          <div class="rounded-xl border border-violet-200/80 bg-violet-50/50 px-4 py-3">
+            <div class="flex items-center gap-2">
+              <Icon icon="solar:graph-bold-duotone" class="size-4 text-violet-500" />
+              <span class="text-sm font-medium text-violet-800">{community.title}</span>
+            </div>
+            <p class="mt-1.5 text-xs leading-relaxed text-violet-600">{community.summary}</p>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              {#each community.member_names as name}
+                <span class="rounded-full border border-violet-200 bg-white px-2 py-0.5 text-[10px] font-medium text-violet-600">
+                  {name}
+                </span>
+              {/each}
+            </div>
+            <p class="mt-2 font-mono text-[10px] text-violet-400">
+              {community.member_count} entities · importance {(community.importance * 100).toFixed(0)}%
+            </p>
+          </div>
+        </div>
+      {/if}
 
       {#if connections.length > 0}
         <div>

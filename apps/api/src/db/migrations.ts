@@ -195,6 +195,23 @@ CREATE INDEX IF NOT EXISTS notifications_created_idx ON notifications(created_at
 CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications(read_at)
       `,
     },
+    {
+      name: '009_entity_communities',
+      sql: `
+CREATE TABLE IF NOT EXISTS entity_communities (
+  id TEXT PRIMARY KEY,
+  membership_hash TEXT NOT NULL UNIQUE,
+  member_entity_ids TEXT NOT NULL,
+  member_count INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  importance REAL NOT NULL DEFAULT 0.5,
+  generated_at TEXT NOT NULL,
+  stale INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS entity_communities_stale_idx ON entity_communities(stale)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

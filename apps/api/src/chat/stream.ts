@@ -57,7 +57,7 @@ export function streamChat(
   context: RetrievalResult,
   corrected = false,
 ): ReadableStream {
-  let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons);
+  let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults);
   if (corrected) {
     contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
   }
@@ -72,6 +72,14 @@ export function streamChat(
     title: e.title,
     score: e.score,
   })) : [];
+
+  const sqlQueryMeta = context.sqlResults.length > 0
+    ? { query: context.sqlResults[0].query, row_count: context.sqlResults[0].rowCount, columns: context.sqlResults[0].columns }
+    : null;
+
+  const communitySummariesMeta = context.communitySummaries.length > 0
+    ? context.communitySummaries.map((cs) => ({ title: cs.title, summary: cs.summary, member_count: cs.memberCount, matched_entities: cs.matchedEntityNames }))
+    : null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -111,7 +119,10 @@ export function streamChat(
         }
 
         const messageId = await persistAssistantMessage(sessionId, fullText, sources);
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true, sources, message_id: messageId })}\n\n`));
+        const donePayload: Record<string, unknown> = { done: true, sources, message_id: messageId };
+        if (sqlQueryMeta) donePayload.sql_query = sqlQueryMeta;
+        if (communitySummariesMeta) donePayload.community_summaries = communitySummariesMeta;
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(donePayload)}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();
 

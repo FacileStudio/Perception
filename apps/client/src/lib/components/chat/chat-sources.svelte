@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { ChatSource } from '$lib/api';
+  import type { ChatSource, ChatMessage } from '$lib/api';
   import { Badge } from '$lib/components/ui/badge';
   import { ScrollArea } from '$lib/components/ui/scroll-area';
   import { Separator } from '$lib/components/ui/separator';
@@ -7,9 +7,11 @@
 
   let {
     sources,
+    message = null,
     onclose,
   }: {
     sources: ChatSource[];
+    message?: ChatMessage | null;
     onclose: () => void;
   } = $props();
 
@@ -35,6 +37,39 @@
   <Separator />
   <ScrollArea class="flex-1 px-4 py-3">
     <div class="flex flex-col gap-3">
+      {#if message?.sql_query}
+        <div class="flex flex-col gap-1.5 rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-3">
+          <div class="flex items-center gap-2">
+            <Icon icon="solar:database-bold-duotone" class="size-4 text-indigo-500" />
+            <span class="text-xs font-medium text-indigo-700">Generated SQL query</span>
+          </div>
+          <pre class="overflow-x-auto rounded-lg bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-300">{message.sql_query.query}</pre>
+          <span class="font-mono text-[11px] text-indigo-400">
+            {message.sql_query.row_count} {message.sql_query.row_count === 1 ? 'row' : 'rows'} · {message.sql_query.columns.length} {message.sql_query.columns.length === 1 ? 'column' : 'columns'}
+          </span>
+        </div>
+      {/if}
+
+      {#if message?.community_summaries && message.community_summaries.length > 0}
+        {#each message.community_summaries as cs}
+          <div class="flex flex-col gap-1.5 rounded-2xl border border-violet-200/80 bg-violet-50/50 p-3">
+            <div class="flex items-center gap-2">
+              <Icon icon="solar:graph-bold-duotone" class="size-4 text-violet-500" />
+              <span class="text-xs font-medium text-violet-700">{cs.title}</span>
+            </div>
+            <p class="text-xs leading-relaxed text-violet-600">{cs.summary}</p>
+            <div class="flex flex-wrap gap-1">
+              {#each cs.matched_entities as name}
+                <Badge variant="outline" class="rounded-full border-violet-200 text-[10px] text-violet-600">
+                  {name}
+                </Badge>
+              {/each}
+            </div>
+            <span class="font-mono text-[10px] text-violet-400">{cs.member_count} entities in cluster</span>
+          </div>
+        {/each}
+      {/if}
+
       {#each sources as src}
         <div class="flex flex-col gap-1 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3">
           <span class="text-xs font-medium text-zinc-900">{src.title}</span>

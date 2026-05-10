@@ -2,12 +2,12 @@ import type { QueryPlan } from '../planner';
 import type { RetrievalSource, ScoredEvent, RankedEvent } from './types';
 
 const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
-  lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0, graph: 0.35 },
-  trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0, graph: 0.1 },
-  status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0, graph: 0.2 },
-  comparison:   { entity: 0.3, fts: 0.2, concept: 0.2, sql: 0.6, vector: 0.1, stats: 0, graph: 0.15 },
-  anomaly:      { entity: 0.5, fts: 0.2, concept: 0.3, sql: 0.5, vector: 0.15, stats: 0, graph: 0.25 },
-  narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0, graph: 0.5 },
+  lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0, graph: 0.35, community: 0.3, text_to_sql: 0.4 },
+  trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0, graph: 0.1, community: 0.1, text_to_sql: 0.45 },
+  status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0, graph: 0.2, community: 0.2, text_to_sql: 0.35 },
+  comparison:   { entity: 0.3, fts: 0.2, concept: 0.2, sql: 0.6, vector: 0.1, stats: 0, graph: 0.15, community: 0.1, text_to_sql: 0.5 },
+  anomaly:      { entity: 0.5, fts: 0.2, concept: 0.3, sql: 0.5, vector: 0.15, stats: 0, graph: 0.25, community: 0.2, text_to_sql: 0.4 },
+  narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0, graph: 0.5, community: 0.5, text_to_sql: 0.2 },
 };
 
 export function mergeAndRank(

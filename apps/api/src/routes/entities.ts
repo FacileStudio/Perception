@@ -52,6 +52,41 @@ entitiesRoutes.get('/graph', async (c) => {
   });
 });
 
+entitiesRoutes.get('/:id/community', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const entityId = c.req.param('id');
+  const result = await db.execute(
+    `SELECT id, title, summary, importance, member_count, member_entity_ids
+     FROM entity_communities WHERE stale = 0 ORDER BY importance DESC`,
+  );
+
+  for (const row of result.rows) {
+    let members: string[];
+    try { members = JSON.parse(row.member_entity_ids as string); } catch { continue; }
+    if (!members.includes(entityId)) continue;
+
+    const entityNames = await db.execute({
+      sql: `SELECT canonical_name FROM entities WHERE id IN (${members.map(() => '?').join(',')})`,
+      args: members,
+    });
+
+    return c.json({
+      community: {
+        id: row.id as string,
+        title: row.title as string,
+        summary: row.summary as string,
+        importance: row.importance as number,
+        member_count: row.member_count as number,
+        member_names: entityNames.rows.map((r) => r.canonical_name as string),
+      },
+    });
+  }
+
+  return c.json({ community: null });
+});
+
 entitiesRoutes.post('/relations/resolve-all', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

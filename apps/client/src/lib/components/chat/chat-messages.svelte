@@ -1,6 +1,6 @@
 <script lang="ts">
   import { chatState } from '$lib/stores';
-  import { api, type ChatSource } from '$lib/api';
+  import { api, type ChatSource, type ChatMessage } from '$lib/api';
   import ChatMarkdown from '$lib/components/chat-markdown.svelte';
   import TypingIndicator from './typing-indicator.svelte';
   import { Badge } from '$lib/components/ui/badge';
@@ -15,8 +15,10 @@
     messagesEl?: HTMLDivElement | null;
     sourcesOpen: boolean;
     lastSources: ChatSource[];
-    onopensources: (sources: ChatSource[]) => void;
+    onopensources: (msg: ChatMessage) => void;
   } = $props();
+
+  let expandedSql = $state<string | null>(null);
 
   function formatDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -53,8 +55,33 @@
                   streaming={(chatState.pending || chatState.streaming) && i === chatState.messages.length - 1}
                 />
               {/if}
+              {#if msg.sql_query}
+                <div class="mt-2.5">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {expandedSql === msg.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+                    onclick={() => expandedSql = expandedSql === msg.id ? null : (msg.id ?? null)}
+                  >
+                    <Icon icon="solar:database-bold-duotone" class="size-3.5" />
+                    SQL query · {msg.sql_query.row_count} {msg.sql_query.row_count === 1 ? 'row' : 'rows'}
+                  </button>
+                  {#if expandedSql === msg.id && msg.sql_query}
+                    <pre class="mt-1.5 overflow-x-auto rounded-xl bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-300">{msg.sql_query.query}</pre>
+                  {/if}
+                </div>
+              {/if}
+              {#if msg.community_summaries && msg.community_summaries.length > 0}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  {#each msg.community_summaries as cs}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700" title={cs.summary}>
+                      <Icon icon="solar:graph-bold-duotone" class="size-3" />
+                      {cs.title}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
               {#if msg.sources && msg.sources.length > 0}
-                <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {#each msg.sources as src}
                     <Badge variant="outline" class="rounded-full font-mono text-xs">
                       {src.provider_name} · {formatDate(src.occurred_at)}
@@ -63,10 +90,10 @@
                   <button
                     type="button"
                     class="inline-flex min-h-8 items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
-                    onclick={() => onopensources(msg.sources ?? [])}
+                    onclick={() => onopensources(msg)}
                   >
                     <Icon icon="solar:document-text-bold-duotone" class="size-3.5" />
-                    {sourcesOpen && lastSources === msg.sources ? 'Sources open' : 'Open sources'}
+                    {sourcesOpen ? 'Sources open' : 'Open sources'}
                   </button>
                 </div>
               {/if}

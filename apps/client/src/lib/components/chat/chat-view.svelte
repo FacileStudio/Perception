@@ -2,7 +2,7 @@
   import { onMount, tick } from 'svelte';
   import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/stores';
-  import type { ChatSource } from '$lib/api';
+  import type { ChatSource, ChatMessage } from '$lib/api';
   import { chatState, sendChatMessage, startNewChat } from '$lib/stores';
   import ChatHeader from './chat-header.svelte';
   import ChatMessages from './chat-messages.svelte';
@@ -18,6 +18,7 @@
   let messagesEl = $state<HTMLDivElement | null>(null);
   let sourcesOpen = $state(false);
   let lastSources = $state<ChatSource[]>([]);
+  let lastMessage = $state<ChatMessage | null>(null);
 
   $effect(() => {
     void chatState.messages.map((m) => m.content);
@@ -62,6 +63,8 @@
     }
     if (sources.length) {
       lastSources = sources;
+      const latestAssistant = chatState.messages.filter((m) => m.role === 'assistant').at(-1) ?? null;
+      lastMessage = latestAssistant;
       sourcesOpen = true;
     }
   }
@@ -70,11 +73,13 @@
     startNewChat();
     sourcesOpen = false;
     lastSources = [];
+    lastMessage = null;
     goto('/');
   }
 
-  function openSourcesForMessage(sources: ChatSource[]) {
-    lastSources = sources;
+  function openSourcesForMessage(msg: ChatMessage) {
+    lastSources = msg.sources ?? [];
+    lastMessage = msg;
     sourcesOpen = true;
   }
 </script>
@@ -96,7 +101,7 @@
     <ChatInput onsend={send} />
   </div>
 
-  {#if sourcesOpen && lastSources.length > 0}
-    <ChatSources sources={lastSources} onclose={() => { sourcesOpen = false; }} />
+  {#if sourcesOpen && (lastSources.length > 0 || lastMessage?.sql_query || lastMessage?.community_summaries?.length)}
+    <ChatSources sources={lastSources} message={lastMessage} onclose={() => { sourcesOpen = false; }} />
   {/if}
 </div>

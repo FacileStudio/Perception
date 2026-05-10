@@ -1,4 +1,4 @@
-import { api, type ChatMessage, type ChatSessionSummary, type ChatSource } from '$lib/api';
+import { api, type ChatMessage, type ChatSessionSummary, type ChatSource, type SqlQueryMeta, type CommunitySummaryMeta } from '$lib/api';
 
 export const chatState = $state({
   sessionId: null as string | null,
@@ -132,6 +132,8 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
             sources?: ChatSource[];
             session_id?: string;
             message_id?: string;
+            sql_query?: SqlQueryMeta;
+            community_summaries?: CommunitySummaryMeta[];
           };
           if (parsed.session_id && !sessionId) {
             sessionId = parsed.session_id;
@@ -148,6 +150,12 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
           }
           if (parsed.message_id) {
             chatState.messages[idx].id = parsed.message_id;
+          }
+          if (parsed.sql_query) {
+            chatState.messages[idx].sql_query = parsed.sql_query;
+          }
+          if (parsed.community_summaries?.length) {
+            chatState.messages[idx].community_summaries = parsed.community_summaries;
           }
         } catch (error) {
           if (error instanceof Error) throw error;

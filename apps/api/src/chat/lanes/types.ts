@@ -1,7 +1,9 @@
 import type { EventRow } from '../../events/types';
 import type { StatsSnapshot } from '../../stats/types';
+import type { CommunitySummary } from './community';
+import type { SqlQueryResult } from './text-to-sql';
 
-export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph';
+export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph' | 'community' | 'text_to_sql';
 export type TemporalPeriod = 'current' | 'previous';
 
 export type TemporalComparison = {
@@ -28,6 +30,8 @@ export type RetrievalResult = {
   events: RankedEvent[];
   stats: AnnotatedStatsSnapshot[];
   comparisons: TemporalComparison[];
+  communitySummaries: CommunitySummary[];
+  sqlResults: SqlQueryResult[];
 };
 
 export type ContextConfidence = {

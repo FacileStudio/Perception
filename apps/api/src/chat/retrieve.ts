@@ -9,6 +9,8 @@ import { entityLane, extractSeedEntityIds } from './lanes/entity';
 import { graphLane } from './lanes/graph';
 import { conceptLane } from './lanes/concept';
 import { statsLane } from './lanes/stats';
+import { communityLane } from './lanes/community';
+import { textToSqlLane } from './lanes/text-to-sql';
 import { mergeAndRank } from './lanes/merge';
 
 export type { RetrievalResult, RetrievalSource, ContextConfidence, TemporalComparison, TemporalPeriod, RankedEvent };
@@ -233,9 +235,14 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   ]);
 
   const seedEntityIds = await extractSeedEntityIds(entityEvents);
-  const graphEvents = shouldGraph && seedEntityIds.length > 0
-    ? await graphLane(seedEntityIds)
-    : [];
+  const shouldCommunity = intent === 'narrative' || intent === 'lookup';
+  const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
+
+  const [graphEvents, communitySummaries, sqlResult] = await Promise.all([
+    shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds) : Promise.resolve([]),
+    shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds) : Promise.resolve([]),
+    shouldTextToSql ? textToSqlLane(plan) : Promise.resolve(null),
+  ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan);
   if (events.length === 0) {
@@ -246,5 +253,11 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     ? await buildTemporalComparisons(plan)
     : [];
 
-  return { events, stats, comparisons };
+  return {
+    events,
+    stats,
+    comparisons,
+    communitySummaries,
+    sqlResults: sqlResult ? [sqlResult] : [],
+  };
 }

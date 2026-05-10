@@ -64,18 +64,21 @@ const { schemaInferenceWorker } = await import('./schema-registry/worker');
 const { upliftWorker } = await import('./ingest/uplift-worker');
 const { crossLinkWorker } = await import('./entities/cross-link-worker');
 const { notificationWorker } = await import('./notifications/worker');
+const { communityWorker } = await import('./communities/worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
 registerWorker({ name: 'uplift', description: 'Upgrades degraded events with confirmed schemas', intervalMs: 6 * 60 * 60 * 1000, run: upliftWorker.run });
 registerWorker({ name: 'cross-link', description: 'Discovers cross-provider entity relationships', intervalMs: 12 * 60 * 60 * 1000, run: crossLinkWorker.run });
 registerWorker({ name: 'notifications', description: 'Evaluates anomalies and generates alerts', intervalMs: 24 * 60 * 60 * 1000, run: notificationWorker.run });
+registerWorker({ name: 'communities', description: 'Detects entity communities and generates summaries', intervalMs: 6 * 60 * 60 * 1000, run: communityWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
 scheduleWorker('uplift', 30_000);
 scheduleWorker('cross-link', 60_000);
 scheduleWorker('notifications', 120_000);
+scheduleWorker('communities', 180_000);
 
 export default {
   port: config.port,

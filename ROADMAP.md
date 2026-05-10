@@ -143,22 +143,22 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 3.1 | GraphRAG community summaries | Medium | 2.1 |
+| [x] | 3.1 | GraphRAG community summaries | Medium | 2.1 |
 | [ ] | 3.2 | Per-entity narrative synthesis | Medium | 3.1 |
 | [ ] | 3.3 | Hierarchical persistent memory | High | 1.5 |
-| [ ] | 3.4 | Text-to-SQL lane | Medium | 1.2 |
+| [x] | 3.4 | Text-to-SQL lane | Medium | 1.2 |
 
 ---
 
 ### 3.1 GraphRAG — Community Summaries
 
-- [ ] `entity_communities` table: `id`, `member_entity_ids` (JSON), `summary`, `generated_at`, `stale`
-- [ ] Migration for `entity_communities`
-- [ ] Leiden community detection worker (nightly): export graph as adjacency list, run Leiden in TS/WASM
-- [ ] Community summary generation: Claude Haiku call per community with member entity names, types, recent event titles
-- [ ] Staleness: mark community stale when any member entity has new events since `generated_at`
-- [ ] Community retrieval lane in `retrieve.ts`: on `narrative` or `lookup` intent, query by entity name overlap
-- [ ] Inject community summary as `[COMMUNITY_SUMMARY]` context block
+- [x] `entity_communities` table: `id`, `member_entity_ids` (JSON), `summary`, `generated_at`, `stale`
+- [x] Migration for `entity_communities`
+- [x] Louvain community detection worker (6h interval + 3min startup delay): export graph as adjacency list, detect communities in pure TS
+- [x] Community summary generation: Claude Haiku call per community with member entity names, types, recent event titles
+- [x] Staleness: mark community stale when any member entity has new events since `generated_at`
+- [x] Community retrieval lane in `retrieve.ts`: on `narrative` or `lookup` intent, query by entity overlap with seed entities
+- [x] Inject community summary as `[COMMUNITY_SUMMARY]` context block
 
 ---
 
@@ -188,12 +188,12 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 
 ### 3.4 Text-to-SQL Lane
 
-- [ ] Schema description serializer: compact `table.column: type` representation of key tables, generated once and cached
-- [ ] SQL generation step in `planner.ts`: for `intent: lookup | comparison` + `requiresSqlFacts: true`, call Haiku to produce a read-only SELECT
-- [ ] Safety layer: parse-validate before execution, reject non-SELECT, apply LIMIT 100 cap
-- [ ] `sqlGeneratedLane` in `retrieve.ts`: execute generated SQL, surface as `[SQL_RESULT]` context block
-- [ ] Few-shot examples of known-good queries in generation prompt (required — without this accuracy collapses)
-- [ ] Fallback: if generated SQL fails or returns empty, fall through to existing lanes silently
+- [x] Schema description serializer: CREATE TABLE representation of key tables with FK relationships, hardcoded for stability
+- [x] SQL generation in `text-to-sql.ts`: for `intent: lookup | comparison | trend` + `requiresSqlFacts: true`, call Haiku to produce a read-only SELECT
+- [x] Safety layer: regex-validate before execution, reject non-SELECT/DDL/PRAGMA/ATTACH, enforce LIMIT 100 cap
+- [x] `textToSqlLane` in `retrieve.ts`: execute generated SQL, surface as `[SQL_RESULT]` context block
+- [x] Five few-shot examples covering counts, entity lookup, relations, temporal, and actor aggregation
+- [x] Fallback: if generated SQL fails or returns empty, return null silently — existing lanes still provide context
 
 ---
 
