@@ -174,6 +174,7 @@
   const apiKeySection = ['anthropic_api_key', 'voyage_api_key'];
   const modelSection = ['llm_model', 'embedding_model', 'embedding_dimensions'];
   const systemSection = ['retention_days', 'store_raw_payloads', 'email_body_indexing'];
+  const notificationsSection = ['notification_webhook_url'];
 
   let workersList = $state<WorkerStatus[]>([]);
   let workersLoading = $state(true);
@@ -398,6 +399,45 @@
                   <Input
                     bind:value={edits[key]}
                     placeholder={settings[key] ?? 'Enter value…'}
+                    class="font-mono text-sm rounded-xl flex-1"
+                  />
+                  {#if sources[key] === 'db'}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onclick={() => clearSetting(key)}
+                      class="shrink-0 rounded-xl text-zinc-400 hover:text-red-500"
+                      title="Clear (revert to env/default)"
+                    >
+                      <Icon icon="solar:trash-bin-minimalistic-bold-duotone" class="size-4" />
+                    </Button>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </Card>
+        </section>
+
+        <section>
+          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Notifications</h2>
+          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100">
+            {#each notificationsSection as key}
+              {@const src = sourceLabel(sources[key] ?? 'default')}
+              <div class="px-5 py-4">
+                <div class="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <span class="text-sm font-medium text-zinc-900">{KEY_LABELS[key]}</span>
+                    <p class="text-xs text-zinc-400 mt-0.5">{KEY_DESCRIPTIONS[key]}</p>
+                  </div>
+                  <span class="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium {src.cls}">
+                    <Icon icon={src.icon} class="size-3" />
+                    {src.label}
+                  </span>
+                </div>
+                <div class="flex gap-2">
+                  <Input
+                    bind:value={edits[key]}
+                    placeholder="https://nook.example.com/webhook/..."
                     class="font-mono text-sm rounded-xl flex-1"
                   />
                   {#if sources[key] === 'db'}
