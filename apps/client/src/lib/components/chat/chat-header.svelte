@@ -5,11 +5,13 @@
     title,
     meta,
     onback,
+    ondelete,
     disabled = false,
   }: {
     title: string;
     meta: string;
     onback: () => void;
+    ondelete?: () => void;
     disabled?: boolean;
   } = $props();
 </script>
@@ -29,5 +31,16 @@
       <p class="truncate font-[Goga] text-lg tracking-tight text-zinc-950">{title}</p>
       <p class="truncate text-xs text-zinc-400">{meta}</p>
     </div>
+    {#if ondelete}
+      <button
+        type="button"
+        class="absolute right-0 inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+        onclick={ondelete}
+        {disabled}
+        aria-label="Delete conversation"
+      >
+        <Icon icon="solar:trash-bin-minimalistic-linear" class="size-4" />
+      </button>
+    {/if}
   </div>
 </div>

@@ -3,7 +3,7 @@
   import { goto, replaceState } from '$app/navigation';
   import { page } from '$app/stores';
   import type { ChatSource, ChatMessage } from '$lib/api';
-  import { chatState, sendChatMessage, startNewChat } from '$lib/stores';
+  import { chatState, sendChatMessage, startNewChat, deleteChatSession } from '$lib/stores';
   import ChatHeader from './chat-header.svelte';
   import ChatMessages from './chat-messages.svelte';
   import ChatInput from './chat-input.svelte';
@@ -77,6 +77,12 @@
     goto('/');
   }
 
+  async function handleDelete() {
+    if (!chatState.sessionId) return;
+    await deleteChatSession(chatState.sessionId);
+    goto('/chat');
+  }
+
   function openSourcesForMessage(msg: ChatMessage) {
     lastSources = msg.sources ?? [];
     lastMessage = msg;
@@ -90,6 +96,7 @@
       title={currentSessionTitle()}
       meta={currentSessionMeta()}
       onback={handleBack}
+      ondelete={chatState.sessionId ? handleDelete : undefined}
       disabled={chatState.pending || chatState.streaming}
     />
     <ChatMessages
