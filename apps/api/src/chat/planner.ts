@@ -3,6 +3,7 @@ import { generateText } from 'ai';
 import { getEffectiveSetting } from '../db/settings';
 
 export type QueryPlan = {
+  intent: 'lookup' | 'trend' | 'status_check' | 'comparison' | 'anomaly' | 'narrative';
   timeWindow: { from: string; to: string } | null;
   providerFilters: string[];
   entityHints: string[];
@@ -26,6 +27,7 @@ Available ontology capabilities: organization, commercial_account, document, can
 Output a single JSON object — no markdown, no code fences, no explanation:
 
 {
+  "intent": "lookup" | "trend" | "status_check" | "comparison" | "anomaly" | "narrative",
   "retrievalMode": "full" | "history" | "light",
   "providerFilters": string[],
   "entityHints": string[],
@@ -53,10 +55,18 @@ Field rules:
 - requiresStats: true if asking for trends, summaries, cadence, or health metrics.
 - prefersRecency: true if asking about recent, latest, or new activity.
 - queryTerms: key content search terms extracted from the message. Lowercase. No stop words. No language-specific articles or prepositions. Max 10 terms.
-- capabilities: ontology capabilities relevant to the query. Empty if none clearly apply.`;
+- capabilities: ontology capabilities relevant to the query. Empty if none clearly apply.
+- intent: classify the user's information need.
+    "lookup"       → finding specific entities, facts, or events
+    "trend"        → patterns over time, growth, decline, cadence
+    "status_check" → current state, health, latest activity
+    "comparison"   → comparing two periods or entities
+    "anomaly"      → unusual patterns, spikes, drops, alerts
+    "narrative"    → broad context, "tell me about", "what happened with"`;
 
 function fallbackPlan(message: string): QueryPlan {
   return {
+    intent: 'narrative',
     timeWindow: null,
     providerFilters: [],
     entityHints: [],
@@ -91,7 +101,11 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       ? (raw.retrievalMode as 'full' | 'history' | 'light')
       : 'full';
 
+    const validIntents = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative'] as const;
+    const intent = validIntents.includes(raw.intent) ? raw.intent : 'narrative';
+
     return {
+      intent,
       timeWindow: raw.timeWindow && typeof raw.timeWindow === 'object' ? raw.timeWindow : null,
       providerFilters: Array.isArray(raw.providerFilters) ? raw.providerFilters : [],
       entityHints: Array.isArray(raw.entityHints) ? raw.entityHints : [],

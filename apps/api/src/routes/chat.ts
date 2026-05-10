@@ -148,6 +148,7 @@ async function loadSessionDetail(sessionId: string): Promise<ChatSessionDetail |
         role,
         content,
         sources_json,
+        feedback,
         created_at
       FROM chat_messages
       WHERE session_id = ?
@@ -161,6 +162,7 @@ async function loadSessionDetail(sessionId: string): Promise<ChatSessionDetail |
     role: row.role as 'user' | 'assistant',
     content: row.content as string,
     sources: parseSources(row.sources_json),
+    feedback: (row.feedback as 'up' | 'down' | null) ?? null,
     created_at: row.created_at as string,
   }));
 
@@ -219,6 +221,43 @@ chatRoutes.delete('/sessions/:sessionId', async (c) => {
   });
 
   return c.json({ ok: true, session_id: sessionId });
+});
+
+chatRoutes.patch('/messages/:messageId/feedback', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const messageId = c.req.param('messageId');
+  let body: { feedback: 'up' | 'down' | null };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_body' }, 400);
+  }
+
+  if (body.feedback !== null && body.feedback !== 'up' && body.feedback !== 'down') {
+    return c.json({ error: 'invalid_feedback' }, 400);
+  }
+
+  const existing = await db.execute({
+    sql: `SELECT id, role FROM chat_messages WHERE id = ?`,
+    args: [messageId],
+  });
+
+  if (existing.rows.length === 0) {
+    return c.json({ error: 'not_found' }, 404);
+  }
+
+  if (existing.rows[0].role !== 'assistant') {
+    return c.json({ error: 'feedback_only_on_assistant_messages' }, 400);
+  }
+
+  await db.execute({
+    sql: `UPDATE chat_messages SET feedback = ? WHERE id = ?`,
+    args: [body.feedback, messageId],
+  });
+
+  return c.json({ ok: true });
 });
 
 chatRoutes.post('/', async (c) => {

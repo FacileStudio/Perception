@@ -1,6 +1,6 @@
 <script lang="ts">
   import { chatState } from '$lib/stores';
-  import type { ChatSource } from '$lib/api';
+  import { api, type ChatSource } from '$lib/api';
   import ChatMarkdown from '$lib/components/chat-markdown.svelte';
   import TypingIndicator from './typing-indicator.svelte';
   import { Badge } from '$lib/components/ui/badge';
@@ -67,6 +67,32 @@
                   >
                     <Icon icon="solar:document-text-bold-duotone" class="size-3.5" />
                     {sourcesOpen && lastSources === msg.sources ? 'Sources open' : 'Open sources'}
+                  </button>
+                </div>
+              {/if}
+              {#if msg.role === 'assistant' && msg.id}
+                <div class="mt-2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    class="rounded-full p-1 transition-colors {msg.feedback === 'up' ? 'text-emerald-500' : 'text-zinc-300 hover:text-zinc-500'}"
+                    onclick={async () => {
+                      const newFeedback = msg.feedback === 'up' ? null : 'up';
+                      msg.feedback = newFeedback;
+                      await api.chat.feedback(msg.id!, newFeedback);
+                    }}
+                  >
+                    <Icon icon="solar:like-bold-duotone" class="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    class="rounded-full p-1 transition-colors {msg.feedback === 'down' ? 'text-red-400' : 'text-zinc-300 hover:text-zinc-500'}"
+                    onclick={async () => {
+                      const newFeedback = msg.feedback === 'down' ? null : 'down';
+                      msg.feedback = newFeedback;
+                      await api.chat.feedback(msg.id!, newFeedback);
+                    }}
+                  >
+                    <Icon icon="solar:dislike-bold-duotone" class="size-4" />
                   </button>
                 </div>
               {/if}

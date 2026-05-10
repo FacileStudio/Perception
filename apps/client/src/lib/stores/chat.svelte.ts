@@ -50,9 +50,11 @@ export async function openChatSession(sessionId: string) {
     const { session } = await api.chat.session(sessionId);
     setActiveChatSession(session.id);
     chatState.messages = session.messages.map((message) => ({
+      id: message.id,
       role: message.role,
       content: message.content,
       sources: message.sources,
+      feedback: message.feedback,
     }));
     chatState.pending = false;
     chatState.streaming = false;
@@ -129,6 +131,7 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
             done?: boolean;
             sources?: ChatSource[];
             session_id?: string;
+            message_id?: string;
           };
           if (parsed.session_id && !sessionId) {
             sessionId = parsed.session_id;
@@ -142,6 +145,9 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
           }
           if (parsed.sources?.length) {
             chatState.messages[idx].sources = parsed.sources;
+          }
+          if (parsed.message_id) {
+            chatState.messages[idx].id = parsed.message_id;
           }
         } catch (error) {
           if (error instanceof Error) throw error;

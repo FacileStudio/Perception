@@ -148,6 +148,10 @@ CREATE TABLE IF NOT EXISTS users (
 ALTER TABLE sessions ADD COLUMN user_id TEXT
       `,
     },
+    {
+      name: '005_chat_feedback',
+      sql: `ALTER TABLE chat_messages ADD COLUMN feedback TEXT CHECK(feedback IN ('up','down'))`,
+    },
   ];
 
   for (const migration of migrations) {

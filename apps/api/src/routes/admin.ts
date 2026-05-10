@@ -65,6 +65,18 @@ adminRoutes.post('/reinfer-schemas', async (c) => {
   return c.json({ queued });
 });
 
+adminRoutes.post('/reembed-all', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute({
+    sql: `UPDATE event_embeddings SET status = 'pending', attempts = 0, last_error = NULL WHERE status IN ('ready', 'error')`,
+    args: [],
+  });
+
+  return c.json({ reset: result.rowsAffected });
+});
+
 adminRoutes.post('/reprocess-entities', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

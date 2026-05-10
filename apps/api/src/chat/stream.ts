@@ -29,15 +29,17 @@ async function persistAssistantMessage(
   sessionId: string,
   content: string,
   sources: ChatSource[],
-): Promise<void> {
+): Promise<string> {
+  const messageId = randomUUID();
   await db.execute({
     sql: `INSERT INTO chat_messages (id, session_id, role, content, sources_json, created_at) VALUES (?, ?, 'assistant', ?, ?, ?)`,
-    args: [randomUUID(), sessionId, content, JSON.stringify(sources), new Date().toISOString()],
+    args: [messageId, sessionId, content, JSON.stringify(sources), new Date().toISOString()],
   });
   await db.execute({
     sql: `UPDATE chat_sessions SET updated_at = ? WHERE id = ?`,
     args: [new Date().toISOString(), sessionId],
   });
+  return messageId;
 }
 
 function trimLatestUserEcho(history: ChatMessageRow[], message: string): ChatMessageRow[] {
@@ -104,11 +106,10 @@ export function streamChat(
           controller.enqueue(encoded);
         }
 
-        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true, sources })}\n\n`));
+        const messageId = await persistAssistantMessage(sessionId, fullText, sources);
+        controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ done: true, sources, message_id: messageId })}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();
-
-        await persistAssistantMessage(sessionId, fullText, sources);
 
         try {
           const usage = await result.usage;

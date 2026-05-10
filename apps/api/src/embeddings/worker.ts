@@ -45,7 +45,21 @@ async function processEvent(eventId: string): Promise<void> {
   const row = evResult.rows[0];
   const event = rowToEvent(row as unknown as Record<string, unknown>);
 
-  const input = buildEmbeddingInput(event);
+  const factsResult = await db.execute({
+    sql: 'SELECT facts_json FROM dynamic_facts WHERE event_id = ?',
+    args: [eventId],
+  });
+
+  let facts: Record<string, unknown> | null = null;
+  if (factsResult.rows.length > 0 && factsResult.rows[0].facts_json) {
+    try {
+      facts = JSON.parse(factsResult.rows[0].facts_json as string);
+    } catch {
+      facts = null;
+    }
+  }
+
+  const input = buildEmbeddingInput(event, facts);
   const inputHash = hashInput(input);
   const embeddings = await embedDocuments([input]);
   const embedding = embeddings[0];

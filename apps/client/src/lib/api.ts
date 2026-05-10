@@ -40,6 +40,11 @@ export const api = {
     sessions: () => request<{ sessions: ChatSessionSummary[] }>('/chat/sessions'),
     session: (sessionId: string) => request<{ session: ChatSessionDetail }>(`/chat/sessions/${sessionId}`),
     deleteSession: (sessionId: string) => request<{ ok: boolean; session_id: string }>(`/chat/sessions/${sessionId}`, { method: 'DELETE' }),
+    feedback: (messageId: string, feedback: 'up' | 'down' | null) =>
+      request<{ ok: boolean }>(`/chat/messages/${messageId}/feedback`, {
+        method: 'PATCH',
+        body: JSON.stringify({ feedback }),
+      }),
   },
   stats: {
     get: (refresh = false) => request<{ snapshots: StatsSnapshot[] }>(`/stats${refresh ? '?refresh=1' : ''}`),
@@ -55,6 +60,7 @@ export const api = {
   },
   admin: {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
+    reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
     reprocessEntities: () => request<{ actors_created: number; events_linked: number; relations_added: number }>('/admin/reprocess-entities', { method: 'POST' }),
   },
 };
@@ -82,7 +88,7 @@ export type StatsSnapshot = {
   data: Record<string, unknown>;
 };
 
-export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[] };
+export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null };
 export type ChatSource = { event_id: string; provider_name: string; occurred_at: string; title: string; score: number };
 export type ChatSessionSummary = {
   id: string;
@@ -97,6 +103,7 @@ export type ChatMessageRecord = {
   role: 'user' | 'assistant';
   content: string;
   sources: ChatSource[];
+  feedback: 'up' | 'down' | null;
   created_at: string;
 };
 export type TokenUsageRow = {

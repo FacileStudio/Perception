@@ -71,6 +71,7 @@ export type ChatMessageRecord = {
   role: 'user' | 'assistant';
   content: string;
   sources: ChatSource[];
+  feedback: 'up' | 'down' | null;
   created_at: string;
 };
 export type ChatSessionSummary = {

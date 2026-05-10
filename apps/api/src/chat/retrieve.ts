@@ -211,6 +211,15 @@ async function statsLane(): Promise<StatsSnapshot[]> {
   }));
 }
 
+const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
+  lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0 },
+  trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0 },
+  status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0 },
+  comparison:   { entity: 0.3, fts: 0.2, concept: 0.2, sql: 0.6, vector: 0.1, stats: 0 },
+  anomaly:      { entity: 0.5, fts: 0.2, concept: 0.3, sql: 0.5, vector: 0.15, stats: 0 },
+  narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0 },
+};
+
 function mergeAndRank(
   lanes: Array<Array<EventRow & { score: number; source: RetrievalSource; concepts?: string[]; entity_names?: string[] }>>,
   plan: QueryPlan,
@@ -220,15 +229,7 @@ function mergeAndRank(
   for (const lane of lanes) {
     for (const event of lane) {
       const existing = best.get(event.id);
-      const laneWeight = event.source === 'entity'
-        ? 0.55
-        : event.source === 'concept'
-          ? 0.4
-          : event.source === 'sql'
-            ? 0.25
-            : event.source === 'fts'
-              ? 0.2
-              : 0.15;
+      const laneWeight = INTENT_WEIGHTS[plan.intent][event.source];
       const scored = {
         ...event,
         score: event.score + laneWeight,
@@ -294,16 +295,30 @@ export async function fetchSystemSummary(): Promise<string> {
 }
 
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
-  const shouldRunRecentLane = plan.retrievalMode === 'full' || plan.requiresSqlFacts || plan.requiresStats || plan.prefersRecency || Boolean(plan.timeWindow);
+  const intent = plan.intent;
+  const prefersRecency = plan.prefersRecency || intent === 'status_check';
+  const shouldRunRecentLane =
+    (plan.retrievalMode === 'full' || plan.requiresSqlFacts || plan.requiresStats || prefersRecency || Boolean(plan.timeWindow))
+    && !(intent === 'lookup' && !plan.timeWindow);
+
+  const skipVector = intent === 'trend';
+  const skipConcept = intent === 'status_check';
+  const alwaysEntity = intent === 'lookup';
+  const alwaysSql = intent === 'lookup';
+  const forceStats = intent === 'trend' || intent === 'status_check' || intent === 'anomaly';
+
+  const emptyVector = [] as Array<EventRow & { score: number; source: 'vector' }>;
+  const emptySql = [] as Array<EventRow & { score: number; source: 'sql' }>;
+  const emptyConcept = [] as Array<EventRow & { score: number; source: 'concept'; concepts: string[] }>;
 
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
-    vectorLane(queryEmbedding),
+    skipVector ? Promise.resolve(emptyVector) : vectorLane(queryEmbedding),
     ftsLane(plan.queryTerms),
-    plan.requiresSqlFacts ? sqlLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
-    shouldRunRecentLane ? recentLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'sql' }>),
-    entityLane(plan),
-    conceptLane(plan),
-    plan.requiresStats ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
+    (plan.requiresSqlFacts || alwaysSql) ? sqlLane(plan) : Promise.resolve(emptySql),
+    shouldRunRecentLane ? recentLane(plan) : Promise.resolve(emptySql),
+    (alwaysEntity || plan.queryTerms.length > 0) ? entityLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'entity'; entity_names: string[] }>),
+    skipConcept ? Promise.resolve(emptyConcept) : conceptLane(plan),
+    (plan.requiresStats || forceStats) ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents], plan);

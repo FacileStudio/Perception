@@ -1,4 +1,5 @@
 import type { NookEventEnvelope, ExtractedEvent } from '../types';
+import { extractEmailExcerpt } from './email-excerpt';
 import { hashEmail, stripHtml } from './redact';
 
 const EMAIL_RE = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/;
@@ -18,14 +19,16 @@ export function extractEnvelope(envelope: NookEventEnvelope): Omit<ExtractedEven
     ?? (envelope.event.messageHtml ? stripHtml(envelope.event.messageHtml) : '');
 
   const title = envelope.event.title ?? '';
-  const summary = rawSummary;
+  const summary = (envelope.source === 'imap' && rawSummary)
+    ? extractEmailExcerpt(rawSummary)
+    : rawSummary;
   const entityName = envelope.subject.name ?? null;
   const tags = envelope.provider.tags.join(' ');
 
   const envelopeActor = envelope.actor?.name ?? null;
   const actorName = (envelopeActor && !SHA256_RE.test(envelopeActor))
     ? envelopeActor
-    : (extractEmailFromText(summary) ?? extractEmailFromText(title) ?? null);
+    : (extractEmailFromText(rawSummary) ?? extractEmailFromText(title) ?? null);
 
   const parts = [
     title,

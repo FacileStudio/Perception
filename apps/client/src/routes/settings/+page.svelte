@@ -105,6 +105,38 @@
 
   onMount(() => load());
 
+  let reembedding = $state(false);
+  let reembedResult = $state<string | null>(null);
+  let reprocessing = $state(false);
+  let reprocessResult = $state<string | null>(null);
+  let confirmAction = $state<'reembed' | 'reprocess' | null>(null);
+
+  async function reembedAll() {
+    reembedding = true;
+    reembedResult = null;
+    try {
+      const res = await api.admin.reembedAll();
+      reembedResult = `${res.reset} embeddings queued for re-processing.`;
+    } catch {
+      reembedResult = 'Failed to trigger re-embed.';
+    } finally {
+      reembedding = false;
+    }
+  }
+
+  async function reprocessEntities() {
+    reprocessing = true;
+    reprocessResult = null;
+    try {
+      const res = await api.admin.reprocessEntities();
+      reprocessResult = `${res.actors_created} actors created, ${res.events_linked} events linked, ${res.relations_added} relations added.`;
+    } catch {
+      reprocessResult = 'Failed to reprocess entities.';
+    } finally {
+      reprocessing = false;
+    }
+  }
+
   const apiKeySection = ['anthropic_api_key', 'voyage_api_key'];
   const modelSection = ['llm_model', 'embedding_model', 'embedding_dimensions'];
   const systemSection = ['retention_days', 'store_raw_payloads', 'email_body_indexing'];
@@ -276,7 +308,99 @@
           </Card>
         </section>
 
+        <section>
+          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Maintenance</h2>
+          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100">
+            <div class="px-5 py-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <span class="text-sm font-medium text-zinc-900">Re-embed all events</span>
+                  <p class="text-xs text-zinc-400 mt-0.5">Reset all embeddings and re-generate with the latest input format. The embedding worker will process them in background.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onclick={() => { confirmAction = 'reembed'; }}
+                  disabled={reembedding}
+                  class="shrink-0 rounded-xl gap-1.5"
+                >
+                  <Icon icon="solar:refresh-bold-duotone" class="size-3.5" />
+                  {reembedding ? 'Processing…' : 'Re-embed'}
+                </Button>
+              </div>
+              {#if reembedResult}
+                <p class="mt-2 text-xs text-emerald-600">{reembedResult}</p>
+              {/if}
+            </div>
+            <div class="px-5 py-4">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <span class="text-sm font-medium text-zinc-900">Reprocess entities</span>
+                  <p class="text-xs text-zinc-400 mt-0.5">Re-extract actor entities, re-run ontology labeling, and rebuild relations. May consume LLM tokens.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onclick={() => { confirmAction = 'reprocess'; }}
+                  disabled={reprocessing}
+                  class="shrink-0 rounded-xl gap-1.5"
+                >
+                  <Icon icon="solar:graph-new-bold-duotone" class="size-3.5" />
+                  {reprocessing ? 'Processing…' : 'Reprocess'}
+                </Button>
+              </div>
+              {#if reprocessResult}
+                <p class="mt-2 text-xs text-emerald-600">{reprocessResult}</p>
+              {/if}
+            </div>
+          </Card>
+        </section>
+
       </div>
     {/if}
   </div>
+
+  {#if confirmAction}
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="mx-4 w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl">
+        <p class="text-sm font-semibold text-zinc-900">
+          {confirmAction === 'reembed' ? 'Re-embed all events?' : 'Reprocess entities?'}
+        </p>
+        <p class="mt-2 text-xs leading-relaxed text-zinc-500">
+          {confirmAction === 'reembed'
+            ? 'This will reset all embeddings and re-generate them with the latest input format. The embedding worker will process them in the background.'
+            : 'This re-processes all events — extracting actor entities, re-running ontology labeling, and rebuilding relations. It may take a while and will consume LLM tokens.'}
+        </p>
+        <div class="mt-5 flex justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={() => { confirmAction = null; }}
+            class="rounded-xl gap-1.5"
+          >
+            <Icon icon="solar:close-circle-linear" class="size-3.5" />
+            Cancel
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onclick={() => {
+              const action = confirmAction;
+              confirmAction = null;
+              if (action === 'reembed') reembedAll();
+              else reprocessEntities();
+            }}
+            class="rounded-xl gap-1.5"
+          >
+            <Icon icon="solar:check-circle-linear" class="size-3.5" />
+            Confirm
+          </Button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </div>

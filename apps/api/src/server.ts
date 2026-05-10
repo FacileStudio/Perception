@@ -57,8 +57,11 @@ console.log(`[perception] API ready on :${config.port}`);
 
 const { embeddingWorker } = await import('./embeddings/worker');
 const { schemaInferenceWorker } = await import('./schema-registry/worker');
+const { upliftWorker } = await import('./ingest/uplift-worker');
 setInterval(() => embeddingWorker.run().catch(console.error), 5000);
 setInterval(() => schemaInferenceWorker.run().catch(console.error), 15000);
+setInterval(() => upliftWorker.run().catch(console.error), 6 * 60 * 60 * 1000);
+setTimeout(() => upliftWorker.run().catch(console.error), 30_000);
 
 export default {
   port: config.port,

@@ -14,8 +14,6 @@
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
-  let refreshing = $state(false);
-  let confirmOpen = $state(false);
   let viewMode = $state<'entities' | 'relations' | 'list'>('entities');
   let drawMode: 'entities' | 'relations' = 'entities';
   let relationLegend = $state<[string, string][]>([]);
@@ -511,22 +509,6 @@
       : []
   );
 
-  async function refreshGraph() {
-    if (refreshing) return;
-    refreshing = true;
-    try {
-      await api.admin.reprocessEntities();
-      cancelAnimationFrame(animId);
-      nodes = [];
-      edges = [];
-      simAlpha = 1.0;
-      loading = true;
-      await loadGraph();
-    } finally {
-      refreshing = false;
-    }
-  }
-
   async function loadGraph() {
     simAlpha = 1.0;
     try {
@@ -599,17 +581,6 @@
   </div>
 
   <div bind:this={container} class="relative min-h-0 flex-1 bg-[#f4f4f5]">
-    <div class="absolute right-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
-      <button
-        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {refreshing ? 'text-zinc-400' : 'text-zinc-500 hover:text-zinc-800'} disabled:cursor-not-allowed"
-        onclick={() => { if (!refreshing) confirmOpen = true; }}
-        disabled={refreshing}
-      >
-        <Icon icon="solar:refresh-linear" class="size-3.5" />
-        {refreshing ? 'Refreshing…' : 'Refresh graph'}
-      </button>
-    </div>
-
     <div class="absolute left-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
       <button
         class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
@@ -681,38 +652,6 @@
       <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
         <span class="text-sm text-zinc-500">No entities resolved yet.</span>
         <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
-      </div>
-    {/if}
-
-    {#if confirmOpen}
-      <div
-        class="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div class="mx-4 w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl">
-          <p class="text-sm font-semibold text-zinc-900">Refresh entity graph?</p>
-          <p class="mt-2 text-xs leading-relaxed text-zinc-500">
-            This re-processes all events — extracting actor entities, re-running ontology labeling, and rebuilding relations.
-            It may take a while and will consume LLM tokens.
-          </p>
-          <div class="mt-5 flex justify-end gap-2">
-            <button
-              class="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3.5 py-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-50"
-              onclick={() => { confirmOpen = false; }}
-            >
-              <Icon icon="solar:close-circle-linear" class="size-3.5" />
-              Cancel
-            </button>
-            <button
-              class="flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3.5 py-2 text-xs font-medium text-white transition-colors hover:bg-zinc-700"
-              onclick={() => { confirmOpen = false; refreshGraph(); }}
-            >
-              <Icon icon="solar:refresh-linear" class="size-3.5" />
-              Yes, refresh
-            </button>
-          </div>
-        </div>
       </div>
     {/if}
 
