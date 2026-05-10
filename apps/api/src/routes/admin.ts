@@ -65,6 +65,24 @@ adminRoutes.post('/reinfer-schemas', async (c) => {
   return c.json({ queued });
 });
 
+adminRoutes.get('/embedding-stats', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute({
+    sql: `SELECT status, COUNT(*) AS cnt FROM event_embeddings GROUP BY status`,
+    args: [],
+  });
+
+  const stats: Record<string, number> = { pending: 0, ready: 0, error: 0, locked: 0 };
+  for (const row of result.rows) {
+    stats[row.status as string] = Number(row.cnt);
+  }
+  const total = Object.values(stats).reduce((a, b) => a + b, 0);
+
+  return c.json({ total, ...stats });
+});
+
 adminRoutes.post('/reembed-all', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

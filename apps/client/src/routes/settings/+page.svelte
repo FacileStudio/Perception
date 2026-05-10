@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { api } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
@@ -103,7 +103,8 @@
     return { label: 'default', icon: 'solar:info-circle-bold-duotone', cls: 'text-zinc-500 bg-zinc-100' };
   }
 
-  onMount(() => load());
+  onMount(() => { load(); loadEmbeddingStats(); });
+  onDestroy(() => { if (pollTimer) clearInterval(pollTimer); });
 
   let reembedding = $state(false);
   let reembedResult = $state<string | null>(null);
@@ -111,12 +112,40 @@
   let reprocessResult = $state<string | null>(null);
   let confirmAction = $state<'reembed' | 'reprocess' | null>(null);
 
+  type EmbeddingStats = { total: number; pending: number; ready: number; error: number; locked: number };
+  let embeddingStats = $state<EmbeddingStats | null>(null);
+  let pollTimer = $state<ReturnType<typeof setInterval> | null>(null);
+
+  let embeddingProgress = $derived(
+    embeddingStats && embeddingStats.total > 0
+      ? Math.round((embeddingStats.ready / embeddingStats.total) * 100)
+      : null,
+  );
+  let embeddingBusy = $derived(
+    embeddingStats ? (embeddingStats.pending + embeddingStats.locked) > 0 : false,
+  );
+
+  async function loadEmbeddingStats() {
+    try {
+      embeddingStats = await api.admin.embeddingStats();
+      if (embeddingBusy && !pollTimer) {
+        pollTimer = setInterval(loadEmbeddingStats, 3000);
+      } else if (!embeddingBusy && pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    } catch {
+      embeddingStats = null;
+    }
+  }
+
   async function reembedAll() {
     reembedding = true;
     reembedResult = null;
     try {
       const res = await api.admin.reembedAll();
       reembedResult = `${res.reset} embeddings queued for re-processing.`;
+      await loadEmbeddingStats();
     } catch {
       reembedResult = 'Failed to trigger re-embed.';
     } finally {
@@ -330,6 +359,30 @@
               </div>
               {#if reembedResult}
                 <p class="mt-2 text-xs text-emerald-600">{reembedResult}</p>
+              {/if}
+              {#if embeddingStats}
+                <div class="mt-3 space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px] text-zinc-400">
+                    <span>
+                      {embeddingStats.ready}/{embeddingStats.total} ready
+                      {#if embeddingStats.pending + embeddingStats.locked > 0}
+                        <span class="text-amber-500">· {embeddingStats.pending + embeddingStats.locked} queued</span>
+                      {/if}
+                      {#if embeddingStats.error > 0}
+                        <span class="text-red-400">· {embeddingStats.error} errors</span>
+                      {/if}
+                    </span>
+                    {#if embeddingProgress !== null}
+                      <span class="font-mono">{embeddingProgress}%</span>
+                    {/if}
+                  </div>
+                  <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      class="h-full rounded-full transition-all duration-500 {embeddingBusy ? 'bg-amber-400' : 'bg-emerald-400'}"
+                      style="width: {embeddingProgress ?? 0}%"
+                    ></div>
+                  </div>
+                </div>
               {/if}
             </div>
             <div class="px-5 py-4">

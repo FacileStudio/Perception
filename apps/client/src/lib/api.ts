@@ -62,6 +62,7 @@ export const api = {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
     reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
     reprocessEntities: () => request<{ actors_created: number; events_linked: number; relations_added: number }>('/admin/reprocess-entities', { method: 'POST' }),
+    embeddingStats: () => request<{ total: number; pending: number; ready: number; error: number; locked: number }>('/admin/embedding-stats'),
   },
 };
 
