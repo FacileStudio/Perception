@@ -4,6 +4,7 @@ import type { CommunitySummary } from './community';
 import type { SqlQueryResult } from './text-to-sql';
 import type { EntityNarrative } from '../../narratives/retrieve';
 import type { MemoryEpisode } from '../../memory/types';
+import type { ResourceChunk } from '../../resources/retrieve';
 
 export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph' | 'community' | 'text_to_sql';
 export type TemporalPeriod = 'current' | 'previous';
@@ -44,6 +45,7 @@ export type RetrievalResult = {
   narratives: EntityNarrative[];
   memoryEpisodes: MemoryEpisode[];
   causalLinks: CausalLink[];
+  resourceChunks: ResourceChunk[];
 };
 
 export type ContextConfidence = {

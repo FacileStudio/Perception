@@ -57,7 +57,7 @@ export function streamChat(
   context: RetrievalResult,
   corrected = false,
 ): ReadableStream {
-  let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults, context.narratives, context.memoryEpisodes, context.causalLinks);
+  let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults, context.narratives, context.memoryEpisodes, context.causalLinks, context.resourceChunks);
   if (corrected) {
     contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
   }
@@ -87,6 +87,10 @@ export function streamChat(
 
   const memoryMeta = context.memoryEpisodes.length > 0
     ? context.memoryEpisodes.map((ep) => ({ summary: ep.summary, entities: ep.entityRefs, occurred: ep.occurredAt }))
+    : null;
+
+  const resourcesMeta = context.resourceChunks.length > 0
+    ? context.resourceChunks.map((rc) => ({ title: rc.resourceTitle, chunk_index: rc.chunkIndex, content: rc.content.slice(0, 200) }))
     : null;
 
   const stream = new ReadableStream({
@@ -132,6 +136,7 @@ export function streamChat(
         if (communitySummariesMeta) donePayload.community_summaries = communitySummariesMeta;
         if (narrativesMeta) donePayload.narratives = narrativesMeta;
         if (memoryMeta) donePayload.memory_episodes = memoryMeta;
+        if (resourcesMeta) donePayload.resources = resourcesMeta;
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(donePayload)}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();

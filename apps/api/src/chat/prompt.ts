@@ -6,6 +6,7 @@ import type { SqlQueryResult } from './lanes/text-to-sql';
 import type { EntityNarrative } from '../narratives/retrieve';
 import type { MemoryEpisode } from '../memory/types';
 import type { CausalLink } from './lanes/types';
+import type { ResourceChunk } from '../resources/retrieve';
 
 export function buildSystemPrompt(mode: QueryPlan['retrievalMode']): string {
   const base = `You are Perception, an operational intelligence assistant for Facile.
@@ -52,6 +53,7 @@ export function buildContextBlock(
   narratives: EntityNarrative[] = [],
   memoryEpisodes: MemoryEpisode[] = [],
   causalLinks: CausalLink[] = [],
+  resourceChunks: ResourceChunk[] = [],
 ): string {
   const lines: string[] = [];
 
@@ -60,6 +62,13 @@ export function buildContextBlock(
     lines.push(`[MEMORY occurred=${ep.occurredAt.slice(0, 10)}${entities}]`);
     lines.push(ep.summary);
     lines.push('[/MEMORY]');
+    lines.push('');
+  }
+
+  for (const rc of resourceChunks) {
+    lines.push(`[RESOURCE title="${rc.resourceTitle}" chunk=${rc.chunkIndex} score=${rc.score.toFixed(2)}]`);
+    lines.push(rc.content);
+    lines.push('[/RESOURCE]');
     lines.push('');
   }
 

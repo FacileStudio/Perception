@@ -15,6 +15,7 @@ import { settingsRoutes } from './routes/settings';
 import { entitiesRoutes } from './routes/entities';
 import { usersRoutes } from './routes/users';
 import { notificationsRoutes } from './routes/notifications';
+import { resourcesRoutes } from './routes/resources';
 import { config } from './config';
 
 const app = new Hono();
@@ -48,6 +49,7 @@ app.route('/settings', settingsRoutes);
 app.route('/entities', entitiesRoutes);
 app.route('/users', usersRoutes);
 app.route('/notifications', notificationsRoutes);
+app.route('/resources', resourcesRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);
@@ -71,6 +73,7 @@ const { changePointWorker } = await import('./math/change-points-worker');
 const { graphHealthWorker } = await import('./math/graph-health-worker');
 const { conceptDriftWorker } = await import('./math/concept-drift-worker');
 const { grangerWorker } = await import('./math/granger-worker');
+const { resourceEmbeddingWorker } = await import('./resources/embedding-worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -84,6 +87,7 @@ registerWorker({ name: 'change-points', description: 'Detects regime changes via
 registerWorker({ name: 'graph-health', description: 'Computes graph entropy and connectivity health metrics', intervalMs: 7 * 24 * 60 * 60 * 1000, run: graphHealthWorker.run });
 registerWorker({ name: 'concept-drift', description: 'Detects distribution drift per provider and invalidates schemas', intervalMs: 24 * 60 * 60 * 1000, run: conceptDriftWorker.run });
 registerWorker({ name: 'granger', description: 'Detects Granger-causal relationships between event series', intervalMs: 24 * 60 * 60 * 1000, run: grangerWorker.run });
+registerWorker({ name: 'resource-embedding', description: 'Generates vector embeddings for resource chunks', intervalMs: 5_000, run: resourceEmbeddingWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -97,6 +101,7 @@ scheduleWorker('change-points', 360_000);
 scheduleWorker('graph-health', 420_000);
 scheduleWorker('concept-drift', 480_000);
 scheduleWorker('granger', 600_000);
+scheduleWorker('resource-embedding');
 
 export default {
   port: config.port,

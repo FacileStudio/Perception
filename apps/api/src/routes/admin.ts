@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Hono } from 'hono';
 import { requireSession } from '../security/session';
 import { getWorkerStatuses, getWorkerHistory, executeWorker, areWorkersPaused } from '../workers/registry';
@@ -6,6 +7,8 @@ import { retryFailedEmbeddings, backfillMissingEmbeddings, getEmbeddingStats, re
 import { reinferAllSchemas } from '../schema-registry/jobs';
 import { reprocessActorEntities } from '../entities/backfill';
 import { db } from '../db/client';
+import { runEvaluation } from '../eval/runner';
+import { promoteToFixture } from '../eval/promote';
 
 export const adminRoutes = new Hono();
 
@@ -140,4 +143,152 @@ adminRoutes.get('/drift-alerts', async (c) => {
   }));
 
   return c.json({ alerts });
+});
+
+adminRoutes.post('/eval/run', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  try {
+    const result = await runEvaluation();
+    return c.json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ error: msg }, 400);
+  }
+});
+
+adminRoutes.get('/eval/runs', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected
+     FROM eval_runs ORDER BY ran_at DESC LIMIT 20`,
+  );
+
+  return c.json({
+    runs: result.rows.map((r) => ({
+      id: r.id,
+      ran_at: r.ran_at,
+      fixture_count: r.fixture_count,
+      precision_at_5: r.precision_at_5,
+      recall_at_5: r.recall_at_5,
+      mrr: r.mrr,
+      lane_hit_rates: JSON.parse(r.lane_hit_rates as string),
+      duration_ms: r.duration_ms,
+      regression_detected: Boolean(r.regression_detected),
+    })),
+  });
+});
+
+adminRoutes.get('/eval/runs/:runId', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const runId = c.req.param('runId');
+  const [run, results] = await Promise.all([
+    db.execute({ sql: `SELECT * FROM eval_runs WHERE id = ?`, args: [runId] }),
+    db.execute({
+      sql: `SELECT er.*, ef.question, ef.intent FROM eval_results er JOIN eval_fixtures ef ON ef.id = er.fixture_id WHERE er.run_id = ? ORDER BY er.score ASC`,
+      args: [runId],
+    }),
+  ]);
+
+  if (run.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const r = run.rows[0];
+  return c.json({
+    id: r.id,
+    ran_at: r.ran_at,
+    fixture_count: r.fixture_count,
+    precision_at_5: r.precision_at_5,
+    recall_at_5: r.recall_at_5,
+    mrr: r.mrr,
+    lane_hit_rates: JSON.parse(r.lane_hit_rates as string),
+    duration_ms: r.duration_ms,
+    regression_detected: Boolean(r.regression_detected),
+    results: results.rows.map((res) => ({
+      id: res.id,
+      fixture_id: res.fixture_id,
+      question: res.question,
+      intent: res.intent,
+      retrieved_event_ids: JSON.parse(res.retrieved_event_ids as string),
+      retrieved_lanes: JSON.parse(res.retrieved_lanes as string),
+      precision: res.precision_val,
+      recall: res.recall_val,
+      reciprocal_rank: res.reciprocal_rank,
+      score: res.score,
+    })),
+  });
+});
+
+adminRoutes.get('/eval/fixtures', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT id, question, expected_event_ids, expected_lanes, intent, notes, source_message_id, created_at
+     FROM eval_fixtures ORDER BY created_at DESC`,
+  );
+
+  return c.json({
+    fixtures: result.rows.map((r) => ({
+      id: r.id,
+      question: r.question,
+      expected_event_ids: JSON.parse(r.expected_event_ids as string),
+      expected_lanes: JSON.parse(r.expected_lanes as string),
+      intent: r.intent,
+      notes: r.notes,
+      source_message_id: r.source_message_id,
+      created_at: r.created_at,
+    })),
+  });
+});
+
+adminRoutes.post('/eval/fixtures', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const body = await c.req.json<{
+    question: string;
+    expected_event_ids: string[];
+    expected_lanes?: string[];
+    intent: string;
+    notes?: string;
+  }>();
+
+  if (!body.question || !body.intent) {
+    return c.json({ error: 'question_and_intent_required' }, 400);
+  }
+
+  const id = randomUUID();
+  await db.execute({
+    sql: `INSERT INTO eval_fixtures (id, question, expected_event_ids, expected_lanes, intent, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, body.question, JSON.stringify(body.expected_event_ids ?? []), JSON.stringify(body.expected_lanes ?? []), body.intent, body.notes ?? '', new Date().toISOString()],
+  });
+
+  return c.json({ id }, 201);
+});
+
+adminRoutes.delete('/eval/fixtures/:id', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  await db.execute({ sql: `DELETE FROM eval_results WHERE fixture_id = ?`, args: [id] });
+  await db.execute({ sql: `DELETE FROM eval_fixtures WHERE id = ?`, args: [id] });
+  return c.json({ ok: true });
+});
+
+adminRoutes.post('/eval/promote/:messageId', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const messageId = c.req.param('messageId');
+  const body = await c.req.json<{ notes?: string }>().catch(() => ({}));
+  const fixtureId = await promoteToFixture(messageId, (body as { notes?: string }).notes);
+
+  if (!fixtureId) return c.json({ error: 'message_not_found_or_not_upvoted' }, 404);
+  return c.json({ fixture_id: fixtureId }, 201);
 });

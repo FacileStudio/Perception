@@ -318,6 +318,86 @@ CREATE INDEX IF NOT EXISTS causal_links_cause_idx ON causal_links(cause_series, 
 CREATE INDEX IF NOT EXISTS causal_links_pvalue_idx ON causal_links(p_value)
       `,
     },
+    {
+      name: '017_resources',
+      sql: `
+CREATE TABLE IF NOT EXISTS resources (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  mime_type TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  source_type TEXT NOT NULL CHECK(source_type IN ('upload','event_attachment')),
+  source_event_id TEXT,
+  chunk_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'processing' CHECK(status IN ('processing','ready','error')),
+  error TEXT,
+  uploaded_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS resources_status_idx ON resources(status);
+CREATE INDEX IF NOT EXISTS resources_source_idx ON resources(source_type);
+
+CREATE TABLE IF NOT EXISTS resource_chunks (
+  id TEXT PRIMARY KEY,
+  resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  token_count INTEGER NOT NULL,
+  embedding_status TEXT NOT NULL DEFAULT 'pending' CHECK(embedding_status IN ('pending','ready','error','locked')),
+  embedding F32_BLOB(1024),
+  input_hash TEXT,
+  locked_at TEXT,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  last_error TEXT,
+  UNIQUE(resource_id, chunk_index)
+);
+CREATE INDEX IF NOT EXISTS resource_chunks_resource_idx ON resource_chunks(resource_id);
+CREATE INDEX IF NOT EXISTS resource_chunks_status_idx ON resource_chunks(embedding_status)
+      `,
+    },
+    {
+      name: '018_eval_harness',
+      sql: `
+CREATE TABLE IF NOT EXISTS eval_fixtures (
+  id TEXT PRIMARY KEY,
+  question TEXT NOT NULL,
+  expected_event_ids TEXT NOT NULL DEFAULT '[]',
+  expected_lanes TEXT NOT NULL DEFAULT '[]',
+  intent TEXT NOT NULL,
+  notes TEXT NOT NULL DEFAULT '',
+  source_message_id TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS eval_runs (
+  id TEXT PRIMARY KEY,
+  ran_at TEXT NOT NULL,
+  fixture_count INTEGER NOT NULL,
+  precision_at_5 REAL NOT NULL,
+  recall_at_5 REAL NOT NULL,
+  mrr REAL NOT NULL,
+  lane_hit_rates TEXT NOT NULL DEFAULT '{}',
+  duration_ms INTEGER NOT NULL,
+  regression_detected INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS eval_runs_ran_idx ON eval_runs(ran_at DESC);
+
+CREATE TABLE IF NOT EXISTS eval_results (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL REFERENCES eval_runs(id) ON DELETE CASCADE,
+  fixture_id TEXT NOT NULL REFERENCES eval_fixtures(id) ON DELETE CASCADE,
+  retrieved_event_ids TEXT NOT NULL DEFAULT '[]',
+  retrieved_lanes TEXT NOT NULL DEFAULT '[]',
+  precision_val REAL NOT NULL,
+  recall_val REAL NOT NULL,
+  reciprocal_rank REAL NOT NULL,
+  score REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS eval_results_run_idx ON eval_results(run_id);
+CREATE INDEX IF NOT EXISTS eval_results_fixture_idx ON eval_results(fixture_id)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

@@ -18,7 +18,8 @@
     "email-reply-parser": "^2.3.5",
     "hono": "^4.7.9",
     "jose": "^6.2.3",
-    "simple-statistics": "^7.8.8"
+    "simple-statistics": "^7.8.8",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
