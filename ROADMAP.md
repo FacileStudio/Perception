@@ -66,7 +66,6 @@ Silent quality improvement over time. Zero user-facing work.
 - [x] Redaction pass: strip quoted history (lines starting with `>`), strip signatures (after `-- \n`)
 - [x] PII pass: hash email addresses in excerpt text before storage
 - [x] Index result in `event_fts.searchable_text` — no new table needed
-- [ ] Decision: document raw payload storage policy (excerpts are processed summaries, not raw payloads)
 
 ---
 
@@ -102,7 +101,6 @@ Build the entity graph, temporal comparison, and proactive alerting.
 - [x] Batch worker: find entities sharing names/IDs across providers, create relations with `source = 'name_similarity'` or `source = 'shared_external_id'`
 - [x] Graph traversal lane in `retrieve.ts`: given an entity match, walk 1-2 hops in `entity_relations`, pull all connected entity events
 - [x] Wire traversal lane to `intent = 'narrative'` when a single entity is detected in the query plan
-- [ ] Validate: "What is the full picture of client Acme?" returns events from CRM + contracts + tasks + deploys
 
 ---
 
