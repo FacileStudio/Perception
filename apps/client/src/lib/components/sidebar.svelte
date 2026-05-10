@@ -45,6 +45,7 @@
     { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
     { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph' },
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
+    { href: '/resources', label: 'Resources', icon: 'solar:documents-bold-duotone', match: (p: string) => p === '/resources' },
   ];
 
   const menuItems = [

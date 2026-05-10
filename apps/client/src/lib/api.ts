@@ -76,6 +76,22 @@ export const api = {
     narratives: () => request<{ narratives: Array<EntityNarrativeDetail & { entity_id: string }> }>('/entities/narratives'),
     resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
   },
+  resources: {
+    list: () => request<{ resources: ResourceRow[] }>('/resources'),
+    get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
+    upload: (file: File, title?: string, description?: string) => {
+      const form = new FormData();
+      form.append('file', file);
+      if (title) form.append('title', title);
+      if (description) form.append('description', description);
+      return fetch(`${API_BASE}/resources`, {
+        method: 'POST',
+        credentials: 'include',
+        body: form,
+      }).then(r => { if (!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json() as Promise<{ id: string; title: string; status: string }>; });
+    },
+    delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
+  },
   admin: {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
     reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
@@ -240,4 +256,30 @@ export type DriftAlert = {
   old_distribution: Record<string, number>;
   new_distribution: Record<string, number>;
   drift_score: number;
+};
+
+export type ResourceRow = {
+  id: string;
+  title: string;
+  description: string;
+  mime_type: string;
+  file_size: number;
+  source_type: 'upload' | 'event_attachment';
+  chunk_count: number;
+  status: 'processing' | 'ready' | 'error';
+  error: string | null;
+  uploaded_at: string;
+  updated_at: string;
+};
+
+export type ResourceChunkRow = {
+  id: string;
+  chunk_index: number;
+  content: string;
+  token_count: number;
+  embedding_status: string;
+};
+
+export type ResourceDetail = ResourceRow & {
+  chunks: ResourceChunkRow[];
 };
