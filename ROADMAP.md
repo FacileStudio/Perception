@@ -144,7 +144,7 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 3.1 | GraphRAG community summaries | Medium | 2.1 |
-| [ ] | 3.2 | Per-entity narrative synthesis | Medium | 3.1 |
+| [x] | 3.2 | Per-entity narrative synthesis | Medium | 3.1 |
 | [ ] | 3.3 | Hierarchical persistent memory | High | 1.5 |
 | [x] | 3.4 | Text-to-SQL lane | Medium | 1.2 |
 
@@ -164,13 +164,13 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 
 ### 3.2 Per-Entity Narrative Synthesis
 
-- [ ] `entity_narratives` table: `entity_id` (PK), `narrative_text`, `source_event_count`, `generated_at`, `staleness_score`
-- [ ] Migration for `entity_narratives`
-- [ ] Staleness scoring: `staleness_score = new_events_since_generation / source_event_count`; regenerate when > 0.3
-- [ ] Narrative generation worker: top 50 entities by event count, regenerate when stale
-- [ ] Narrative retrieval: for `intent: lookup | narrative` with single entity match, inject as highest-priority context block
-- [ ] Admin endpoint: `GET /entities/:id/narrative`
-- [ ] Surface narrative on entity detail page in frontend
+- [x] `entity_narratives` table: `entity_id` (PK), `narrative_text`, `source_event_count`, `generated_at`, `staleness_score`
+- [x] Migration for `entity_narratives`
+- [x] Staleness scoring: `staleness_score = new_events_since_generation / source_event_count`; regenerate when > 0.3
+- [x] Narrative generation worker (6h interval): top 50 entities by event count, regenerate when stale
+- [x] Narrative retrieval: for `intent: lookup | narrative` with entity match, inject as `[ENTITY_NARRATIVE]` highest-priority context block
+- [x] Admin endpoint: `GET /entities/:id/narrative`
+- [x] Surface narrative on entity detail page, chat message indicators, and sources panel
 
 ---
 

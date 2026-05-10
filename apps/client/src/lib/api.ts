@@ -71,6 +71,7 @@ export const api = {
     graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
     communities: () => request<{ communities: CommunityDetail[] }>('/entities/communities'),
     community: (entityId: string) => request<{ community: EntityCommunity | null }>(`/entities/${entityId}/community`),
+    narrative: (entityId: string) => request<{ narrative: EntityNarrativeDetail | null }>(`/entities/${entityId}/narrative`),
     resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
   },
   admin: {
@@ -110,7 +111,9 @@ export type StatsSnapshot = {
 
 export type SqlQueryMeta = { query: string; row_count: number; columns: string[] };
 export type CommunitySummaryMeta = { title: string; summary: string; member_count: number; matched_entities: string[] };
-export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null; sql_query?: SqlQueryMeta | null; community_summaries?: CommunitySummaryMeta[] | null };
+export type NarrativeMeta = { entity_name: string; narrative: string; event_count: number };
+export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null; sql_query?: SqlQueryMeta | null; community_summaries?: CommunitySummaryMeta[] | null; narratives?: NarrativeMeta[] | null };
+export type EntityNarrativeDetail = { entity_name: string; text: string; source_event_count: number; generated_at: string; staleness_score: number };
 export type ChatSource = { event_id: string; provider_name: string; occurred_at: string; title: string; score: number };
 export type EntityCommunity = { id: string; title: string; summary: string; importance: number; member_count: number; member_names: string[] };
 export type CommunityDetail = {

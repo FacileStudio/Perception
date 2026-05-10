@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import { api, type GraphEntity, type EntityCommunity } from '$lib/api';
+  import { api, type GraphEntity, type EntityCommunity, type EntityNarrativeDetail } from '$lib/api';
   import Icon from '@iconify/svelte';
 
   type Connection = { other: GraphEntity; label: string };
@@ -18,17 +18,26 @@
 
   let community = $state<EntityCommunity | null>(null);
   let loadingCommunity = $state(false);
+  let narrative = $state<EntityNarrativeDetail | null>(null);
+  let loadingNarrative = $state(false);
 
   $effect(() => {
     if (node) {
       loadingCommunity = true;
+      loadingNarrative = true;
       community = null;
+      narrative = null;
       api.entities.community(node.id)
         .then((res) => { community = res.community; })
         .catch(() => { community = null; })
         .finally(() => { loadingCommunity = false; });
+      api.entities.narrative(node.id)
+        .then((res) => { narrative = res.narrative; })
+        .catch(() => { narrative = null; })
+        .finally(() => { loadingNarrative = false; });
     } else {
       community = null;
+      narrative = null;
     }
   });
 
@@ -110,6 +119,29 @@
           </p>
         </div>
       </div>
+
+      {#if loadingNarrative}
+        <div class="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3">
+          <Icon icon="solar:refresh-bold-duotone" class="size-4 animate-spin text-emerald-400" />
+          <span class="text-xs text-emerald-400">Loading narrative...</span>
+        </div>
+      {:else if narrative}
+        <div>
+          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+            Narrative
+          </p>
+          <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3">
+            <p class="text-xs leading-relaxed text-emerald-700">{narrative.text}</p>
+            <div class="mt-2 flex items-center gap-3 text-[10px] text-emerald-400">
+              <span class="font-mono">{narrative.source_event_count} events analyzed</span>
+              <span>{new Date(narrative.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              {#if narrative.staleness_score > 0.3}
+                <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-600">stale</span>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}
 
       {#if loadingCommunity}
         <div class="flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3">

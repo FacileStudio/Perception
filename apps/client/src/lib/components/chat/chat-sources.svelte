@@ -70,6 +70,19 @@
         {/each}
       {/if}
 
+      {#if message?.narratives && message.narratives.length > 0}
+        {#each message.narratives as n}
+          <div class="flex flex-col gap-1.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-3">
+            <div class="flex items-center gap-2">
+              <Icon icon="solar:document-text-bold-duotone" class="size-4 text-emerald-500" />
+              <span class="text-xs font-medium text-emerald-700">{n.entity_name}</span>
+            </div>
+            <p class="text-xs leading-relaxed text-emerald-600">{n.narrative}</p>
+            <span class="font-mono text-[10px] text-emerald-400">{n.event_count} events analyzed</span>
+          </div>
+        {/each}
+      {/if}
+
       {#each sources as src}
         <div class="flex flex-col gap-1 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3">
           <span class="text-xs font-medium text-zinc-900">{src.title}</span>

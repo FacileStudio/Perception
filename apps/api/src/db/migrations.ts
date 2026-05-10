@@ -212,6 +212,18 @@ CREATE TABLE IF NOT EXISTS entity_communities (
 CREATE INDEX IF NOT EXISTS entity_communities_stale_idx ON entity_communities(stale)
       `,
     },
+    {
+      name: '010_entity_narratives',
+      sql: `
+CREATE TABLE IF NOT EXISTS entity_narratives (
+  entity_id TEXT PRIMARY KEY REFERENCES entities(id) ON DELETE CASCADE,
+  narrative_text TEXT NOT NULL,
+  source_event_count INTEGER NOT NULL,
+  generated_at TEXT NOT NULL,
+  staleness_score REAL NOT NULL DEFAULT 0
+)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

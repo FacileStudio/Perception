@@ -80,6 +80,16 @@
                   {/each}
                 </div>
               {/if}
+              {#if msg.narratives && msg.narratives.length > 0}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  {#each msg.narratives as n}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700" title={n.narrative}>
+                      <Icon icon="solar:document-text-bold-duotone" class="size-3" />
+                      {n.entity_name} narrative
+                    </span>
+                  {/each}
+                </div>
+              {/if}
               {#if msg.sources && msg.sources.length > 0}
                 <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {#each msg.sources as src}

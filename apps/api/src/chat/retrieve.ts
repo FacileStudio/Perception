@@ -11,6 +11,7 @@ import { conceptLane } from './lanes/concept';
 import { statsLane } from './lanes/stats';
 import { communityLane } from './lanes/community';
 import { textToSqlLane } from './lanes/text-to-sql';
+import { fetchNarratives } from '../narratives/retrieve';
 import { mergeAndRank } from './lanes/merge';
 
 export type { RetrievalResult, RetrievalSource, ContextConfidence, TemporalComparison, TemporalPeriod, RankedEvent };
@@ -236,11 +237,13 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
 
   const seedEntityIds = await extractSeedEntityIds(entityEvents);
   const shouldCommunity = intent === 'narrative' || intent === 'lookup';
+  const shouldNarrative = intent === 'narrative' || intent === 'lookup';
   const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
 
-  const [graphEvents, communitySummaries, sqlResult] = await Promise.all([
+  const [graphEvents, communitySummaries, narratives, sqlResult] = await Promise.all([
     shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds) : Promise.resolve([]),
     shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds) : Promise.resolve([]),
+    shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds) : Promise.resolve([]),
     shouldTextToSql ? textToSqlLane(plan) : Promise.resolve(null),
   ]);
 
@@ -259,5 +262,6 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     comparisons,
     communitySummaries,
     sqlResults: sqlResult ? [sqlResult] : [],
+    narratives,
   };
 }
