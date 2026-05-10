@@ -71,7 +71,7 @@
   let hoveredNode: SimNode | null = null;
   let draggedNode: SimNode | null = null;
   let animId: number;
-  let simAlpha = 0.6;
+  let simAlpha = 1.0;
   let panX = 0;
   let panY = 0;
   let zoom = 1;
@@ -156,8 +156,8 @@
     const cx = cw() / 2;
     const cy = ch() / 2;
 
-    const repulsionStrength = 420;
-    const minDist = 50;
+    const repulsionStrength = 2000;
+    const minDist = 80;
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = (nodes[j].x - nodes[i].x) || (Math.random() - 0.5) * 2;
@@ -176,8 +176,8 @@
       }
     }
 
-    const linkDist = 200;
-    const linkStrength = 0.04;
+    const linkDist = 250;
+    const linkStrength = 0.03;
     for (const edge of edges) {
       const s = nodes.find((n) => n.id === edge.from_id);
       const t = nodes.find((n) => n.id === edge.to_id);
@@ -199,7 +199,7 @@
         const dx = (nodes[j].x - nodes[i].x) || 0.01;
         const dy = (nodes[j].y - nodes[i].y) || 0.01;
         const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const minD = nodes[i].r + nodes[j].r + 14;
+        const minD = nodes[i].r + nodes[j].r + 28;
         if (d < minD) {
           const push = (minD - d) * 0.3;
           const nx = dx / d;
@@ -211,7 +211,7 @@
     }
 
     const damping = 0.7;
-    const gravityStrength = 0.004;
+    const gravityStrength = 0.0015;
     for (const node of nodes) {
       if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
       node.vx += (cx - node.x) * gravityStrength * alpha;
@@ -531,7 +531,7 @@
       relationCount = edges.length;
       empty = nodes.length === 0;
       buildRelationColors();
-      for (let i = 0; i < 15; i++) tick();
+      for (let i = 0; i < 40; i++) tick();
     } catch {
       empty = true;
     }
