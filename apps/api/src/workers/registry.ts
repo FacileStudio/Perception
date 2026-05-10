@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { db } from '../db/client';
+import { getEffectiveSetting } from '../db/settings';
 
 type WorkerDef = {
   name: string;
@@ -77,13 +78,24 @@ export async function executeWorker(name: string): Promise<void> {
   }
 }
 
+export async function areWorkersPaused(): Promise<boolean> {
+  const val = await getEffectiveSetting('workers_paused');
+  return val === 'true';
+}
+
 export function scheduleWorker(name: string, delayMs?: number): void {
   const def = workers.get(name);
   if (!def) return;
 
-  setInterval(() => executeWorker(name).catch(console.error), def.intervalMs);
+  setInterval(async () => {
+    if (await areWorkersPaused()) return;
+    executeWorker(name).catch(console.error);
+  }, def.intervalMs);
   if (delayMs !== undefined) {
-    setTimeout(() => executeWorker(name).catch(console.error), delayMs);
+    setTimeout(async () => {
+      if (await areWorkersPaused()) return;
+      executeWorker(name).catch(console.error);
+    }, delayMs);
   }
 }
 

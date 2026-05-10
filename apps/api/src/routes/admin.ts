@@ -4,7 +4,8 @@ import { db } from '../db/client';
 import { requireSession } from '../security/session';
 import { config } from '../config';
 import { extractAllMissingRelations, extractEntityRelations } from '../entities/link';
-import { getWorkerStatuses, getWorkerHistory, executeWorker } from '../workers/registry';
+import { getWorkerStatuses, getWorkerHistory, executeWorker, areWorkersPaused } from '../workers/registry';
+import { setSetting } from '../db/settings';
 
 export const adminRoutes = new Hono();
 
@@ -12,7 +13,16 @@ adminRoutes.get('/workers', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
   const workers = await getWorkerStatuses();
-  return c.json({ workers });
+  const paused = await areWorkersPaused();
+  return c.json({ workers, paused });
+});
+
+adminRoutes.put('/workers/paused', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const body = await c.req.json<{ paused: boolean }>();
+  await setSetting('workers_paused', String(body.paused));
+  return c.json({ ok: true, paused: body.paused });
 });
 
 adminRoutes.get('/workers/:name/history', async (c) => {

@@ -45,7 +45,7 @@
   let hoveredEdge: EntityRelation | null = null;
   let draggedNode: SimNode | null = null;
   let animId: number;
-  let simAlpha = 1.0;
+  let simAlpha = 0.6;
   let panX = 0;
   let panY = 0;
   let zoom = 1;
@@ -113,25 +113,34 @@
     ctx.fill();
   }
 
-  function reheat(target = 0.4) {
+  const MAX_VELOCITY = 8;
+
+  function clampVelocity(v: number): number {
+    return Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, v));
+  }
+
+  function reheat(target = 0.25) {
     simAlpha = Math.max(simAlpha, target);
   }
 
   function tick() {
     if (nodes.length === 0 || simAlpha <= 0.001) return;
-    simAlpha = Math.max(0.001, simAlpha * 0.988);
+    simAlpha = Math.max(0.001, simAlpha * 0.96);
     const alpha = simAlpha;
     const cx = cw() / 2;
     const cy = ch() / 2;
 
-    // Many-body repulsion: 1/d falloff (smooth, no close-range spikes)
+    const repulsionStrength = 180;
+    const minDist = 30;
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
-        const dx = (nodes[j].x - nodes[i].x) || 0.01;
-        const dy = (nodes[j].y - nodes[i].y) || 0.01;
-        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        if (d > 600) continue;
-        const f = (1400 * alpha) / d;
+        const dx = (nodes[j].x - nodes[i].x) || (Math.random() - 0.5) * 2;
+        const dy = (nodes[j].y - nodes[i].y) || (Math.random() - 0.5) * 2;
+        const dSq = dx * dx + dy * dy;
+        if (dSq > 500 * 500) continue;
+        const d = Math.sqrt(dSq);
+        const safeDist = Math.max(d, minDist);
+        const f = (repulsionStrength * alpha) / (safeDist * safeDist);
         const fx = (f * dx) / d;
         const fy = (f * dy) / d;
         nodes[i].vx -= fx;
@@ -141,8 +150,8 @@
       }
     }
 
-    // Spring force for linked pairs (alpha-scaled — fades with simulation)
-    const linkDist = 120;
+    const linkDist = 140;
+    const linkStrength = 0.04;
     for (const edge of edges) {
       const s = nodes.find((n) => n.id === edge.from_id);
       const t = nodes.find((n) => n.id === edge.to_id);
@@ -150,7 +159,7 @@
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = 0.07 * alpha * (d - linkDist);
+      const f = linkStrength * alpha * (d - linkDist);
       const fx = (f * dx) / d;
       const fy = (f * dy) / d;
       s.vx += fx;
@@ -159,7 +168,6 @@
       t.vy -= fy;
     }
 
-    // Hard collision — direct position correction, no force bounce
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = (nodes[j].x - nodes[i].x) || 0.01;
@@ -167,7 +175,7 @@
         const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
         const minD = nodes[i].r + nodes[j].r + 14;
         if (d < minD) {
-          const push = (minD - d) * 0.5;
+          const push = (minD - d) * 0.3;
           const nx = dx / d;
           const ny = dy / d;
           if (nodes[i] !== draggedNode) { nodes[i].x -= nx * push; nodes[i].y -= ny * push; }
@@ -176,13 +184,16 @@
       }
     }
 
-    // Center gravity + velocity integration
+    const damping = 0.7;
+    const gravityStrength = 0.008;
     for (const node of nodes) {
       if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
-      node.vx += (cx - node.x) * 0.014 * alpha;
-      node.vy += (cy - node.y) * 0.014 * alpha;
-      node.vx *= 0.86;
-      node.vy *= 0.86;
+      node.vx += (cx - node.x) * gravityStrength * alpha;
+      node.vy += (cy - node.y) * gravityStrength * alpha;
+      node.vx *= damping;
+      node.vy *= damping;
+      node.vx = clampVelocity(node.vx);
+      node.vy = clampVelocity(node.vy);
       node.x += node.vx;
       node.y += node.vy;
     }
@@ -510,24 +521,31 @@
   );
 
   async function loadGraph() {
-    simAlpha = 1.0;
+    simAlpha = 0.6;
     try {
       const data = await api.entities.graph();
       const W = container?.clientWidth ?? 800;
       const H = container?.clientHeight ?? 600;
-      nodes = data.entities.map((e) => ({
-        ...e,
-        x: W / 2 + (Math.random() - 0.5) * Math.min(W * 0.7, 460),
-        y: H / 2 + (Math.random() - 0.5) * Math.min(H * 0.7, 360),
-        vx: 0,
-        vy: 0,
-        r: radiusFor(e.event_count),
-      }));
+      const count = data.entities.length;
+      const baseRadius = Math.min(W, H) * 0.3;
+      nodes = data.entities.map((e, i) => {
+        const angle = (2 * Math.PI * i) / count + (Math.random() - 0.5) * 0.3;
+        const r = baseRadius * (0.6 + Math.random() * 0.4);
+        return {
+          ...e,
+          x: W / 2 + Math.cos(angle) * r,
+          y: H / 2 + Math.sin(angle) * r,
+          vx: 0,
+          vy: 0,
+          r: radiusFor(e.event_count),
+        };
+      });
       edges = data.relations;
       entityCount = nodes.length;
       relationCount = edges.length;
       empty = nodes.length === 0;
       buildRelationColors();
+      for (let i = 0; i < 15; i++) tick();
     } catch {
       empty = true;
     }

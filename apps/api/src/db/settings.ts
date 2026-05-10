@@ -10,6 +10,7 @@ const DEFAULTS: Record<string, string> = {
   retention_days: String(config.retentionDays),
   store_raw_payloads: String(config.storeRawPayloads),
   email_body_indexing: String(config.emailBodyIndexing),
+  workers_paused: 'false',
 };
 
 export async function getEffectiveSetting(key: string): Promise<string> {

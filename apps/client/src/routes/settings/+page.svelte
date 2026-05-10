@@ -175,6 +175,8 @@
 
   let workersList = $state<WorkerStatus[]>([]);
   let workersLoading = $state(true);
+  let workersPaused = $state(false);
+  let togglingPause = $state(false);
   let triggeringWorker = $state<string | null>(null);
   let workerPollTimer = $state<ReturnType<typeof setInterval> | null>(null);
 
@@ -208,6 +210,7 @@
     try {
       const res = await api.admin.workers();
       workersList = res.workers;
+      workersPaused = res.paused;
       const anyRunning = workersList.some((w) => w.status === 'running');
       if (anyRunning && !workerPollTimer) {
         workerPollTimer = setInterval(loadWorkers, 2000);
@@ -219,6 +222,18 @@
       workersList = [];
     } finally {
       workersLoading = false;
+    }
+  }
+
+  async function toggleWorkersPaused() {
+    togglingPause = true;
+    try {
+      const res = await api.admin.setWorkersPaused(!workersPaused);
+      workersPaused = res.paused;
+    } catch {
+      error = 'Failed to toggle workers.';
+    } finally {
+      togglingPause = false;
     }
   }
 
@@ -474,16 +489,35 @@
 
         <section>
           <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Background Workers</h2>
-            <button
-              onclick={loadWorkers}
-              class="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
-              title="Refresh worker status"
-            >
-              <Icon icon="solar:refresh-linear" class="size-3.5" />
-            </button>
+            <div class="flex items-center gap-2.5">
+              <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Background Workers</h2>
+              {#if workersPaused}
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
+                  <Icon icon="solar:pause-bold" class="size-2.5" />
+                  paused
+                </span>
+              {/if}
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                onclick={toggleWorkersPaused}
+                disabled={togglingPause}
+                class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors {workersPaused ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}"
+                title={workersPaused ? 'Resume all scheduled workers' : 'Pause all scheduled workers'}
+              >
+                <Icon icon={workersPaused ? 'solar:play-bold' : 'solar:pause-bold'} class="size-3" />
+                {togglingPause ? '…' : workersPaused ? 'Resume' : 'Pause'}
+              </button>
+              <button
+                onclick={loadWorkers}
+                class="text-xs text-zinc-400 hover:text-zinc-600 transition-colors"
+                title="Refresh worker status"
+              >
+                <Icon icon="solar:refresh-linear" class="size-3.5" />
+              </button>
+            </div>
           </div>
-          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100">
+          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100 {workersPaused ? 'opacity-60' : ''}">
             {#if workersLoading}
               <div class="px-5 py-8 text-center text-sm text-zinc-400">Loading workers…</div>
             {:else if workersList.length === 0}
@@ -493,7 +527,7 @@
                 <div class="px-5 py-4">
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-start gap-3 min-w-0">
-                      <div class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl {worker.status === 'running' ? 'bg-amber-50 text-amber-500' : worker.lastRun?.status === 'error' ? 'bg-red-50 text-red-400' : 'bg-emerald-50 text-emerald-500'}">
+                      <div class="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl {workersPaused ? 'bg-zinc-100 text-zinc-400' : worker.status === 'running' ? 'bg-amber-50 text-amber-500' : worker.lastRun?.status === 'error' ? 'bg-red-50 text-red-400' : 'bg-emerald-50 text-emerald-500'}">
                         <Icon icon={WORKER_ICONS[worker.name] ?? 'solar:bolt-bold-duotone'} class="size-4" />
                       </div>
                       <div class="min-w-0">

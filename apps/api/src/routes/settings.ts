@@ -14,6 +14,7 @@ const ALLOWED_KEYS = [
   'retention_days',
   'store_raw_payloads',
   'email_body_indexing',
+  'workers_paused',
 ];
 
 const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);

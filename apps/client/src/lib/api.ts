@@ -63,9 +63,10 @@ export const api = {
     reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
     reprocessEntities: () => request<{ actors_created: number; events_linked: number; relations_added: number }>('/admin/reprocess-entities', { method: 'POST' }),
     embeddingStats: () => request<{ total: number; pending: number; ready: number; error: number; locked: number }>('/admin/embedding-stats'),
-    workers: () => request<{ workers: WorkerStatus[] }>('/admin/workers'),
+    workers: () => request<{ workers: WorkerStatus[]; paused: boolean }>('/admin/workers'),
     workerHistory: (name: string) => request<{ history: WorkerRun[] }>(`/admin/workers/${name}/history`),
     runWorker: (name: string) => request<{ ok: boolean }>(`/admin/workers/${name}/run`, { method: 'POST' }),
+    setWorkersPaused: (paused: boolean) => request<{ ok: boolean; paused: boolean }>('/admin/workers/paused', { method: 'PUT', body: JSON.stringify({ paused }) }),
   },
 };
 
