@@ -5,6 +5,7 @@ import type { CommunitySummary } from './lanes/community';
 import type { SqlQueryResult } from './lanes/text-to-sql';
 import type { EntityNarrative } from '../narratives/retrieve';
 import type { MemoryEpisode } from '../memory/types';
+import type { CausalLink } from './lanes/types';
 
 export function buildSystemPrompt(mode: QueryPlan['retrievalMode']): string {
   const base = `You are Perception, an operational intelligence assistant for Facile.
@@ -50,6 +51,7 @@ export function buildContextBlock(
   sqlResults: SqlQueryResult[] = [],
   narratives: EntityNarrative[] = [],
   memoryEpisodes: MemoryEpisode[] = [],
+  causalLinks: CausalLink[] = [],
 ): string {
   const lines: string[] = [];
 
@@ -112,6 +114,13 @@ export function buildContextBlock(
     lines.push(JSON.stringify(display, null, 2));
     if (sr.rowCount > 20) lines.push(`... and ${sr.rowCount - 20} more rows`);
     lines.push('[/SQL_RESULT]');
+    lines.push('');
+  }
+
+  for (const cl of causalLinks) {
+    lines.push(`[CAUSAL_CONTEXT cause="${cl.causeSeries}" effect="${cl.effectSeries}" lag=${cl.lagDays} p=${cl.pValue}]`);
+    lines.push(`${cl.causeSeries} Granger-causes ${cl.effectSeries} with ${cl.lagDays}-day lag (p=${cl.pValue})`);
+    lines.push('[/CAUSAL_CONTEXT]');
     lines.push('');
   }
 

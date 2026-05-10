@@ -1,7 +1,7 @@
 import { db } from '../db/client';
 import type { StatsSnapshot } from '../stats/types';
 import type { QueryPlan } from './planner';
-import type { RetrievalResult, RetrievalSource, ContextConfidence, RankedEvent, TemporalComparison, TemporalPeriod } from './lanes/types';
+import type { RetrievalResult, RetrievalSource, ContextConfidence, RankedEvent, TemporalComparison, TemporalPeriod, CausalLink } from './lanes/types';
 import { vectorLane } from './lanes/vector';
 import { ftsLane } from './lanes/fts';
 import { sqlLane, recentLane, buildSqlConditions } from './lanes/sql';
@@ -242,13 +242,15 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
 
   const shouldMemory = plan.retrievalMode === 'full';
+  const shouldCausal = intent === 'anomaly';
 
-  const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes] = await Promise.all([
+  const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes, causalLinks] = await Promise.all([
     shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds) : Promise.resolve([]),
     shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds) : Promise.resolve([]),
     shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds) : Promise.resolve([]),
     shouldTextToSql ? textToSqlLane(plan) : Promise.resolve(null),
     shouldMemory ? fetchMemoryEpisodes(queryEmbedding) : Promise.resolve([]),
+    shouldCausal ? fetchCausalLinks() : Promise.resolve([] as CausalLink[]),
   ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan);
@@ -268,5 +270,23 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     sqlResults: sqlResult ? [sqlResult] : [],
     narratives,
     memoryEpisodes,
+    causalLinks,
   };
+}
+
+async function fetchCausalLinks(): Promise<CausalLink[]> {
+  const result = await db.execute(
+    `SELECT cause_series, effect_series, lag_days, p_value
+     FROM causal_links
+     WHERE superseded_at IS NULL AND p_value < 0.01
+     ORDER BY p_value ASC
+     LIMIT 5`,
+  );
+
+  return result.rows.map((r) => ({
+    causeSeries: r.cause_series as string,
+    effectSeries: r.effect_series as string,
+    lagDays: r.lag_days as number,
+    pValue: r.p_value as number,
+  }));
 }

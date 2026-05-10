@@ -28,6 +28,13 @@ export type ScoredEvent<S extends RetrievalSource = RetrievalSource> = EventRow 
 
 export type RankedEvent = ScoredEvent & { lanes: RetrievalSource[] };
 
+export type CausalLink = {
+  causeSeries: string;
+  effectSeries: string;
+  lagDays: number;
+  pValue: number;
+};
+
 export type RetrievalResult = {
   events: RankedEvent[];
   stats: AnnotatedStatsSnapshot[];
@@ -36,6 +43,7 @@ export type RetrievalResult = {
   sqlResults: SqlQueryResult[];
   narratives: EntityNarrative[];
   memoryEpisodes: MemoryEpisode[];
+  causalLinks: CausalLink[];
 };
 
 export type ContextConfidence = {

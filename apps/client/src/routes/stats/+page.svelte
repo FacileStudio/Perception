@@ -16,6 +16,8 @@
   import KnowledgeCoveragePanel from './_components/KnowledgeCoveragePanel.svelte';
   import ChangePointsTimeline from './_components/ChangePointsTimeline.svelte';
   import ProviderHealthPanel from './_components/ProviderHealthPanel.svelte';
+  import KnowledgeGapsPanel from './_components/KnowledgeGapsPanel.svelte';
+  import DriftAlertsPanel from './_components/DriftAlertsPanel.svelte';
 
   let snapshots = $state<StatsSnapshot[]>([]);
   let usage = $state<TokenUsageRow[]>([]);
@@ -198,6 +200,14 @@
 
               <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <ChangePointsTimeline data={intelligence} />
+              </Card>
+
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <KnowledgeGapsPanel data={intelligence} />
+              </Card>
+
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <DriftAlertsPanel data={intelligence} />
               </Card>
             {/if}
           </div>

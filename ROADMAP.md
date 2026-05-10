@@ -143,7 +143,7 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 |--------|---|------|--------|------------|
 | [x] | 3.1 | GraphRAG community summaries | Medium | 2.1 |
 | [x] | 3.2 | Per-entity narrative synthesis | Medium | 3.1 |
-| [ ] | 3.3 | Hierarchical persistent memory | High | 1.5 |
+| [x] | 3.3 | Hierarchical persistent memory | High | 1.5 |
 | [x] | 3.4 | Text-to-SQL lane | Medium | 1.2 |
 
 ---
@@ -174,13 +174,13 @@ Pre-compute understanding. Stop assembling answers from fragments every time.
 
 ### 3.3 Hierarchical Persistent Memory
 
-- [ ] `memory_episodes` table: `id`, `session_id`, `summary`, `entity_refs` (JSON), `occurred_at`, `embedding` (F32_BLOB 1024)
-- [ ] Migration for `memory_episodes`
-- [ ] Post-session extraction worker: after session idle 30 min, run Haiku pass to extract 2-5 durable facts → `memory_episodes`
-- [ ] Embed memory episodes via Voyage (same pipeline as events)
-- [ ] Memory retrieval lane: on `full` mode queries, fetch top-3 episodes by vector similarity
-- [ ] Inject as `[MEMORY]` block after system summary, before event context
-- [ ] Pruning: episodes older than 90 days with zero retrieval hits → archived
+- [x] `memory_episodes` table: `id`, `session_id`, `summary`, `entity_refs` (JSON), `occurred_at`, `embedding` (F32_BLOB 1024)
+- [x] Migration for `memory_episodes`
+- [x] Post-session extraction worker: after session idle 30 min, run Haiku pass to extract 2-5 durable facts → `memory_episodes`
+- [x] Embed memory episodes via Voyage (same pipeline as events)
+- [x] Memory retrieval lane: on `full` mode queries, fetch top-3 episodes by vector similarity
+- [x] Inject as `[MEMORY]` block after system summary, before event context
+- [x] Pruning: episodes older than 90 days with zero retrieval hits → archived
 
 ---
 
@@ -202,7 +202,7 @@ Pure math. No LLM calls. No token cost. Deterministic, testable, fast.
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 4.1 | BOCPD change point detection | Medium | — |
-| [ ] | 4.2 | Granger causality on event series | Medium | 4.1 |
+| [x] | 4.2 | Granger causality on event series | Medium | 4.1 |
 | [x] | 4.3 | Graph entropy health score | Low | 2.1 |
 | [x] | 4.4 | Concept drift tracking | Medium | — |
 
@@ -218,8 +218,8 @@ BOCPD (Adams & MacKay, 2007): maintains a posterior over run-length at every obs
 - [x] `change_points` table: `id`, `entity_id`, `provider_type`, `detected_at`, `run_length_probability`, `pre_mean`, `post_mean`
 - [x] Migration for `change_points`
 - [x] Worker: update BOCPD state per active entity on every ingest
-- [ ] Trigger: change point above threshold → emit `perception.change_point` internal event → proactive digest (2.2) picks it up
-- [ ] Replace hardcoded 2σ threshold in proactive digests with BOCPD signal
+- [x] Trigger: change point above threshold → emit `perception.change_point` internal event → proactive digest (2.2) picks it up
+- [x] Replace hardcoded 2σ threshold in proactive digests with BOCPD signal
 
 ---
 
@@ -227,13 +227,13 @@ BOCPD (Adams & MacKay, 2007): maintains a posterior over run-length at every obs
 
 Granger causality: time series X Granger-causes Y if past values of X improve forecasting of Y beyond Y's own history. Implemented as VAR (Vector Auto-Regression) + F-test.
 
-- [ ] `event_counts_daily` table: `date`, `entity_type`, `provider_type`, `count`
-- [ ] Migration + daily aggregation worker
-- [ ] VAR fitting worker: for series pairs with 30+ data points, fit VAR(p), compute Granger F-test
-- [ ] `causal_links` table: `id`, `cause_series`, `effect_series`, `lag_days`, `f_statistic`, `p_value`, `computed_at`
-- [ ] Migration for `causal_links`
-- [ ] Retrieval integration: on `intent: anomaly`, inject top-k significant causal links as `[CAUSAL_CONTEXT]` block
-- [ ] Threshold: p < 0.05, min lag 1 day, min 30-sample history
+- [x] `event_counts_daily` table: `day`, `series_key`, `cnt`
+- [x] Migration + daily aggregation in worker
+- [x] Pure TS VAR fitting: OLS via normal equations, BIC lag selection (max 7), Gauss-Jordan inversion
+- [x] `causal_links` table: `id`, `cause_series`, `effect_series`, `lag_days`, `f_statistic`, `p_value`, `bic_score`, `sample_size`, `direction`, `detected_at`, `superseded_at`
+- [x] Migrations 015 + 016
+- [x] Retrieval integration: on `intent: anomaly`, inject top-5 significant causal links as `[CAUSAL_CONTEXT]` block
+- [x] Threshold: p < 0.01 with Bonferroni correction, min 60-day history, first-differencing, >50% non-zero filter
 
 ---
 
@@ -244,7 +244,7 @@ Granger causality: time series X Granger-causes Y if past values of X improve fo
 - [x] Weekly worker: compute degree distribution entropy (`H = -Sigma p(k) log p(k)`) over `entity_relations`
 - [x] Dark zone detector: entities with 0 relationships and > N events from same provider → flagged as isolated
 - [x] Surface in `GET /stats` response alongside existing snapshots
-- [ ] Admin UI: "knowledge gaps" section showing isolated entity list
+- [x] Admin UI: "knowledge gaps" section showing isolated entity list
 
 ---
 
@@ -257,7 +257,7 @@ ADWIN (Adaptive Windowing): per provider + event type pair, maintain sliding win
 - [x] Migration for `concept_drift_alerts`
 - [x] Worker: evaluate per provider+event_type pair on every ingest batch
 - [x] On significant drift: set `provider_schemas.confirmed_at = null`, queue schema re-inference job
-- [ ] Admin UI: drift alerts surfaced with "review ontology" link to affected provider schema
+- [x] Admin UI: drift alerts surfaced with "review ontology" link to affected provider schema
 
 ---
 

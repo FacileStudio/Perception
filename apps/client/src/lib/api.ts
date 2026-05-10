@@ -212,6 +212,8 @@ export type IntelligenceData = {
   coverage: { total_entities: number; with_narratives: number; in_communities: number; with_relations: number };
   change_points: Array<{ entity_id: string; entity_name: string; pre_mean: number; post_mean: number; detected_at: string }>;
   providers: Array<{ provider_type: string; provider_name: string; event_count: number; drifted: boolean; schema_confirmed: boolean }>;
+  isolated_entities: Array<{ id: string; name: string; type: string; event_count: number }>;
+  drift_alerts: Array<{ id: string; provider_type: string; field_name: string; detected_at: string; drift_score: number }>;
 };
 
 export type GraphHealthSnapshot = {

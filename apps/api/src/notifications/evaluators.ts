@@ -15,50 +15,92 @@ export async function detectEntityVelocitySpikes(): Promise<AnomalyAlert[]> {
   const alerts: AnomalyAlert[] = [];
   const windowStart = daysAgoIso(7);
   const prevStart = daysAgoIso(28);
+  const cpCutoff = daysAgoIso(30);
 
-  const result = await db.execute({
-    sql: `
-      SELECT en.id, en.canonical_name,
-             COUNT(CASE WHEN ev.occurred_at >= ? THEN 1 END) AS current_count,
-             COUNT(CASE WHEN ev.occurred_at >= ? AND ev.occurred_at < ? THEN 1 END) AS prev_count
-      FROM event_entities ee
-      JOIN events ev ON ev.id = ee.event_id
-      JOIN entities en ON en.id = ee.entity_id
-      WHERE ev.occurred_at >= ?
-      GROUP BY en.id, en.canonical_name
-      HAVING current_count > 0
-    `,
-    args: [windowStart, prevStart, windowStart, prevStart],
-  });
+  const [eventResult, cpResult] = await Promise.all([
+    db.execute({
+      sql: `
+        SELECT en.id, en.canonical_name,
+               COUNT(CASE WHEN ev.occurred_at >= ? THEN 1 END) AS current_count,
+               COUNT(CASE WHEN ev.occurred_at >= ? AND ev.occurred_at < ? THEN 1 END) AS prev_count
+        FROM event_entities ee
+        JOIN events ev ON ev.id = ee.event_id
+        JOIN entities en ON en.id = ee.entity_id
+        WHERE ev.occurred_at >= ?
+        GROUP BY en.id, en.canonical_name
+        HAVING current_count > 0
+      `,
+      args: [windowStart, prevStart, windowStart, prevStart],
+    }),
+    db.execute({
+      sql: `
+        SELECT cp.entity_id, cp.post_mean
+        FROM change_points cp
+        INNER JOIN (
+          SELECT entity_id, MAX(detected_at) AS latest
+          FROM change_points
+          WHERE detected_at >= ?
+          GROUP BY entity_id
+        ) latest_cp ON cp.entity_id = latest_cp.entity_id AND cp.detected_at = latest_cp.latest
+      `,
+      args: [cpCutoff],
+    }),
+  ]);
 
-  const counts = result.rows.map(r => ({
-    id: r.id as string,
-    name: r.canonical_name as string,
-    current: Number(r.current_count),
-    prev: Number(r.prev_count),
-  }));
+  const cpMap = new Map<string, number>();
+  for (const row of cpResult.rows) {
+    cpMap.set(row.entity_id as string, Number(row.post_mean));
+  }
 
-  if (counts.length < 3) return alerts;
+  for (const row of eventResult.rows) {
+    const id = row.id as string;
+    const name = row.canonical_name as string;
+    const current = Number(row.current_count);
+    const prev = Number(row.prev_count);
+    const postMean = cpMap.get(id);
 
-  const prevValues = counts.map(c => c.prev / 3).filter(v => v > 0);
-  if (prevValues.length === 0) return alerts;
+    if (postMean !== undefined && postMean > 0) {
+      const expectedWeekly = 168 / postMean;
+      if (current < 5 || expectedWeekly < 3) {
+        const weeklyAvg = prev / 3;
+        if (weeklyAvg <= 0 || current < 5 || current <= weeklyAvg * 2.5) continue;
+        const ratio = current / weeklyAvg;
+        alerts.push({
+          type: 'entity_velocity_spike',
+          severity: ratio > 4 ? 'critical' : 'warning',
+          title: `${name} activity spike`,
+          message: `${name} had ${current} events this week vs ~${Math.round(weeklyAvg)} weekly average`,
+          entity_id: id,
+          entity_name: name,
+          metadata: { current, weekly_avg: Math.round(weeklyAvg), ratio: Math.round(ratio * 10) / 10, source: 'fallback' },
+        });
+        continue;
+      }
+      const ratio = current / expectedWeekly;
+      if (ratio <= 2) continue;
 
-  const mean = prevValues.reduce((a, b) => a + b, 0) / prevValues.length;
-  const variance = prevValues.reduce((a, v) => a + (v - mean) ** 2, 0) / prevValues.length;
-  const stdDev = Math.sqrt(variance);
-  const threshold = mean + 2 * stdDev;
-
-  for (const entity of counts) {
-    const weeklyAvg = entity.prev / 3;
-    if (entity.current > threshold && entity.current > weeklyAvg * 2 && entity.current >= 5) {
       alerts.push({
         type: 'entity_velocity_spike',
-        severity: entity.current > mean + 3 * stdDev ? 'critical' : 'warning',
-        title: `${entity.name} activity spike`,
-        message: `${entity.name} had ${entity.current} events this week vs ~${Math.round(weeklyAvg)} weekly average`,
-        entity_id: entity.id,
-        entity_name: entity.name,
-        metadata: { current: entity.current, weekly_avg: Math.round(weeklyAvg), threshold: Math.round(threshold) },
+        severity: ratio > 4 ? 'critical' : 'warning',
+        title: `${name} activity spike`,
+        message: `${name} had ${current} events this week vs ~${Math.round(expectedWeekly)} expected from recent regime`,
+        entity_id: id,
+        entity_name: name,
+        metadata: { current, expected_weekly: Math.round(expectedWeekly), ratio: Math.round(ratio * 10) / 10, source: 'bocpd' },
+      });
+    } else {
+      const weeklyAvg = prev / 3;
+      if (weeklyAvg <= 0 || current < 5 || current <= weeklyAvg * 2.5) continue;
+
+      const ratio = current / weeklyAvg;
+      alerts.push({
+        type: 'entity_velocity_spike',
+        severity: ratio > 4 ? 'critical' : 'warning',
+        title: `${name} activity spike`,
+        message: `${name} had ${current} events this week vs ~${Math.round(weeklyAvg)} weekly average`,
+        entity_id: id,
+        entity_name: name,
+        metadata: { current, weekly_avg: Math.round(weeklyAvg), ratio: Math.round(ratio * 10) / 10, source: 'fallback' },
       });
     }
   }

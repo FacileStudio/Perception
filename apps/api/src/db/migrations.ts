@@ -286,6 +286,38 @@ CREATE TABLE IF NOT EXISTS concept_drift_alerts (
 CREATE INDEX IF NOT EXISTS concept_drift_provider_idx ON concept_drift_alerts(provider_type, detected_at DESC)
       `,
     },
+    {
+      name: '015_event_counts_daily',
+      sql: `
+CREATE TABLE IF NOT EXISTS event_counts_daily (
+  day TEXT NOT NULL,
+  series_key TEXT NOT NULL,
+  cnt INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (day, series_key)
+);
+CREATE INDEX IF NOT EXISTS event_counts_daily_series_idx ON event_counts_daily(series_key, day)
+      `,
+    },
+    {
+      name: '016_causal_links',
+      sql: `
+CREATE TABLE IF NOT EXISTS causal_links (
+  id TEXT PRIMARY KEY,
+  cause_series TEXT NOT NULL,
+  effect_series TEXT NOT NULL,
+  lag_days INTEGER NOT NULL,
+  f_statistic REAL NOT NULL,
+  p_value REAL NOT NULL,
+  bic_score REAL NOT NULL,
+  sample_size INTEGER NOT NULL,
+  direction TEXT NOT NULL CHECK(direction IN ('forward','reverse','bidirectional')),
+  detected_at TEXT NOT NULL,
+  superseded_at TEXT
+);
+CREATE INDEX IF NOT EXISTS causal_links_cause_idx ON causal_links(cause_series, detected_at DESC);
+CREATE INDEX IF NOT EXISTS causal_links_pvalue_idx ON causal_links(p_value)
+      `,
+    },
   ];
 
   for (const migration of migrations) {
