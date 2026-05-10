@@ -118,12 +118,7 @@
               {initials(label)}
             </div>
             <div class="min-w-0 flex-1">
-              {#if auth.user.name}
-                <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name}</p>
-                <p class="truncate text-xs text-zinc-400">{auth.user.email}</p>
-              {:else}
-                <p class="truncate text-sm font-medium text-zinc-950">{auth.user.email}</p>
-              {/if}
+              <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name || auth.user.email}</p>
             </div>
             <Icon
               icon="solar:alt-arrow-up-bold-duotone"
