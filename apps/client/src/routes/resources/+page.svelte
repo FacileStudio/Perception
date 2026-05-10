@@ -3,7 +3,6 @@
   import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -18,10 +17,8 @@
   let uploading = $state(false);
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
-  let uploadTitle = $state('');
-  let uploadDescription = $state('');
   let fileInput = $state<HTMLInputElement | undefined>();
-  let selectedFile = $state<File | null>(null);
+  let selectedFiles = $state<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
@@ -71,21 +68,18 @@
   }
 
   function handleFileSelect() {
-    if (fileInput?.files?.[0]) {
-      selectedFile = fileInput.files[0];
-      if (!uploadTitle) uploadTitle = selectedFile.name;
+    if (fileInput?.files?.length) {
+      selectedFiles = Array.from(fileInput.files);
     }
   }
 
   async function handleUpload() {
-    if (!selectedFile || uploading) return;
+    if (selectedFiles.length === 0 || uploading) return;
     uploading = true;
     try {
-      await api.resources.upload(selectedFile, uploadTitle, uploadDescription);
+      await api.resources.upload(selectedFiles);
       showUpload = false;
-      selectedFile = null;
-      uploadTitle = '';
-      uploadDescription = '';
+      selectedFiles = [];
       await load();
     } catch {
       error = 'Upload failed.';
@@ -167,63 +161,48 @@
 
   {#if showUpload}
     <div class="border-b border-zinc-200/80 bg-zinc-50/50 px-4 py-4 sm:px-6" transition:fly={{ y: -10, duration: 200 }}>
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center gap-3">
-          <div class="flex-1">
-            <Input
-              bind:value={uploadTitle}
-              placeholder="Document title (optional)"
-              class="rounded-xl text-sm"
-            />
-          </div>
-          <div class="flex-1">
-            <Input
-              bind:value={uploadDescription}
-              placeholder="Description (optional)"
-              class="rounded-xl text-sm"
-            />
-          </div>
-        </div>
-        <div class="flex items-center gap-3">
-          <button
-            onclick={() => fileInput?.click()}
-            class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
-          >
-            <Icon icon="solar:file-download-bold-duotone" class="size-5" />
-            {#if selectedFile}
-              {selectedFile.name} ({formatSize(selectedFile.size)})
-            {:else}
-              Choose a file (PDF, text, markdown, CSV, JSON)
-            {/if}
-          </button>
-          <input
-            bind:this={fileInput}
-            type="file"
-            accept=".pdf,.txt,.md,.csv,.json,application/pdf,text/plain,text/markdown,text/csv,application/json"
-            onchange={handleFileSelect}
-            class="hidden"
-          />
-          <Button
-            size="sm"
-            class="rounded-full bg-zinc-950 text-white hover:bg-zinc-800"
-            disabled={!selectedFile || uploading}
-            onclick={handleUpload}
-          >
-            {#if uploading}
-              Processing...
-            {:else}
-              Upload
-            {/if}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="rounded-full"
-            onclick={() => { showUpload = false; selectedFile = null; uploadTitle = ''; uploadDescription = ''; }}
-          >
-            Cancel
-          </Button>
-        </div>
+      <div class="flex items-center gap-3">
+        <button
+          onclick={() => fileInput?.click()}
+          class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
+        >
+          <Icon icon="solar:file-download-bold-duotone" class="size-5" />
+          {#if selectedFiles.length > 1}
+            {selectedFiles.length} files selected ({formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))})
+          {:else if selectedFiles.length === 1}
+            {selectedFiles[0].name} ({formatSize(selectedFiles[0].size)})
+          {:else}
+            Choose files (PDF, text, markdown, CSV, JSON)
+          {/if}
+        </button>
+        <input
+          bind:this={fileInput}
+          type="file"
+          multiple
+          accept=".pdf,.txt,.md,.csv,.json,application/pdf,text/plain,text/markdown,text/csv,application/json"
+          onchange={handleFileSelect}
+          class="hidden"
+        />
+        <Button
+          size="sm"
+          class="rounded-full bg-zinc-950 text-white hover:bg-zinc-800"
+          disabled={selectedFiles.length === 0 || uploading}
+          onclick={handleUpload}
+        >
+          {#if uploading}
+            Processing...
+          {:else}
+            Upload
+          {/if}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="rounded-full"
+          onclick={() => { showUpload = false; selectedFiles = []; }}
+        >
+          Cancel
+        </Button>
       </div>
     </div>
   {/if}

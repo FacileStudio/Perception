@@ -11,29 +11,32 @@ resourcesRoutes.post('/', async (c) => {
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
   const formData = await c.req.formData();
-  const file = formData.get('file') as File | null;
-  const title = (formData.get('title') as string) || '';
-  const description = (formData.get('description') as string) || '';
+  const files = formData.getAll('file') as File[];
 
-  if (!file) return c.json({ error: 'file_required' }, 400);
+  if (files.length === 0) return c.json({ error: 'file_required' }, 400);
 
   const supported = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
-  if (!supported.some((t) => file.type.startsWith(t.split('/')[0]) || file.type === t)) {
-    return c.json({ error: 'unsupported_mime_type', mime_type: file.type, supported }, 400);
+  const ids: string[] = [];
+
+  for (const file of files) {
+    if (!supported.some((t) => file.type.startsWith(t.split('/')[0]) || file.type === t)) {
+      return c.json({ error: 'unsupported_mime_type', mime_type: file.type, supported }, 400);
+    }
+
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await db.execute({
+      sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
+      args: [id, file.name, '', file.type, buffer.length, now, now],
+    });
+
+    processResource(id, buffer, file.type).catch(console.error);
+    ids.push(id);
   }
 
-  const id = randomUUID();
-  const now = new Date().toISOString();
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  await db.execute({
-    sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
-    args: [id, title || file.name, description, file.type, buffer.length, now, now],
-  });
-
-  processResource(id, buffer, file.type).catch(console.error);
-
-  return c.json({ id, title: title || file.name, status: 'processing' }, 201);
+  return c.json({ ids }, 201);
 });
 
 resourcesRoutes.get('/', async (c) => {

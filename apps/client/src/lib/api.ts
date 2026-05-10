@@ -79,16 +79,15 @@ export const api = {
   resources: {
     list: () => request<{ resources: ResourceRow[] }>('/resources'),
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
-    upload: (file: File, title?: string, description?: string) => {
+    upload: (files: File | File[]) => {
+      const list = Array.isArray(files) ? files : [files];
       const form = new FormData();
-      form.append('file', file);
-      if (title) form.append('title', title);
-      if (description) form.append('description', description);
+      for (const f of list) form.append('file', f);
       return fetch(`${API_BASE}/resources`, {
         method: 'POST',
         credentials: 'include',
         body: form,
-      }).then(r => { if (!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json() as Promise<{ id: string; title: string; status: string }>; });
+      }).then(r => { if (!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json() as Promise<{ ids: string[] }>; });
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },
