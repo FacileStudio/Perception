@@ -81,17 +81,16 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      const encoded = await Promise.all(
-        list.map(async (f) => ({
-          name: f.name,
-          type: f.type,
-          data: await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.readAsDataURL(f);
-          }),
-        })),
-      );
+      const encoded = [];
+      for (const f of list) {
+        const buf = await f.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i += 8192) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+        }
+        encoded.push({ name: f.name, type: f.type, data: btoa(binary) });
+      }
       return request<{ ids: string[] }>('/resources', {
         method: 'POST',
         body: JSON.stringify({ files: encoded }),
