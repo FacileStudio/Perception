@@ -66,7 +66,7 @@ statsRoutes.get('/intelligence', async (c) => {
     db.execute(`SELECT COUNT(*) AS cnt FROM entities`).catch(() => ({ rows: [{ cnt: 0 }] })),
     db.execute(`SELECT COUNT(*) AS cnt FROM entity_narratives`).catch(() => ({ rows: [{ cnt: 0 }] })),
     db.execute(`SELECT COUNT(DISTINCT m.value) AS cnt FROM entity_communities ec, json_each(ec.member_entity_ids) AS m WHERE ec.stale = 0`).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute(`SELECT COUNT(DISTINCT from_entity_id) + COUNT(DISTINCT to_entity_id) AS cnt FROM entity_relations`).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute(`SELECT COUNT(*) AS cnt FROM (SELECT DISTINCT from_entity_id AS eid FROM entity_relations UNION SELECT DISTINCT to_entity_id AS eid FROM entity_relations)`).catch(() => ({ rows: [{ cnt: 0 }] })),
     db.execute({
       sql: `SELECT cp.entity_id, e.canonical_name, cp.pre_mean, cp.post_mean, cp.detected_at
             FROM change_points cp
