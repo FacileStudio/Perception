@@ -130,8 +130,8 @@
     const cx = cw() / 2;
     const cy = ch() / 2;
 
-    const repulsionStrength = 180;
-    const minDist = 30;
+    const repulsionStrength = 420;
+    const minDist = 50;
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const dx = (nodes[j].x - nodes[i].x) || (Math.random() - 0.5) * 2;
@@ -150,7 +150,7 @@
       }
     }
 
-    const linkDist = 140;
+    const linkDist = 200;
     const linkStrength = 0.04;
     for (const edge of edges) {
       const s = nodes.find((n) => n.id === edge.from_id);
@@ -185,7 +185,7 @@
     }
 
     const damping = 0.7;
-    const gravityStrength = 0.008;
+    const gravityStrength = 0.004;
     for (const node of nodes) {
       if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
       node.vx += (cx - node.x) * gravityStrength * alpha;
@@ -527,7 +527,7 @@
       const W = container?.clientWidth ?? 800;
       const H = container?.clientHeight ?? 600;
       const count = data.entities.length;
-      const baseRadius = Math.min(W, H) * 0.3;
+      const baseRadius = Math.min(W, H) * 0.38;
       nodes = data.entities.map((e, i) => {
         const angle = (2 * Math.PI * i) / count + (Math.random() - 0.5) * 0.3;
         const r = baseRadius * (0.6 + Math.random() * 0.4);
