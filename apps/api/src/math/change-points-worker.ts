@@ -52,6 +52,7 @@ async function run(): Promise<void> {
 
     const state: BocpdState = initBocpd(mean, Math.max(variance, 1));
     let lastChangeIdx = -1;
+    let lastCpProb = 0;
     let preMean = mean;
     let postMean = mean;
 
@@ -59,6 +60,7 @@ async function run(): Promise<void> {
       const result = updateBocpd(state, interArrivalTimes[i]);
       if (result.changePointProbability > CHANGE_POINT_THRESHOLD && i > 5) {
         lastChangeIdx = i;
+        lastCpProb = result.changePointProbability;
         preMean = result.preMean;
         postMean = result.postMean;
       }
@@ -81,7 +83,7 @@ async function run(): Promise<void> {
         randomUUID(),
         entityId,
         new Date().toISOString(),
-        CHANGE_POINT_THRESHOLD,
+        lastCpProb,
         preMean,
         postMean,
       ],

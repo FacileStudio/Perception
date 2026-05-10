@@ -7,7 +7,6 @@ export class Adwin {
   private bucketLevels: Bucket[][] = [];
   private width = 0;
   private total = 0;
-  private variance = 0;
   private delta: number;
 
   constructor(delta = DEFAULT_DELTA) {
@@ -18,10 +17,6 @@ export class Adwin {
     this.insertBucket(value);
     this.width++;
     this.total += value;
-    if (this.width > 1) {
-      const mean = this.total / this.width;
-      this.variance += (value - mean) * (value - mean);
-    }
 
     return this.checkDrift();
   }
@@ -111,15 +106,6 @@ export class Adwin {
     }
     this.bucketLevels[level] = this.bucketLevels[level].slice(bucketIdx + 1);
     this.width -= removed;
-    this.variance = 0;
-    if (this.width > 0) {
-      const mean = this.total / this.width;
-      for (const lvl of this.bucketLevels) {
-        for (const b of lvl) {
-          this.variance += b.variance + b.count * ((b.total / b.count) - mean) ** 2;
-        }
-      }
-    }
   }
 
   getMean(): number {
