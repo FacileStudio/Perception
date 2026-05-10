@@ -1,6 +1,28 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+import { db } from '../db/client';
 import { getEffectiveSetting } from '../db/settings';
+
+const CATALOG_TTL = 5 * 60 * 1000;
+let catalogCache: { providers: string[]; entityTypes: string[]; capabilities: string[]; fetchedAt: number } | null = null;
+
+async function getCatalog(): Promise<{ providers: string[]; entityTypes: string[]; capabilities: string[] }> {
+  if (catalogCache && Date.now() - catalogCache.fetchedAt < CATALOG_TTL) return catalogCache;
+
+  const [provRows, entityRows, capRows] = await Promise.all([
+    db.execute(`SELECT DISTINCT provider_type FROM events ORDER BY provider_type`),
+    db.execute(`SELECT DISTINCT label FROM ontology_concepts WHERE kind = 'entity_type' AND state != 'rejected' ORDER BY label`),
+    db.execute(`SELECT DISTINCT json_each.value AS cap FROM ontology_concepts, json_each(capabilities_json) WHERE kind = 'entity_type' AND state != 'rejected' ORDER BY cap`),
+  ]);
+
+  catalogCache = {
+    providers: provRows.rows.map((r) => r.provider_type as string),
+    entityTypes: entityRows.rows.map((r) => r.label as string),
+    capabilities: capRows.rows.map((r) => r.cap as string),
+    fetchedAt: Date.now(),
+  };
+  return catalogCache;
+}
 
 export type QueryPlan = {
   intent: 'lookup' | 'trend' | 'status_check' | 'comparison' | 'anomaly' | 'narrative';
@@ -18,12 +40,13 @@ export type QueryPlan = {
   rawMessage: string;
 };
 
-const PLANNER_SYSTEM = `You are a query planner for Perception, an operational intelligence assistant for Facile.
+function buildPlannerSystem(providers: string[], entityTypes: string[], capabilities: string[]): string {
+  return `You are a query planner for Perception, an operational intelligence assistant for Facile.
 Your job: analyze the user message (in ANY language) and output a JSON query plan.
 
-Available data providers: imap, git, dokploy, vikunja, charles, docuseal, uptime-kuma, sablier, website
-Available entity types: email, task, contract, deployment, service, client
-Available ontology capabilities: organization, commercial_account, document, can_have_contracts, financial_record, money, work_item, service, person
+Available data providers: ${providers.join(', ') || 'none'}
+Available entity types: ${entityTypes.join(', ') || 'none'}
+Available ontology capabilities: ${capabilities.join(', ') || 'none'}
 
 Output a single JSON object — no markdown, no code fences, no explanation:
 
@@ -70,6 +93,7 @@ Field rules:
     "comparison"   → comparing two periods or entities
     "anomaly"      → unusual patterns, spikes, drops, alerts
     "narrative"    → broad context, "tell me about", "what happened with"`;
+}
 
 function fallbackPlan(message: string): QueryPlan {
   return {
@@ -91,13 +115,17 @@ function fallbackPlan(message: string): QueryPlan {
 
 export async function buildQueryPlan(message: string): Promise<QueryPlan> {
   try {
-    const apiKey = await getEffectiveSetting('anthropic_api_key');
+    const [apiKey, catalog] = await Promise.all([
+      getEffectiveSetting('anthropic_api_key'),
+      getCatalog(),
+    ]);
     const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
     const now = new Date().toISOString();
+    const systemPrompt = buildPlannerSystem(catalog.providers, catalog.entityTypes, catalog.capabilities);
 
     const { text } = await generateText({
       model: anthropic('claude-haiku-4-5-20251001'),
-      system: PLANNER_SYSTEM,
+      system: systemPrompt,
       prompt: `Current datetime: ${now}\n\nUser message: ${message}`,
       maxTokens: 400,
     });
