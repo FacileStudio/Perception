@@ -20,7 +20,7 @@ async function run(): Promise<void> {
           FROM chat_sessions cs
           WHERE cs.updated_at < ?
             AND cs.id NOT IN (SELECT DISTINCT session_id FROM memory_episodes)
-            AND (SELECT COUNT(*) FROM chat_messages cm WHERE cm.session_id = cs.id) >= 4
+            AND (SELECT COUNT(*) FROM chat_messages cm WHERE cm.session_id = cs.id) >= 2
           ORDER BY cs.updated_at DESC
           LIMIT 10`,
     args: [cutoff],

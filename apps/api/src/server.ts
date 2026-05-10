@@ -78,7 +78,7 @@ registerWorker({ name: 'cross-link', description: 'Discovers cross-provider enti
 registerWorker({ name: 'notifications', description: 'Evaluates anomalies and generates alerts', intervalMs: 24 * 60 * 60 * 1000, run: notificationWorker.run });
 registerWorker({ name: 'communities', description: 'Detects entity communities and generates summaries', intervalMs: 6 * 60 * 60 * 1000, run: communityWorker.run });
 registerWorker({ name: 'narratives', description: 'Generates per-entity operational narratives', intervalMs: 6 * 60 * 60 * 1000, run: narrativeWorker.run });
-registerWorker({ name: 'memory', description: 'Extracts durable memory episodes from idle sessions', intervalMs: 6 * 60 * 60 * 1000, run: memoryWorker.run });
+registerWorker({ name: 'memory', description: 'Extracts durable memory episodes from idle sessions', intervalMs: 30 * 60 * 1000, run: memoryWorker.run });
 registerWorker({ name: 'change-points', description: 'Detects regime changes via BOCPD on entity event series', intervalMs: 12 * 60 * 60 * 1000, run: changePointWorker.run });
 registerWorker({ name: 'graph-health', description: 'Computes graph entropy and connectivity health metrics', intervalMs: 7 * 24 * 60 * 60 * 1000, run: graphHealthWorker.run });
 registerWorker({ name: 'concept-drift', description: 'Detects distribution drift per provider and invalidates schemas', intervalMs: 24 * 60 * 60 * 1000, run: conceptDriftWorker.run });
