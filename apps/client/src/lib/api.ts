@@ -85,7 +85,11 @@ export const api = {
         list.map(async (f) => ({
           name: f.name,
           type: f.type,
-          data: btoa(String.fromCharCode(...new Uint8Array(await f.arrayBuffer()))),
+          data: await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve((reader.result as string).split(',')[1]);
+            reader.readAsDataURL(f);
+          }),
         })),
       );
       return request<{ ids: string[] }>('/resources', {
