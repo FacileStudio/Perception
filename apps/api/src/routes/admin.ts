@@ -4,8 +4,36 @@ import { db } from '../db/client';
 import { requireSession } from '../security/session';
 import { config } from '../config';
 import { extractAllMissingRelations, extractEntityRelations } from '../entities/link';
+import { getWorkerStatuses, getWorkerHistory, executeWorker } from '../workers/registry';
 
 export const adminRoutes = new Hono();
+
+adminRoutes.get('/workers', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const workers = await getWorkerStatuses();
+  return c.json({ workers });
+});
+
+adminRoutes.get('/workers/:name/history', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const history = await getWorkerHistory(c.req.param('name'));
+  return c.json({ history });
+});
+
+adminRoutes.post('/workers/:name/run', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const name = c.req.param('name');
+  try {
+    await executeWorker(name);
+    return c.json({ ok: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({ ok: false, error: msg }, 500);
+  }
+});
 
 adminRoutes.post('/embedding-jobs/retry', async (c) => {
   const authed = await requireSession(c);

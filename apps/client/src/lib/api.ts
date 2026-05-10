@@ -63,6 +63,9 @@ export const api = {
     reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
     reprocessEntities: () => request<{ actors_created: number; events_linked: number; relations_added: number }>('/admin/reprocess-entities', { method: 'POST' }),
     embeddingStats: () => request<{ total: number; pending: number; ready: number; error: number; locked: number }>('/admin/embedding-stats'),
+    workers: () => request<{ workers: WorkerStatus[] }>('/admin/workers'),
+    workerHistory: (name: string) => request<{ history: WorkerRun[] }>(`/admin/workers/${name}/history`),
+    runWorker: (name: string) => request<{ ok: boolean }>(`/admin/workers/${name}/run`, { method: 'POST' }),
   },
 };
 
@@ -137,4 +140,22 @@ export type ChatSessionDetail = {
   created_at: string;
   updated_at: string;
   messages: ChatMessageRecord[];
+};
+
+export type WorkerRun = {
+  started_at: string;
+  finished_at: string;
+  duration_ms: number;
+  status: 'success' | 'error';
+  error: string | null;
+};
+
+export type WorkerStatus = {
+  name: string;
+  description: string;
+  intervalMs: number;
+  status: 'idle' | 'running';
+  lastRun: WorkerRun | null;
+  totalRuns: number;
+  totalErrors: number;
 };

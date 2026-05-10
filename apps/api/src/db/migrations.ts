@@ -160,6 +160,22 @@ CREATE INDEX IF NOT EXISTS entity_relations_to_idx ON entity_relations(to_entity
 CREATE INDEX IF NOT EXISTS entity_relations_source_idx ON entity_relations(source)
       `,
     },
+    {
+      name: '007_worker_runs',
+      sql: `
+CREATE TABLE IF NOT EXISTS worker_runs (
+  id TEXT PRIMARY KEY,
+  worker_name TEXT NOT NULL,
+  status TEXT NOT NULL CHECK(status IN ('running','success','error')),
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  duration_ms INTEGER,
+  result_json TEXT,
+  error TEXT
+);
+CREATE INDEX IF NOT EXISTS worker_runs_worker_idx ON worker_runs(worker_name, started_at DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

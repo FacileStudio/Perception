@@ -55,16 +55,22 @@ app.onError((err, c) => {
 await runMigrations();
 console.log(`[perception] API ready on :${config.port}`);
 
+import { registerWorker, scheduleWorker } from './workers/registry';
+
 const { embeddingWorker } = await import('./embeddings/worker');
 const { schemaInferenceWorker } = await import('./schema-registry/worker');
 const { upliftWorker } = await import('./ingest/uplift-worker');
 const { crossLinkWorker } = await import('./entities/cross-link-worker');
-setInterval(() => embeddingWorker.run().catch(console.error), 5000);
-setInterval(() => schemaInferenceWorker.run().catch(console.error), 15000);
-setInterval(() => upliftWorker.run().catch(console.error), 6 * 60 * 60 * 1000);
-setTimeout(() => upliftWorker.run().catch(console.error), 30_000);
-setInterval(() => crossLinkWorker.run().catch(console.error), 12 * 60 * 60 * 1000);
-setTimeout(() => crossLinkWorker.run().catch(console.error), 60_000);
+
+registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
+registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
+registerWorker({ name: 'uplift', description: 'Upgrades degraded events with confirmed schemas', intervalMs: 6 * 60 * 60 * 1000, run: upliftWorker.run });
+registerWorker({ name: 'cross-link', description: 'Discovers cross-provider entity relationships', intervalMs: 12 * 60 * 60 * 1000, run: crossLinkWorker.run });
+
+scheduleWorker('embedding');
+scheduleWorker('schema-inference');
+scheduleWorker('uplift', 30_000);
+scheduleWorker('cross-link', 60_000);
 
 export default {
   port: config.port,
