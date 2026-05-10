@@ -32,6 +32,7 @@ const FIELD_ROLE_CAPABILITIES: Record<InferredFieldMapping['role'], string[]> = 
   status: ['status'],
   id: ['identity'],
   name: ['name'],
+  actor: ['identity', 'person'],
   date: ['date'],
   url: ['url'],
   count: ['amount'],
