@@ -99,7 +99,7 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       model: anthropic('claude-haiku-4-5-20251001'),
       system: PLANNER_SYSTEM,
       prompt: `Current datetime: ${now}\n\nUser message: ${message}`,
-      maxTokens: 300,
+      maxTokens: 400,
     });
 
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
@@ -112,8 +112,10 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
     const validIntents = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative'] as const;
     const intent = validIntents.includes(raw.intent) ? raw.intent : 'narrative';
 
-    const compareWindow = intent === 'comparison' && raw.compareWindow && typeof raw.compareWindow === 'object'
-      ? raw.compareWindow
+    const compareWindow = intent === 'comparison'
+      && raw.compareWindow && typeof raw.compareWindow === 'object'
+      && typeof raw.compareWindow.from === 'string' && typeof raw.compareWindow.to === 'string'
+      ? { from: raw.compareWindow.from, to: raw.compareWindow.to }
       : null;
 
     return {

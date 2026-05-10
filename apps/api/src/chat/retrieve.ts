@@ -15,7 +15,7 @@ export type TemporalComparison = {
 
 export type RetrievalResult = {
   events: Array<EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[]; period?: TemporalPeriod }>;
-  stats: StatsSnapshot[];
+  stats: Array<StatsSnapshot & { period?: TemporalPeriod }>;
   comparisons: TemporalComparison[];
 };
 
@@ -56,7 +56,7 @@ async function ftsLane(queryTerms: string[]): Promise<Array<EventRow & { score: 
   }
 }
 
-type TemporalPeriod = 'current' | 'previous';
+export type TemporalPeriod = 'current' | 'previous';
 
 function buildSqlConditions(plan: QueryPlan, window: { from: string; to: string } | null): { where: string; args: InValue[] } {
   const conditions: string[] = ['1=1'];
@@ -263,7 +263,20 @@ async function conceptLane(plan: QueryPlan): Promise<Array<EventRow & { score: n
   }
 }
 
-async function statsLane(plan: QueryPlan): Promise<StatsSnapshot[]> {
+export type AnnotatedStatsSnapshot = StatsSnapshot & { period?: TemporalPeriod };
+
+async function statsLane(plan: QueryPlan): Promise<AnnotatedStatsSnapshot[]> {
+  const mapRow = (r: Record<string, unknown>): StatsSnapshot => ({
+    id: r.id as string,
+    kind: r.kind as string,
+    window_start: r.window_start as string,
+    window_end: r.window_end as string,
+    generated_at: r.generated_at as string,
+    source_count: r.source_count as number,
+    min_sample_met: Boolean(r.min_sample_met),
+    data: JSON.parse(r.data_json as string) as Record<string, unknown>,
+  });
+
   if (plan.compareWindow && plan.timeWindow) {
     const [currentResult, previousResult] = await Promise.all([
       db.execute({
@@ -276,20 +289,9 @@ async function statsLane(plan: QueryPlan): Promise<StatsSnapshot[]> {
       }),
     ]);
 
-    const mapRow = (r: Record<string, unknown>, period: TemporalPeriod): StatsSnapshot => ({
-      id: r.id as string,
-      kind: r.kind as string,
-      window_start: r.window_start as string,
-      window_end: r.window_end as string,
-      generated_at: r.generated_at as string,
-      source_count: r.source_count as number,
-      min_sample_met: Boolean(r.min_sample_met),
-      data: { ...JSON.parse(r.data_json as string) as Record<string, unknown>, _period: period },
-    });
-
     return [
-      ...currentResult.rows.map((r) => mapRow(r as unknown as Record<string, unknown>, 'current')),
-      ...previousResult.rows.map((r) => mapRow(r as unknown as Record<string, unknown>, 'previous')),
+      ...currentResult.rows.map((r) => ({ ...mapRow(r as unknown as Record<string, unknown>), period: 'current' as TemporalPeriod })),
+      ...previousResult.rows.map((r) => ({ ...mapRow(r as unknown as Record<string, unknown>), period: 'previous' as TemporalPeriod })),
     ];
   }
 
@@ -297,16 +299,7 @@ async function statsLane(plan: QueryPlan): Promise<StatsSnapshot[]> {
     sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 5`,
     args: [],
   });
-  return result.rows.map((r) => ({
-    id: r.id as string,
-    kind: r.kind as string,
-    window_start: r.window_start as string,
-    window_end: r.window_end as string,
-    generated_at: r.generated_at as string,
-    source_count: r.source_count as number,
-    min_sample_met: Boolean(r.min_sample_met),
-    data: JSON.parse(r.data_json as string) as Record<string, unknown>,
-  }));
+  return result.rows.map((r) => mapRow(r as unknown as Record<string, unknown>));
 }
 
 const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
@@ -512,42 +505,58 @@ export async function fetchSystemSummary(): Promise<string> {
   ].join('\n');
 }
 
-function buildTemporalComparisons(
-  sqlEvents: Array<EventRow & { score: number; source: 'sql'; period?: TemporalPeriod }>,
-): TemporalComparison[] {
-  const currentEvents = sqlEvents.filter((e) => e.period === 'current');
-  const previousEvents = sqlEvents.filter((e) => e.period === 'previous');
+async function buildTemporalComparisons(plan: QueryPlan): Promise<TemporalComparison[]> {
+  if (!plan.timeWindow || !plan.compareWindow) return [];
 
-  const dimensions = new Set<string>();
-  for (const e of sqlEvents) {
-    dimensions.add(`provider:${e.provider_type}`);
-    dimensions.add(`entity:${e.entity_type}`);
-    dimensions.add(`event:${e.event_type}`);
+  const { where: curWhere, args: curArgs } = buildSqlConditions(plan, plan.timeWindow);
+  const { where: prevWhere, args: prevArgs } = buildSqlConditions(plan, plan.compareWindow);
+
+  const [curTotal, prevTotal, curByDim, prevByDim] = await Promise.all([
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM events WHERE ${curWhere}`, args: curArgs }),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM events WHERE ${prevWhere}`, args: prevArgs }),
+    db.execute({
+      sql: `SELECT provider_type, entity_type, event_type, COUNT(*) AS cnt FROM events WHERE ${curWhere} GROUP BY provider_type, entity_type, event_type`,
+      args: curArgs,
+    }),
+    db.execute({
+      sql: `SELECT provider_type, entity_type, event_type, COUNT(*) AS cnt FROM events WHERE ${prevWhere} GROUP BY provider_type, entity_type, event_type`,
+      args: prevArgs,
+    }),
+  ]);
+
+  const curCount = (curTotal.rows[0]?.cnt as number) ?? 0;
+  const prevCount = (prevTotal.rows[0]?.cnt as number) ?? 0;
+
+  const comparisons: TemporalComparison[] = [{
+    dimension: 'total_events',
+    current: curCount,
+    previous: prevCount,
+    delta: curCount - prevCount,
+    deltaPercent: prevCount > 0 ? Math.round(((curCount - prevCount) / prevCount) * 100) : null,
+  }];
+
+  type DimKey = string;
+  const curMap = new Map<DimKey, number>();
+  const prevMap = new Map<DimKey, number>();
+
+  for (const r of curByDim.rows) {
+    const cnt = r.cnt as number;
+    curMap.set(`provider:${r.provider_type}`, (curMap.get(`provider:${r.provider_type}`) ?? 0) + cnt);
+    curMap.set(`entity:${r.entity_type}`, (curMap.get(`entity:${r.entity_type}`) ?? 0) + cnt);
+    curMap.set(`event:${r.event_type}`, (curMap.get(`event:${r.event_type}`) ?? 0) + cnt);
+  }
+  for (const r of prevByDim.rows) {
+    const cnt = r.cnt as number;
+    prevMap.set(`provider:${r.provider_type}`, (prevMap.get(`provider:${r.provider_type}`) ?? 0) + cnt);
+    prevMap.set(`entity:${r.entity_type}`, (prevMap.get(`entity:${r.entity_type}`) ?? 0) + cnt);
+    prevMap.set(`event:${r.event_type}`, (prevMap.get(`event:${r.event_type}`) ?? 0) + cnt);
   }
 
-  const comparisons: TemporalComparison[] = [];
-
-  comparisons.push({
-    dimension: 'total_events',
-    current: currentEvents.length,
-    previous: previousEvents.length,
-    delta: currentEvents.length - previousEvents.length,
-    deltaPercent: previousEvents.length > 0
-      ? Math.round(((currentEvents.length - previousEvents.length) / previousEvents.length) * 100)
-      : null,
-  });
-
-  for (const dim of dimensions) {
-    const [kind, value] = dim.split(':');
-    const filterFn = (e: EventRow) =>
-      kind === 'provider' ? e.provider_type === value
-      : kind === 'entity' ? e.entity_type === value
-      : e.event_type === value;
-
-    const cur = currentEvents.filter(filterFn).length;
-    const prev = previousEvents.filter(filterFn).length;
+  const allDims = new Set([...curMap.keys(), ...prevMap.keys()]);
+  for (const dim of allDims) {
+    const cur = curMap.get(dim) ?? 0;
+    const prev = prevMap.get(dim) ?? 0;
     if (cur === 0 && prev === 0) continue;
-
     comparisons.push({
       dimension: dim,
       current: cur,
@@ -601,7 +610,7 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   }
 
   const comparisons = isComparison
-    ? buildTemporalComparisons(sqlEvents)
+    ? await buildTemporalComparisons(plan)
     : [];
 
   return { events, stats, comparisons };

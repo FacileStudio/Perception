@@ -1,6 +1,6 @@
 import type { EventRow, StatsSnapshot } from '../types';
 import type { QueryPlan } from './planner';
-import type { TemporalComparison } from './retrieve';
+import type { TemporalComparison, TemporalPeriod } from './retrieve';
 
 export function buildSystemPrompt(mode: QueryPlan['retrievalMode']): string {
   const base = `You are Perception, an operational intelligence assistant for Facile.
@@ -40,7 +40,7 @@ Rules:
 
 export function buildContextBlock(
   events: Array<EventRow & { score: number; period?: string }>,
-  stats: StatsSnapshot[],
+  stats: Array<StatsSnapshot & { period?: TemporalPeriod }>,
   comparisons: TemporalComparison[] = [],
 ): string {
   const lines: string[] = [
@@ -61,10 +61,9 @@ export function buildContextBlock(
   }
 
   for (const snapshot of stats) {
-    const period = snapshot.data._period ? ` period=${snapshot.data._period}` : '';
+    const period = snapshot.period ? ` period=${snapshot.period}` : '';
     lines.push(`[STATS kind=${snapshot.kind} window_start=${snapshot.window_start} window_end=${snapshot.window_end} source_count=${snapshot.source_count} min_sample_met=${snapshot.min_sample_met}${period}]`);
-    const { _period, ...cleanData } = snapshot.data;
-    lines.push(JSON.stringify(cleanData, null, 2));
+    lines.push(JSON.stringify(snapshot.data, null, 2));
     lines.push('[/STATS]');
     lines.push('');
   }
