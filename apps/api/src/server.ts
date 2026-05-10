@@ -27,6 +27,7 @@ app.use('*', cors({
   exposeHeaders: ['X-Session-Id'],
 }));
 app.use('/ingest', bodyLimit({ maxSize: 1 * 1024 * 1024 }));
+app.use('/resources', bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
 app.get('/health', (c) => c.json({ ok: true }));
 app.get('/ready', async (c) => {

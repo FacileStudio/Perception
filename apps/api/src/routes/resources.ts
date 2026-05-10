@@ -10,22 +10,20 @@ resourcesRoutes.post('/', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
-  const formData = await c.req.formData();
-  const files = formData.getAll('file') as File[];
-
-  if (files.length === 0) return c.json({ error: 'file_required' }, 400);
+  const body = await c.req.json<{ files: Array<{ name: string; type: string; data: string }> }>();
+  if (!body.files?.length) return c.json({ error: 'file_required' }, 400);
 
   const supported = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
   const ids: string[] = [];
 
-  for (const file of files) {
+  for (const file of body.files) {
     if (!supported.some((t) => file.type.startsWith(t.split('/')[0]) || file.type === t)) {
       return c.json({ error: 'unsupported_mime_type', mime_type: file.type, supported }, 400);
     }
 
     const id = randomUUID();
     const now = new Date().toISOString();
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = Buffer.from(file.data, 'base64');
 
     await db.execute({
       sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
