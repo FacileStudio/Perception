@@ -14,15 +14,13 @@
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
-  let viewMode = $state<'entities' | 'relations' | 'list' | 'communities'>('entities');
-  let drawMode: 'entities' | 'relations' = 'entities';
-  let relationLegend = $state<[string, string][]>([]);
+  let viewMode = $state<'entities' | 'list' | 'communities'>('entities');
   let paused = false;
   let communities = $state<CommunityDetail[]>([]);
   let loadingCommunities = $state(false);
   let narrativesMap = $state<Map<string, EntityNarrativeDetail>>(new Map());
   let loadingNarratives = $state(false);
-  function setMode(m: 'entities' | 'relations' | 'list' | 'communities') {
+  function setMode(m: 'entities' | 'list' | 'communities') {
     viewMode = m;
     if (m === 'list' || m === 'communities') {
       paused = true;
@@ -30,7 +28,6 @@
       if (m === 'communities' && communities.length === 0) loadCommunities();
       if (m === 'list' && narrativesMap.size === 0) loadNarratives();
     } else {
-      drawMode = m;
       if (paused) {
         paused = false;
         loop();
@@ -72,7 +69,6 @@
   let nodes: SimNode[] = [];
   let edges: EntityRelation[] = [];
   let hoveredNode: SimNode | null = null;
-  let hoveredEdge: EntityRelation | null = null;
   let draggedNode: SimNode | null = null;
   let animId: number;
   let simAlpha = 0.6;
@@ -236,7 +232,6 @@
     if (!ctx) return;
     const W = cw();
     const H = ch();
-    const mode = drawMode;
 
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -253,43 +248,13 @@
       const t = nodes.find((n) => n.id === edge.to_id);
       if (!s || !t) continue;
 
-      if (mode === 'relations') {
-        const color = relationColorFor(edge.label);
-        const isHE = hoveredEdge === edge;
-
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(t.x, t.y);
-        ctx.strokeStyle = isHE ? color : color + 'aa';
-        ctx.lineWidth = isHE ? 2 : 1.2;
-        ctx.stroke();
-
-        if (zoom > 0.45) {
-          const mx = (s.x + t.x) / 2;
-          const my = (s.y + t.y) / 2;
-          const labelText = edge.label.replace(/_/g, ' ');
-          ctx.font = '500 9px system-ui,sans-serif';
-          const tw = ctx.measureText(labelText).width;
-          const pad = 4;
-          const ph = 13;
-
-          ctx.fillStyle = isHE ? color + '22' : 'rgba(255,255,255,0.9)';
-          fillRoundRect(ctx, mx - tw / 2 - pad, my - ph / 2, tw + pad * 2, ph, 3);
-
-          ctx.fillStyle = isHE ? color : '#71717a';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(labelText, mx, my);
-        }
-      } else {
-        const active = hoveredNode?.id === s.id || hoveredNode?.id === t.id;
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(t.x, t.y);
-        ctx.strokeStyle = active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.08)';
-        ctx.lineWidth = active ? 1.5 : 1;
-        ctx.stroke();
-      }
+      const active = hoveredNode?.id === s.id || hoveredNode?.id === t.id;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.strokeStyle = active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = active ? 1.5 : 1;
+      ctx.stroke();
     }
 
     for (const node of nodes) {
@@ -449,16 +414,9 @@
     const hit = findHovered(sx, sy);
     hoveredNode = hit;
 
-    if (drawMode === 'relations' && !hit) {
-      hoveredEdge = findHoveredEdge(sx, sy);
-    } else {
-      hoveredEdge = null;
-    }
-
-    canvas.style.cursor = hit ? 'grab' : hoveredEdge ? 'pointer' : isPanning ? 'grabbing' : 'grab';
+    canvas.style.cursor = hit ? 'grab' : isPanning ? 'grabbing' : 'grab';
 
     if (hit) showTooltip(hit, sx, sy);
-    else if (hoveredEdge) showEdgeTooltip(hoveredEdge);
     else hideTooltip();
 
     if (isPanning) {
@@ -507,7 +465,6 @@
   function onMouseLeave() {
     draggedNode = null;
     hoveredNode = null;
-    hoveredEdge = null;
     isPanning = false;
     hideTooltip();
   }
@@ -522,7 +479,6 @@
     labels.forEach((label, i) => {
       relationColors.set(label, RELATION_PALETTE[i % RELATION_PALETTE.length]);
     });
-    relationLegend = labels.map((l) => [relationColors.get(l)!, l.replace(/_/g, ' ')] as [string, string]);
   }
 
   let adjacency = $derived(
@@ -616,13 +572,6 @@
               {label}
             </span>
           {/each}
-        {:else if viewMode === 'relations'}
-          {#each relationLegend as [color, label]}
-            <span class="flex items-center gap-1.5">
-              <span class="size-2 rounded-full" style="background:{color}"></span>
-              {label}
-            </span>
-          {/each}
         {:else if viewMode === 'communities'}
           <span>{communities.length} {communities.length === 1 ? 'community' : 'communities'}</span>
         {/if}
@@ -638,13 +587,6 @@
       >
         <Icon icon="solar:layers-minimalistic-linear" class="size-3.5" />
         Entities
-      </button>
-      <button
-        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'relations' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => setMode('relations')}
-      >
-        <Icon icon="solar:graph-linear" class="size-3.5" />
-        Relations
       </button>
       <button
         class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
