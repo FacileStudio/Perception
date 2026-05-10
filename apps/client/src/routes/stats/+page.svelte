@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type StatsSnapshot, type TokenUsageRow } from '$lib/api';
+  import { api, type StatsSnapshot, type TokenUsageRow, type IntelligenceData } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
@@ -12,6 +12,10 @@
   import ActorActivityPanel from './_components/ActorActivityPanel.svelte';
   import TopEntitiesPanel from './_components/TopEntitiesPanel.svelte';
   import EventVolumeChart from './_components/EventVolumeChart.svelte';
+  import IntelligenceCards from './_components/IntelligenceCards.svelte';
+  import KnowledgeCoveragePanel from './_components/KnowledgeCoveragePanel.svelte';
+  import ChangePointsTimeline from './_components/ChangePointsTimeline.svelte';
+  import ProviderHealthPanel from './_components/ProviderHealthPanel.svelte';
 
   let snapshots = $state<StatsSnapshot[]>([]);
   let usage = $state<TokenUsageRow[]>([]);
@@ -20,6 +24,7 @@
   let error = $state('');
   let activeWindow = $state<'7d' | '30d'>('7d');
   let lastLoadedAt = 0;
+  let intelligence = $state<IntelligenceData | null>(null);
 
   function formatTokens(n: number) {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
@@ -65,10 +70,15 @@
     loading = true;
     error = '';
     try {
-      const [statsResult, usageResult] = await Promise.all([api.stats.get(forceRefresh), api.settings.usage()]);
+      const [statsResult, usageResult, intelResult] = await Promise.all([
+        api.stats.get(forceRefresh),
+        api.settings.usage(),
+        api.stats.intelligence().catch(() => null),
+      ]);
       snapshots = statsResult.snapshots;
       usage = usageResult.usage;
       totalCost = usageResult.total_cost_usd;
+      intelligence = intelResult;
       lastLoadedAt = Date.now();
     } catch {
       error = 'Failed to load stats.';
@@ -146,6 +156,10 @@
         {:else}
           <SummaryCards {snapshots} window={activeWindow} />
 
+          {#if intelligence}
+            <IntelligenceCards data={intelligence} />
+          {/if}
+
           {#if volumeSnap}
             <Card class="rounded-[24px] border-zinc-200/80 px-5 pb-4 pt-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <EventVolumeChart snap={volumeSnap} />
@@ -176,7 +190,23 @@
                 <ActorActivityPanel snap={actorSnap} />
               </Card>
             {/if}
+
+            {#if intelligence}
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <KnowledgeCoveragePanel data={intelligence} />
+              </Card>
+
+              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+                <ChangePointsTimeline data={intelligence} />
+              </Card>
+            {/if}
           </div>
+
+          {#if intelligence && intelligence.providers.length > 0}
+            <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <ProviderHealthPanel data={intelligence} />
+            </Card>
+          {/if}
         {/if}
 
         <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">

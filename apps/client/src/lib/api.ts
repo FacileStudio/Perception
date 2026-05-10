@@ -48,6 +48,7 @@ export const api = {
   },
   stats: {
     get: (refresh = false) => request<{ snapshots: StatsSnapshot[] }>(`/stats${refresh ? '?refresh=1' : ''}`),
+    intelligence: () => request<IntelligenceData>('/stats/intelligence'),
   },
   settings: {
     get: () => request<{ settings: Record<string, string>; sources: Record<string, string> }>('/settings'),
@@ -201,6 +202,16 @@ export type WorkerStatus = {
   lastRun: WorkerRun | null;
   totalRuns: number;
   totalErrors: number;
+};
+
+export type IntelligenceData = {
+  graph_health: { largest_component_ratio: number; degree_entropy: number; isolated_node_ratio: number; node_count: number; edge_count: number } | null;
+  memory_episodes: number;
+  change_points_30d: number;
+  drift_alerts_30d: number;
+  coverage: { total_entities: number; with_narratives: number; in_communities: number; with_relations: number };
+  change_points: Array<{ entity_id: string; entity_name: string; pre_mean: number; post_mean: number; detected_at: string }>;
+  providers: Array<{ provider_type: string; provider_name: string; event_count: number; drifted: boolean; schema_confirmed: boolean }>;
 };
 
 export type GraphHealthSnapshot = {
