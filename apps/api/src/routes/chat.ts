@@ -100,7 +100,7 @@ chatRoutes.post('/', async (c) => {
     embedQuery(body.message).catch(() => [] as number[]),
   ]);
 
-  let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [] };
+  let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [] };
   let corrected = false;
   if (plan.requiresRetrieval) {
     const result = await retrieveWithCorrection(plan, queryEmbedding);

@@ -12,6 +12,7 @@ import { statsLane } from './lanes/stats';
 import { communityLane } from './lanes/community';
 import { textToSqlLane } from './lanes/text-to-sql';
 import { fetchNarratives } from '../narratives/retrieve';
+import { fetchMemoryEpisodes } from '../memory/retrieve';
 import { mergeAndRank } from './lanes/merge';
 
 export type { RetrievalResult, RetrievalSource, ContextConfidence, TemporalComparison, TemporalPeriod, RankedEvent };
@@ -240,11 +241,14 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   const shouldNarrative = intent === 'narrative' || intent === 'lookup';
   const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
 
-  const [graphEvents, communitySummaries, narratives, sqlResult] = await Promise.all([
+  const shouldMemory = plan.retrievalMode === 'full';
+
+  const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes] = await Promise.all([
     shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds) : Promise.resolve([]),
     shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds) : Promise.resolve([]),
     shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds) : Promise.resolve([]),
     shouldTextToSql ? textToSqlLane(plan) : Promise.resolve(null),
+    shouldMemory ? fetchMemoryEpisodes(queryEmbedding) : Promise.resolve([]),
   ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan);
@@ -263,5 +267,6 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     communitySummaries,
     sqlResults: sqlResult ? [sqlResult] : [],
     narratives,
+    memoryEpisodes,
   };
 }

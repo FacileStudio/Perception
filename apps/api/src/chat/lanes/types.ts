@@ -3,6 +3,7 @@ import type { StatsSnapshot } from '../../stats/types';
 import type { CommunitySummary } from './community';
 import type { SqlQueryResult } from './text-to-sql';
 import type { EntityNarrative } from '../../narratives/retrieve';
+import type { MemoryEpisode } from '../../memory/types';
 
 export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph' | 'community' | 'text_to_sql';
 export type TemporalPeriod = 'current' | 'previous';
@@ -34,6 +35,7 @@ export type RetrievalResult = {
   communitySummaries: CommunitySummary[];
   sqlResults: SqlQueryResult[];
   narratives: EntityNarrative[];
+  memoryEpisodes: MemoryEpisode[];
 };
 
 export type ContextConfidence = {

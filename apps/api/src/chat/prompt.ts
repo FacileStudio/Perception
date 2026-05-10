@@ -4,6 +4,7 @@ import type { TemporalComparison, TemporalPeriod } from './retrieve';
 import type { CommunitySummary } from './lanes/community';
 import type { SqlQueryResult } from './lanes/text-to-sql';
 import type { EntityNarrative } from '../narratives/retrieve';
+import type { MemoryEpisode } from '../memory/types';
 
 export function buildSystemPrompt(mode: QueryPlan['retrievalMode']): string {
   const base = `You are Perception, an operational intelligence assistant for Facile.
@@ -48,8 +49,17 @@ export function buildContextBlock(
   communitySummaries: CommunitySummary[] = [],
   sqlResults: SqlQueryResult[] = [],
   narratives: EntityNarrative[] = [],
+  memoryEpisodes: MemoryEpisode[] = [],
 ): string {
   const lines: string[] = [];
+
+  for (const ep of memoryEpisodes) {
+    const entities = ep.entityRefs.length > 0 ? ` entities="${ep.entityRefs.join(',')}"` : '';
+    lines.push(`[MEMORY occurred=${ep.occurredAt.slice(0, 10)}${entities}]`);
+    lines.push(ep.summary);
+    lines.push('[/MEMORY]');
+    lines.push('');
+  }
 
   for (const n of narratives) {
     lines.push(`[ENTITY_NARRATIVE entity="${n.entityName}" events=${n.sourceEventCount} generated=${n.generatedAt}]`);

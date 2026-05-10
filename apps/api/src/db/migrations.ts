@@ -224,6 +224,23 @@ CREATE TABLE IF NOT EXISTS entity_narratives (
 )
       `,
     },
+    {
+      name: '011_memory_episodes',
+      sql: `
+CREATE TABLE IF NOT EXISTS memory_episodes (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  summary TEXT NOT NULL,
+  entity_refs TEXT NOT NULL DEFAULT '[]',
+  occurred_at TEXT NOT NULL,
+  retrieval_hits INTEGER NOT NULL DEFAULT 0,
+  embedding_status TEXT NOT NULL DEFAULT 'pending' CHECK(embedding_status IN ('pending','ready','error')),
+  embedding F32_BLOB(1024)
+);
+CREATE INDEX IF NOT EXISTS memory_episodes_session_idx ON memory_episodes(session_id);
+CREATE INDEX IF NOT EXISTS memory_episodes_status_idx ON memory_episodes(embedding_status)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

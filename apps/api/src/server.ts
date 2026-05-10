@@ -66,6 +66,7 @@ const { crossLinkWorker } = await import('./entities/cross-link-worker');
 const { notificationWorker } = await import('./notifications/worker');
 const { communityWorker } = await import('./communities/worker');
 const { narrativeWorker } = await import('./narratives/worker');
+const { memoryWorker } = await import('./memory/worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -74,6 +75,7 @@ registerWorker({ name: 'cross-link', description: 'Discovers cross-provider enti
 registerWorker({ name: 'notifications', description: 'Evaluates anomalies and generates alerts', intervalMs: 24 * 60 * 60 * 1000, run: notificationWorker.run });
 registerWorker({ name: 'communities', description: 'Detects entity communities and generates summaries', intervalMs: 6 * 60 * 60 * 1000, run: communityWorker.run });
 registerWorker({ name: 'narratives', description: 'Generates per-entity operational narratives', intervalMs: 6 * 60 * 60 * 1000, run: narrativeWorker.run });
+registerWorker({ name: 'memory', description: 'Extracts durable memory episodes from idle sessions', intervalMs: 6 * 60 * 60 * 1000, run: memoryWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -82,6 +84,7 @@ scheduleWorker('cross-link', 60_000);
 scheduleWorker('notifications', 120_000);
 scheduleWorker('communities', 180_000);
 scheduleWorker('narratives', 240_000);
+scheduleWorker('memory', 300_000);
 
 export default {
   port: config.port,
