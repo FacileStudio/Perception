@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
-  import type { GraphEntity, EntityRelation } from '$lib/api';
+  import type { GraphEntity, EntityRelation, CommunityDetail } from '$lib/api';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -14,15 +14,18 @@
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
-  let viewMode = $state<'entities' | 'relations' | 'list'>('entities');
+  let viewMode = $state<'entities' | 'relations' | 'list' | 'communities'>('entities');
   let drawMode: 'entities' | 'relations' = 'entities';
   let relationLegend = $state<[string, string][]>([]);
   let paused = false;
-  function setMode(m: 'entities' | 'relations' | 'list') {
+  let communities = $state<CommunityDetail[]>([]);
+  let loadingCommunities = $state(false);
+  function setMode(m: 'entities' | 'relations' | 'list' | 'communities') {
     viewMode = m;
-    if (m === 'list') {
+    if (m === 'list' || m === 'communities') {
       paused = true;
       cancelAnimationFrame(animId);
+      if (m === 'communities' && communities.length === 0) loadCommunities();
     } else {
       drawMode = m;
       if (paused) {
@@ -30,6 +33,17 @@
         loop();
       }
     }
+  }
+
+  async function loadCommunities() {
+    loadingCommunities = true;
+    try {
+      const data = await api.entities.communities();
+      communities = data.communities;
+    } catch {
+      communities = [];
+    }
+    loadingCommunities = false;
   }
 
   let container: HTMLDivElement;
@@ -586,13 +600,15 @@
               {label}
             </span>
           {/each}
-        {:else}
+        {:else if viewMode === 'relations'}
           {#each relationLegend as [color, label]}
             <span class="flex items-center gap-1.5">
               <span class="size-2 rounded-full" style="background:{color}"></span>
               {label}
             </span>
           {/each}
+        {:else if viewMode === 'communities'}
+          <span>{communities.length} {communities.length === 1 ? 'community' : 'communities'}</span>
         {/if}
       </div>
     </div>
@@ -620,6 +636,13 @@
       >
         <Icon icon="solar:list-linear" class="size-3.5" />
         List
+      </button>
+      <button
+        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'communities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+        onclick={() => setMode('communities')}
+      >
+        <Icon icon="solar:users-group-rounded-linear" class="size-3.5" />
+        Communities
       </button>
     </div>
 
@@ -651,10 +674,60 @@
       </div>
     {/if}
 
+    {#if viewMode === 'communities'}
+      <div class="absolute inset-0 z-10 overflow-y-auto p-4 pt-16">
+        <div class="mx-auto max-w-2xl space-y-3 pb-4">
+          {#if loadingCommunities}
+            <div class="flex items-center justify-center py-16">
+              <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin text-zinc-400" />
+            </div>
+          {:else if communities.length === 0}
+            <div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
+              <Icon icon="solar:users-group-rounded-bold-duotone" class="size-10 text-zinc-300" />
+              <p class="text-sm text-zinc-500">No communities detected yet.</p>
+              <p class="text-xs text-zinc-400">Run the communities worker from Settings to generate clusters.</p>
+            </div>
+          {:else}
+            {#each communities as comm, ci}
+              <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm">
+                <div class="flex items-start gap-3 px-5 py-4">
+                  <span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-600">
+                    {ci + 1}
+                  </span>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-semibold text-zinc-900">{comm.title}</span>
+                      {#if comm.stale}
+                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-600">stale</span>
+                      {/if}
+                    </div>
+                    <p class="mt-1 text-xs leading-relaxed text-zinc-500">{comm.summary}</p>
+                    <div class="mt-2.5 flex flex-wrap gap-1.5">
+                      {#each comm.members as member}
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-medium text-zinc-700">
+                          <span class="size-1.5 shrink-0 rounded-full" style="background:{colorFor(member.type_label)}"></span>
+                          {member.name}
+                        </span>
+                      {/each}
+                    </div>
+                    <div class="mt-2.5 flex items-center gap-3 text-[11px] text-zinc-400">
+                      <span class="font-mono">{comm.member_count} entities</span>
+                      <span>importance {(comm.importance * 100).toFixed(0)}%</span>
+                      <span>{new Date(comm.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            {/each}
+          {/if}
+        </div>
+      </div>
+    {/if}
+
     <canvas
       bind:this={canvas}
       class="absolute inset-0 block"
-      style="width:100%;height:100%;cursor:grab;display:{viewMode === 'list' ? 'none' : 'block'}"
+      style="width:100%;height:100%;cursor:grab;display:{viewMode === 'list' || viewMode === 'communities' ? 'none' : 'block'}"
       onmousemove={onMouseMove}
       onmousedown={onMouseDown}
       onmouseup={onMouseUp}

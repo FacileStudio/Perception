@@ -52,6 +52,50 @@ entitiesRoutes.get('/graph', async (c) => {
   });
 });
 
+entitiesRoutes.get('/communities', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT id, title, summary, importance, member_count, member_entity_ids, generated_at, stale
+     FROM entity_communities ORDER BY importance DESC`,
+  );
+
+  const communities = await Promise.all(
+    result.rows.map(async (row) => {
+      let memberIds: string[] = [];
+      try { memberIds = JSON.parse(row.member_entity_ids as string); } catch {}
+
+      const members = memberIds.length > 0
+        ? await db.execute({
+            sql: `SELECT e.id, e.canonical_name, oc.label AS type_label
+                  FROM entities e
+                  JOIN ontology_concepts oc ON oc.id = e.type_concept_id
+                  WHERE e.id IN (${memberIds.map(() => '?').join(',')})`,
+            args: memberIds,
+          })
+        : { rows: [] };
+
+      return {
+        id: row.id as string,
+        title: row.title as string,
+        summary: row.summary as string,
+        importance: row.importance as number,
+        member_count: row.member_count as number,
+        generated_at: row.generated_at as string,
+        stale: Boolean(row.stale),
+        members: members.rows.map((r) => ({
+          id: r.id as string,
+          name: r.canonical_name as string,
+          type_label: r.type_label as string,
+        })),
+      };
+    }),
+  );
+
+  return c.json({ communities });
+});
+
 entitiesRoutes.get('/:id/community', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

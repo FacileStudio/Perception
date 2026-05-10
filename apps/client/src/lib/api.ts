@@ -69,6 +69,7 @@ export const api = {
   },
   entities: {
     graph: () => request<{ entities: GraphEntity[]; relations: EntityRelation[] }>('/entities/graph'),
+    communities: () => request<{ communities: CommunityDetail[] }>('/entities/communities'),
     community: (entityId: string) => request<{ community: EntityCommunity | null }>(`/entities/${entityId}/community`),
     resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
   },
@@ -112,6 +113,11 @@ export type CommunitySummaryMeta = { title: string; summary: string; member_coun
 export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null; sql_query?: SqlQueryMeta | null; community_summaries?: CommunitySummaryMeta[] | null };
 export type ChatSource = { event_id: string; provider_name: string; occurred_at: string; title: string; score: number };
 export type EntityCommunity = { id: string; title: string; summary: string; importance: number; member_count: number; member_names: string[] };
+export type CommunityDetail = {
+  id: string; title: string; summary: string; importance: number; member_count: number;
+  generated_at: string; stale: boolean;
+  members: Array<{ id: string; name: string; type_label: string }>;
+};
 export type ChatSessionSummary = {
   id: string;
   title: string;
