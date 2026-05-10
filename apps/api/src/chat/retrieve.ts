@@ -5,9 +5,18 @@ import type { EventRow, StatsSnapshot } from '../types';
 import type { QueryPlan } from './planner';
 import { EVENT_LIST_ORDER_BY } from '../events/order';
 
+export type TemporalComparison = {
+  dimension: string;
+  current: number;
+  previous: number;
+  delta: number;
+  deltaPercent: number | null;
+};
+
 export type RetrievalResult = {
-  events: Array<EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[] }>;
+  events: Array<EventRow & { score: number; source: RetrievalSource; lanes: RetrievalSource[]; concepts?: string[]; entity_names?: string[]; period?: TemporalPeriod }>;
   stats: StatsSnapshot[];
+  comparisons: TemporalComparison[];
 };
 
 export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph';
@@ -47,7 +56,9 @@ async function ftsLane(queryTerms: string[]): Promise<Array<EventRow & { score: 
   }
 }
 
-async function sqlLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'sql' }>> {
+type TemporalPeriod = 'current' | 'previous';
+
+function buildSqlConditions(plan: QueryPlan, window: { from: string; to: string } | null): { where: string; args: InValue[] } {
   const conditions: string[] = ['1=1'];
   const args: InValue[] = [];
 
@@ -63,22 +74,44 @@ async function sqlLane(plan: QueryPlan): Promise<Array<EventRow & { score: numbe
     args.push(...plan.entityHints);
   }
 
-  if (plan.timeWindow) {
+  if (window) {
     conditions.push(`occurred_at >= ? AND occurred_at <= ?`);
-    args.push(plan.timeWindow.from, plan.timeWindow.to);
+    args.push(window.from, window.to);
   }
 
-  const where = conditions.join(' AND ');
+  return { where: conditions.join(' AND '), args };
+}
+
+async function sqlLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'sql'; period?: TemporalPeriod }>> {
+  const { where, args } = buildSqlConditions(plan, plan.timeWindow);
   const result = await db.execute({
     sql: `SELECT * FROM events WHERE ${where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
     args,
   });
 
-  return result.rows.map((r) => ({
+  const currentEvents = result.rows.map((r) => ({
     ...rowToEvent(r as unknown as Record<string, unknown>),
     score: 0.5,
     source: 'sql' as const,
+    ...(plan.compareWindow ? { period: 'current' as TemporalPeriod } : {}),
   }));
+
+  if (!plan.compareWindow) return currentEvents;
+
+  const prev = buildSqlConditions(plan, plan.compareWindow);
+  const prevResult = await db.execute({
+    sql: `SELECT * FROM events WHERE ${prev.where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
+    args: prev.args,
+  });
+
+  const previousEvents = prevResult.rows.map((r) => ({
+    ...rowToEvent(r as unknown as Record<string, unknown>),
+    score: 0.35,
+    source: 'sql' as const,
+    period: 'previous' as TemporalPeriod,
+  }));
+
+  return [...currentEvents, ...previousEvents];
 }
 
 async function recentLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'sql' }>> {
@@ -230,7 +263,36 @@ async function conceptLane(plan: QueryPlan): Promise<Array<EventRow & { score: n
   }
 }
 
-async function statsLane(): Promise<StatsSnapshot[]> {
+async function statsLane(plan: QueryPlan): Promise<StatsSnapshot[]> {
+  if (plan.compareWindow && plan.timeWindow) {
+    const [currentResult, previousResult] = await Promise.all([
+      db.execute({
+        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ? ORDER BY generated_at DESC LIMIT 5`,
+        args: [plan.timeWindow.from, plan.timeWindow.to],
+      }),
+      db.execute({
+        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ? ORDER BY generated_at DESC LIMIT 5`,
+        args: [plan.compareWindow.from, plan.compareWindow.to],
+      }),
+    ]);
+
+    const mapRow = (r: Record<string, unknown>, period: TemporalPeriod): StatsSnapshot => ({
+      id: r.id as string,
+      kind: r.kind as string,
+      window_start: r.window_start as string,
+      window_end: r.window_end as string,
+      generated_at: r.generated_at as string,
+      source_count: r.source_count as number,
+      min_sample_met: Boolean(r.min_sample_met),
+      data: { ...JSON.parse(r.data_json as string) as Record<string, unknown>, _period: period },
+    });
+
+    return [
+      ...currentResult.rows.map((r) => mapRow(r as unknown as Record<string, unknown>, 'current')),
+      ...previousResult.rows.map((r) => mapRow(r as unknown as Record<string, unknown>, 'previous')),
+    ];
+  }
+
   const result = await db.execute({
     sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 5`,
     args: [],
@@ -450,6 +512,54 @@ export async function fetchSystemSummary(): Promise<string> {
   ].join('\n');
 }
 
+function buildTemporalComparisons(
+  sqlEvents: Array<EventRow & { score: number; source: 'sql'; period?: TemporalPeriod }>,
+): TemporalComparison[] {
+  const currentEvents = sqlEvents.filter((e) => e.period === 'current');
+  const previousEvents = sqlEvents.filter((e) => e.period === 'previous');
+
+  const dimensions = new Set<string>();
+  for (const e of sqlEvents) {
+    dimensions.add(`provider:${e.provider_type}`);
+    dimensions.add(`entity:${e.entity_type}`);
+    dimensions.add(`event:${e.event_type}`);
+  }
+
+  const comparisons: TemporalComparison[] = [];
+
+  comparisons.push({
+    dimension: 'total_events',
+    current: currentEvents.length,
+    previous: previousEvents.length,
+    delta: currentEvents.length - previousEvents.length,
+    deltaPercent: previousEvents.length > 0
+      ? Math.round(((currentEvents.length - previousEvents.length) / previousEvents.length) * 100)
+      : null,
+  });
+
+  for (const dim of dimensions) {
+    const [kind, value] = dim.split(':');
+    const filterFn = (e: EventRow) =>
+      kind === 'provider' ? e.provider_type === value
+      : kind === 'entity' ? e.entity_type === value
+      : e.event_type === value;
+
+    const cur = currentEvents.filter(filterFn).length;
+    const prev = previousEvents.filter(filterFn).length;
+    if (cur === 0 && prev === 0) continue;
+
+    comparisons.push({
+      dimension: dim,
+      current: cur,
+      previous: prev,
+      delta: cur - prev,
+      deltaPercent: prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null,
+    });
+  }
+
+  return comparisons;
+}
+
 export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
   const intent = plan.intent;
   const prefersRecency = plan.prefersRecency || intent === 'status_check';
@@ -461,7 +571,8 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   const skipConcept = intent === 'status_check';
   const alwaysEntity = intent === 'lookup';
   const alwaysSql = intent === 'lookup';
-  const forceStats = intent === 'trend' || intent === 'status_check' || intent === 'anomaly';
+  const isComparison = intent === 'comparison' && Boolean(plan.compareWindow);
+  const forceStats = intent === 'trend' || intent === 'status_check' || intent === 'anomaly' || isComparison;
   const shouldGraph = intent === 'narrative' || intent === 'lookup' || intent === 'anomaly';
 
   const emptyVector = [] as Array<EventRow & { score: number; source: 'vector' }>;
@@ -472,11 +583,11 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     skipVector ? Promise.resolve(emptyVector) : vectorLane(queryEmbedding),
     ftsLane(plan.queryTerms),
-    (plan.requiresSqlFacts || alwaysSql) ? sqlLane(plan) : Promise.resolve(emptySql),
+    (plan.requiresSqlFacts || alwaysSql || isComparison) ? sqlLane(plan) : Promise.resolve(emptySql),
     shouldRunRecentLane ? recentLane(plan) : Promise.resolve(emptySql),
     (alwaysEntity || plan.queryTerms.length > 0) ? entityLane(plan) : Promise.resolve([] as Array<EventRow & { score: number; source: 'entity'; entity_names: string[] }>),
     skipConcept ? Promise.resolve(emptyConcept) : conceptLane(plan),
-    (plan.requiresStats || forceStats) ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
+    (plan.requiresStats || forceStats) ? statsLane(plan) : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
   const seedEntityIds = await extractSeedEntityIds(entityEvents);
@@ -489,7 +600,11 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     events = (await recentLane(plan)).map((event) => ({ ...event, lanes: ['sql' as const] }));
   }
 
-  return { events, stats };
+  const comparisons = isComparison
+    ? buildTemporalComparisons(sqlEvents)
+    : [];
+
+  return { events, stats, comparisons };
 }
 
 async function extractSeedEntityIds(

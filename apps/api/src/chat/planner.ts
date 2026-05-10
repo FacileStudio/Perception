@@ -5,6 +5,7 @@ import { getEffectiveSetting } from '../db/settings';
 export type QueryPlan = {
   intent: 'lookup' | 'trend' | 'status_check' | 'comparison' | 'anomaly' | 'narrative';
   timeWindow: { from: string; to: string } | null;
+  compareWindow: { from: string; to: string } | null;
   providerFilters: string[];
   entityHints: string[];
   queryTerms: string[];
@@ -32,6 +33,7 @@ Output a single JSON object — no markdown, no code fences, no explanation:
   "providerFilters": string[],
   "entityHints": string[],
   "timeWindow": { "from": "ISO8601", "to": "ISO8601" } | null,
+  "compareWindow": { "from": "ISO8601", "to": "ISO8601" } | null,
   "requiresSqlFacts": boolean,
   "requiresStats": boolean,
   "prefersRecency": boolean,
@@ -51,6 +53,11 @@ Field rules:
 - entityHints: entity types relevant to the query. Empty array = no filter.
   Use ["email"] alongside providerFilters: ["imap"] for personal communication queries.
 - timeWindow: only set if the message explicitly references a time period. Use the current datetime to compute ISO 8601 from/to values (e.g. "today", "this week", "last 7 days"). Null otherwise.
+- compareWindow: only set when intent is "comparison" and the user references a previous period to compare against.
+  timeWindow = the current/recent period, compareWindow = the earlier/baseline period.
+  Example: "how did deploys change this week vs last week?" → timeWindow = this week, compareWindow = last week.
+  Example: "compare March to April" → timeWindow = April, compareWindow = March.
+  Null when there is no explicit second time reference.
 - requiresSqlFacts: true if asking for exact counts, lists, or enumerations.
 - requiresStats: true if asking for trends, summaries, cadence, or health metrics.
 - prefersRecency: true if asking about recent, latest, or new activity.
@@ -68,6 +75,7 @@ function fallbackPlan(message: string): QueryPlan {
   return {
     intent: 'narrative',
     timeWindow: null,
+    compareWindow: null,
     providerFilters: [],
     entityHints: [],
     queryTerms: [],
@@ -104,9 +112,14 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
     const validIntents = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative'] as const;
     const intent = validIntents.includes(raw.intent) ? raw.intent : 'narrative';
 
+    const compareWindow = intent === 'comparison' && raw.compareWindow && typeof raw.compareWindow === 'object'
+      ? raw.compareWindow
+      : null;
+
     return {
       intent,
       timeWindow: raw.timeWindow && typeof raw.timeWindow === 'object' ? raw.timeWindow : null,
+      compareWindow,
       providerFilters: Array.isArray(raw.providerFilters) ? raw.providerFilters : [],
       entityHints: Array.isArray(raw.entityHints) ? raw.entityHints : [],
       queryTerms: Array.isArray(raw.queryTerms) ? raw.queryTerms : [],

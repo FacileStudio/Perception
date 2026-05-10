@@ -88,10 +88,10 @@ Build the entity graph, temporal comparison, and proactive alerting.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 2.1 | Cross-entity relationship graph | High | — |
+| [x] | 2.1 | Cross-entity relationship graph | High | — |
 | [ ] | 2.2 | Proactive digests | Medium | 1.2 |
-| [ ] | 2.3 | Self-correcting retrieval (Corrective RAG) | Medium | 1.2, 1.5 |
-| [ ] | 2.4 | Temporal diff queries | Medium | 1.2 |
+| [x] | 2.3 | Self-correcting retrieval (Corrective RAG) | Medium | 1.2, 1.5 |
+| [x] | 2.4 | Temporal diff queries | Medium | 1.2 |
 
 ---
 
@@ -99,9 +99,9 @@ Build the entity graph, temporal comparison, and proactive alerting.
 
 `entity_relations` already exists (migration 003). Current population: rule-based capability matching during ingest (10+ rules). What's missing: post-hoc inference and graph traversal at query time.
 
-- [ ] Batch worker: find entities sharing names/IDs across providers, create relations with `source = 'name_similarity'` or `source = 'shared_external_id'`
-- [ ] Graph traversal lane in `retrieve.ts`: given an entity match, walk 1-2 hops in `entity_relations`, pull all connected entity events
-- [ ] Wire traversal lane to `intent = 'narrative'` when a single entity is detected in the query plan
+- [x] Batch worker: find entities sharing names/IDs across providers, create relations with `source = 'name_similarity'` or `source = 'shared_external_id'`
+- [x] Graph traversal lane in `retrieve.ts`: given an entity match, walk 1-2 hops in `entity_relations`, pull all connected entity events
+- [x] Wire traversal lane to `intent = 'narrative'` when a single entity is detected in the query plan
 - [ ] Validate: "What is the full picture of client Acme?" returns events from CRM + contracts + tasks + deploys
 
 ---
@@ -120,20 +120,20 @@ Build the entity graph, temporal comparison, and proactive alerting.
 
 ### 2.3 Self-Correcting Retrieval (Corrective RAG)
 
-- [ ] Context quality scorer: takes `RetrievalResult`, returns confidence score (avg event quality + score distribution + lane diversity + entity coverage ratio)
-- [ ] Re-plan logic: if score below threshold, generate relaxed `QueryPlan` (drop provider filters, widen time window 2x, force `requiresSqlFacts: true`)
-- [ ] Wrap `retrieveContext` in corrective shell in `retrieve.ts` — one retry max
-- [ ] When correction triggered, prepend note to answer: "Context was sparse — widened search."
+- [x] Context quality scorer: takes `RetrievalResult`, returns confidence score (avg event quality + score distribution + lane diversity + entity coverage ratio)
+- [x] Re-plan logic: if score below threshold, generate relaxed `QueryPlan` (drop provider filters, widen time window 2x, force `requiresSqlFacts: true`)
+- [x] Wrap `retrieveContext` in corrective shell in `retrieve.ts` — one retry max
+- [x] When correction triggered, prepend note to answer: "Context was sparse — widened search."
 
 ---
 
 ### 2.4 Temporal Diff Queries
 
-- [ ] Add optional `compareWindow: { from, to }` to `QueryPlan` type
-- [ ] `sqlLane`: accept two windows, return delta-annotated results
-- [ ] `statsLane`: accept two windows, return delta-annotated results
-- [ ] Prompt builder: surface deltas as `[COMPARISON current=... previous=... delta=...]` block
-- [ ] Planner: populate `compareWindow` when `intent = 'comparison'` and user specifies two time references
+- [x] Add optional `compareWindow: { from, to }` to `QueryPlan` type
+- [x] `sqlLane`: accept two windows, return delta-annotated results
+- [x] `statsLane`: accept two windows, return delta-annotated results
+- [x] Prompt builder: surface deltas as `[COMPARISON current=... previous=... delta=...]` block
+- [x] Planner: populate `compareWindow` when `intent = 'comparison'` and user specifies two time references
 
 ---
 

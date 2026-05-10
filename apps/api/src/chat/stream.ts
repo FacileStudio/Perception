@@ -57,7 +57,7 @@ export function streamChat(
   context: RetrievalResult,
   corrected = false,
 ): ReadableStream {
-  let contextBlock = buildContextBlock(context.events, context.stats);
+  let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons);
   if (corrected) {
     contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
   }

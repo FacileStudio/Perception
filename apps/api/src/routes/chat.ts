@@ -292,7 +292,7 @@ chatRoutes.post('/', async (c) => {
     embedQuery(body.message).catch(() => [] as number[]),
   ]);
 
-  let context: RetrievalResult = { events: [], stats: [] };
+  let context: RetrievalResult = { events: [], stats: [], comparisons: [] };
   let corrected = false;
   if (plan.requiresRetrieval) {
     const result = await retrieveWithCorrection(plan, queryEmbedding);
