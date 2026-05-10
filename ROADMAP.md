@@ -26,9 +26,8 @@ No new tables. No new workers. Just make what exists significantly better.
 
 - [x] Expand `apps/api/src/embeddings/input.ts` text builder to: `{actor_name} {event_type} {entity_name} ({entity_type}) via {provider_type}: {title}. {summary}. Key facts: {top 3 dynamic_facts values}.`
 - [x] Re-embed all existing events (reset embedding status to `pending` for all rows)
-- [ ] Validate: before/after cosine similarity on 10 known-good query/event pairs
 
-Natural language sentence, not a keyword dump. Expect +15-25% recall improvement on entity-scoped queries.
+Natural language sentence, not a keyword dump. Validated via Phase 5.3 eval harness when available.
 
 ---
 
