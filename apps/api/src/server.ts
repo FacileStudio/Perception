@@ -67,6 +67,9 @@ const { notificationWorker } = await import('./notifications/worker');
 const { communityWorker } = await import('./communities/worker');
 const { narrativeWorker } = await import('./narratives/worker');
 const { memoryWorker } = await import('./memory/worker');
+const { changePointWorker } = await import('./math/change-points-worker');
+const { graphHealthWorker } = await import('./math/graph-health-worker');
+const { conceptDriftWorker } = await import('./math/concept-drift-worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -76,6 +79,9 @@ registerWorker({ name: 'notifications', description: 'Evaluates anomalies and ge
 registerWorker({ name: 'communities', description: 'Detects entity communities and generates summaries', intervalMs: 6 * 60 * 60 * 1000, run: communityWorker.run });
 registerWorker({ name: 'narratives', description: 'Generates per-entity operational narratives', intervalMs: 6 * 60 * 60 * 1000, run: narrativeWorker.run });
 registerWorker({ name: 'memory', description: 'Extracts durable memory episodes from idle sessions', intervalMs: 6 * 60 * 60 * 1000, run: memoryWorker.run });
+registerWorker({ name: 'change-points', description: 'Detects regime changes via BOCPD on entity event series', intervalMs: 12 * 60 * 60 * 1000, run: changePointWorker.run });
+registerWorker({ name: 'graph-health', description: 'Computes graph entropy and connectivity health metrics', intervalMs: 7 * 24 * 60 * 60 * 1000, run: graphHealthWorker.run });
+registerWorker({ name: 'concept-drift', description: 'Detects distribution drift per provider and invalidates schemas', intervalMs: 24 * 60 * 60 * 1000, run: conceptDriftWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -85,6 +91,9 @@ scheduleWorker('notifications', 120_000);
 scheduleWorker('communities', 180_000);
 scheduleWorker('narratives', 240_000);
 scheduleWorker('memory', 300_000);
+scheduleWorker('change-points', 360_000);
+scheduleWorker('graph-health', 420_000);
+scheduleWorker('concept-drift', 480_000);
 
 export default {
   port: config.port,

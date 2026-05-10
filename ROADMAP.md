@@ -201,10 +201,10 @@ Pure math. No LLM calls. No token cost. Deterministic, testable, fast.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 4.1 | BOCPD change point detection | Medium | — |
+| [x] | 4.1 | BOCPD change point detection | Medium | — |
 | [ ] | 4.2 | Granger causality on event series | Medium | 4.1 |
-| [ ] | 4.3 | Graph entropy health score | Low | 2.1 |
-| [ ] | 4.4 | Concept drift tracking | Medium | — |
+| [x] | 4.3 | Graph entropy health score | Low | 2.1 |
+| [x] | 4.4 | Concept drift tracking | Medium | — |
 
 Note: 4.1 and 4.4 can be built in parallel with Phase 2/3 — no dependencies on the graph or synthesis work.
 
@@ -214,10 +214,10 @@ Note: 4.1 and 4.4 can be built in parallel with Phase 2/3 — no dependencies on
 
 BOCPD (Adams & MacKay, 2007): maintains a posterior over run-length at every observation. When run-length probability collapses to near-zero, a regime change is detected. Gaussian conjugate prior over inter-arrival times — self-contained TS implementation, no external library.
 
-- [ ] Implement BOCPD in TypeScript: running sufficient statistics per entity, conjugate Gaussian update
-- [ ] `change_points` table: `id`, `entity_id`, `provider_type`, `detected_at`, `run_length_probability`, `pre_mean`, `post_mean`
-- [ ] Migration for `change_points`
-- [ ] Worker: update BOCPD state per active entity on every ingest
+- [x] Implement BOCPD in TypeScript: running sufficient statistics per entity, conjugate Gaussian update
+- [x] `change_points` table: `id`, `entity_id`, `provider_type`, `detected_at`, `run_length_probability`, `pre_mean`, `post_mean`
+- [x] Migration for `change_points`
+- [x] Worker: update BOCPD state per active entity on every ingest
 - [ ] Trigger: change point above threshold → emit `perception.change_point` internal event → proactive digest (2.2) picks it up
 - [ ] Replace hardcoded 2σ threshold in proactive digests with BOCPD signal
 
@@ -239,11 +239,11 @@ Granger causality: time series X Granger-causes Y if past values of X improve fo
 
 ### 4.3 Graph Entropy Health Score
 
-- [ ] `graph_health_snapshots` table: `id`, `computed_at`, `node_count`, `edge_count`, `degree_entropy`, `isolated_node_ratio`, `largest_component_ratio`
-- [ ] Migration for `graph_health_snapshots`
-- [ ] Weekly worker: compute degree distribution entropy (`H = -Sigma p(k) log p(k)`) over `entity_relations`
-- [ ] Dark zone detector: entities with 0 relationships and > N events from same provider → flagged as isolated
-- [ ] Surface in `GET /stats` response alongside existing snapshots
+- [x] `graph_health_snapshots` table: `id`, `computed_at`, `node_count`, `edge_count`, `degree_entropy`, `isolated_node_ratio`, `largest_component_ratio`
+- [x] Migration for `graph_health_snapshots`
+- [x] Weekly worker: compute degree distribution entropy (`H = -Sigma p(k) log p(k)`) over `entity_relations`
+- [x] Dark zone detector: entities with 0 relationships and > N events from same provider → flagged as isolated
+- [x] Surface in `GET /stats` response alongside existing snapshots
 - [ ] Admin UI: "knowledge gaps" section showing isolated entity list
 
 ---
@@ -252,11 +252,11 @@ Granger causality: time series X Granger-causes Y if past values of X improve fo
 
 ADWIN (Adaptive Windowing): per provider + event type pair, maintain sliding window distribution of field values. When distribution shifts significantly → drift alert.
 
-- [ ] Implement ADWIN in TypeScript: sliding window, per-field value distribution tracking
-- [ ] `concept_drift_alerts` table: `id`, `provider_type`, `field_name`, `detected_at`, `old_distribution` (JSON), `new_distribution` (JSON), `drift_score`
-- [ ] Migration for `concept_drift_alerts`
-- [ ] Worker: evaluate per provider+event_type pair on every ingest batch
-- [ ] On significant drift: set `provider_schemas.confirmed_at = null`, queue schema re-inference job
+- [x] Implement ADWIN in TypeScript: sliding window, per-field value distribution tracking
+- [x] `concept_drift_alerts` table: `id`, `provider_type`, `field_name`, `detected_at`, `old_distribution` (JSON), `new_distribution` (JSON), `drift_score`
+- [x] Migration for `concept_drift_alerts`
+- [x] Worker: evaluate per provider+event_type pair on every ingest batch
+- [x] On significant drift: set `provider_schemas.confirmed_at = null`, queue schema re-inference job
 - [ ] Admin UI: drift alerts surfaced with "review ontology" link to affected provider schema
 
 ---

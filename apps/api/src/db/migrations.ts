@@ -241,6 +241,51 @@ CREATE INDEX IF NOT EXISTS memory_episodes_session_idx ON memory_episodes(sessio
 CREATE INDEX IF NOT EXISTS memory_episodes_status_idx ON memory_episodes(embedding_status)
       `,
     },
+    {
+      name: '012_change_points',
+      sql: `
+CREATE TABLE IF NOT EXISTS change_points (
+  id TEXT PRIMARY KEY,
+  entity_id TEXT NOT NULL,
+  provider_type TEXT NOT NULL,
+  detected_at TEXT NOT NULL,
+  run_length_probability REAL NOT NULL,
+  pre_mean REAL NOT NULL,
+  post_mean REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS change_points_entity_idx ON change_points(entity_id, detected_at DESC)
+      `,
+    },
+    {
+      name: '013_graph_health_snapshots',
+      sql: `
+CREATE TABLE IF NOT EXISTS graph_health_snapshots (
+  id TEXT PRIMARY KEY,
+  computed_at TEXT NOT NULL,
+  node_count INTEGER NOT NULL,
+  edge_count INTEGER NOT NULL,
+  degree_entropy REAL NOT NULL,
+  isolated_node_ratio REAL NOT NULL,
+  largest_component_ratio REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS graph_health_computed_idx ON graph_health_snapshots(computed_at DESC)
+      `,
+    },
+    {
+      name: '014_concept_drift_alerts',
+      sql: `
+CREATE TABLE IF NOT EXISTS concept_drift_alerts (
+  id TEXT PRIMARY KEY,
+  provider_type TEXT NOT NULL,
+  field_name TEXT NOT NULL,
+  detected_at TEXT NOT NULL,
+  old_distribution TEXT NOT NULL,
+  new_distribution TEXT NOT NULL,
+  drift_score REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS concept_drift_provider_idx ON concept_drift_alerts(provider_type, detected_at DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {
