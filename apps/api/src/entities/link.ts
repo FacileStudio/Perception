@@ -31,7 +31,7 @@ const RULES: RelationRule[] = [
 
 const NAME_SIMILARITY_THRESHOLD = 0.5;
 
-function tokenSimilarity(a: string, b: string): number {
+export function tokenSimilarity(a: string, b: string): number {
   const tok = (s: string) =>
     new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter((t) => t.length > 2));
   const tokA = tok(a);

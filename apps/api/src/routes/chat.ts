@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { db } from '../db/client';
 import { requireSession } from '../security/session';
 import { buildQueryPlan } from '../chat/planner';
-import { retrieveContext } from '../chat/retrieve';
+import { retrieveWithCorrection } from '../chat/retrieve';
 import type { RetrievalResult } from '../chat/retrieve';
 import { streamChat } from '../chat/stream';
 import { embedQuery } from '../embeddings/voyage';
@@ -293,10 +293,13 @@ chatRoutes.post('/', async (c) => {
   ]);
 
   let context: RetrievalResult = { events: [], stats: [] };
+  let corrected = false;
   if (plan.requiresRetrieval) {
-    context = await retrieveContext(plan, queryEmbedding);
+    const result = await retrieveWithCorrection(plan, queryEmbedding);
+    context = result;
+    corrected = result.corrected;
   }
-  const stream = streamChat(sessionId, body.message, plan, context);
+  const stream = streamChat(sessionId, body.message, plan, context, corrected);
 
   return new Response(stream, {
     headers: {

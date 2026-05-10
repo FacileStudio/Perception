@@ -10,7 +10,7 @@ export type RetrievalResult = {
   stats: StatsSnapshot[];
 };
 
-type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept';
+export type RetrievalSource = 'vector' | 'fts' | 'sql' | 'stats' | 'entity' | 'concept' | 'graph';
 
 async function vectorLane(queryEmbedding: number[]): Promise<Array<EventRow & { score: number; source: 'vector' }>> {
   try {
@@ -149,6 +149,42 @@ async function entityLane(plan: QueryPlan): Promise<Array<EventRow & { score: nu
   }
 }
 
+async function graphLane(
+  seedEntityIds: string[],
+): Promise<Array<EventRow & { score: number; source: 'graph'; entity_names: string[] }>> {
+  if (seedEntityIds.length === 0) return [];
+
+  try {
+    const placeholders = seedEntityIds.map(() => '?').join(',');
+    const result = await db.execute({
+      sql: `SELECT e.*, ent.canonical_name AS matched_entity_name,
+              max(er.confidence) AS relation_confidence
+            FROM entity_relations er
+            JOIN event_entities ee ON ee.entity_id = er.to_entity_id
+            JOIN events e ON e.id = ee.event_id
+            JOIN entities ent ON ent.id = er.to_entity_id
+            WHERE er.from_entity_id IN (${placeholders})
+              AND er.to_entity_id NOT IN (${placeholders})
+            GROUP BY e.id
+            ORDER BY relation_confidence DESC, ${EVENT_LIST_ORDER_BY}
+            LIMIT 20`,
+      args: [...seedEntityIds, ...seedEntityIds],
+    });
+
+    return result.rows.map((r) => {
+      const relConf = typeof r.relation_confidence === 'number' ? r.relation_confidence : 0.5;
+      return {
+        ...rowToEvent(r as unknown as Record<string, unknown>),
+        score: relConf,
+        source: 'graph' as const,
+        entity_names: typeof r.matched_entity_name === 'string' ? [r.matched_entity_name] : [],
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 async function conceptLane(plan: QueryPlan): Promise<Array<EventRow & { score: number; source: 'concept'; concepts: string[] }>> {
   const conditions: string[] = [];
   const args: InValue[] = [];
@@ -212,12 +248,12 @@ async function statsLane(): Promise<StatsSnapshot[]> {
 }
 
 const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
-  lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0 },
-  trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0 },
-  status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0 },
-  comparison:   { entity: 0.3, fts: 0.2, concept: 0.2, sql: 0.6, vector: 0.1, stats: 0 },
-  anomaly:      { entity: 0.5, fts: 0.2, concept: 0.3, sql: 0.5, vector: 0.15, stats: 0 },
-  narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0 },
+  lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0, graph: 0.35 },
+  trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0, graph: 0.1 },
+  status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0, graph: 0.2 },
+  comparison:   { entity: 0.3, fts: 0.2, concept: 0.2, sql: 0.6, vector: 0.1, stats: 0, graph: 0.15 },
+  anomaly:      { entity: 0.5, fts: 0.2, concept: 0.3, sql: 0.5, vector: 0.15, stats: 0, graph: 0.25 },
+  narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0, graph: 0.5 },
 };
 
 function mergeAndRank(
@@ -253,6 +289,7 @@ function mergeAndRank(
     if (plan.entityHints.some((e) => event.entity_type === e)) bonus += 0.3;
     if (event.lanes.includes('entity')) bonus += 0.45;
     if (event.lanes.includes('concept')) bonus += 0.3;
+    if (event.lanes.includes('graph')) bonus += 0.35;
     if (event.quality === 'complete') bonus += 0.25;
     if (event.quality === 'partial') bonus += 0.1;
     if (plan.timeWindow) {
@@ -265,6 +302,125 @@ function mergeAndRank(
 
   ranked.sort((a, b) => b.score - a.score);
   return ranked.slice(0, 25);
+}
+
+export type ContextConfidence = {
+  score: number;
+  verdict: 'correct' | 'ambiguous' | 'incorrect';
+  details: {
+    qualityScore: number;
+    scoreSpread: number;
+    laneDiversity: number;
+    entityCoverage: number;
+    eventCount: number;
+  };
+};
+
+const CONFIDENCE_CORRECT = 0.6;
+const CONFIDENCE_AMBIGUOUS = 0.35;
+
+export function scoreContextQuality(result: RetrievalResult, plan: QueryPlan): ContextConfidence {
+  const events = result.events;
+  const eventCount = events.length;
+
+  if (eventCount === 0) {
+    return {
+      score: 0,
+      verdict: 'incorrect',
+      details: { qualityScore: 0, scoreSpread: 0, laneDiversity: 0, entityCoverage: 0, eventCount: 0 },
+    };
+  }
+
+  const qualityMap = { complete: 1, partial: 0.6, degraded: 0.2 };
+  const qualityScore = events.reduce((sum, e) => sum + (qualityMap[e.quality] ?? 0.2), 0) / eventCount;
+
+  const scores = events.map((e) => e.score);
+  const maxScore = Math.max(...scores);
+  const minScore = Math.min(...scores);
+  const scoreSpread = maxScore > 0 ? 1 - (maxScore - minScore) / maxScore : 0;
+
+  const allLanes = new Set<string>();
+  for (const e of events) {
+    if ('lanes' in e && Array.isArray(e.lanes)) {
+      for (const l of e.lanes) allLanes.add(l);
+    }
+  }
+  const activeLaneCount = allLanes.size;
+  const expectedLanes = plan.intent === 'trend' ? 2 : plan.intent === 'lookup' ? 3 : 4;
+  const laneDiversity = Math.min(1, activeLaneCount / expectedLanes);
+
+  const hintCount = plan.entityHints.length + plan.providerFilters.length;
+  let entityCoverage = 1;
+  if (hintCount > 0) {
+    const matchedHints = new Set<string>();
+    for (const e of events) {
+      if (plan.providerFilters.includes(e.provider_type)) matchedHints.add(e.provider_type);
+      if (plan.entityHints.includes(e.entity_type)) matchedHints.add(e.entity_type);
+    }
+    entityCoverage = matchedHints.size / hintCount;
+  }
+
+  const countBonus = Math.min(1, eventCount / 5);
+
+  const score =
+    qualityScore * 0.25 +
+    scoreSpread * 0.1 +
+    laneDiversity * 0.25 +
+    entityCoverage * 0.25 +
+    countBonus * 0.15;
+
+  const verdict: ContextConfidence['verdict'] =
+    score >= CONFIDENCE_CORRECT ? 'correct'
+    : score >= CONFIDENCE_AMBIGUOUS ? 'ambiguous'
+    : 'incorrect';
+
+  return {
+    score,
+    verdict,
+    details: { qualityScore, scoreSpread, laneDiversity, entityCoverage, eventCount },
+  };
+}
+
+function relaxPlan(plan: QueryPlan): QueryPlan {
+  const relaxed = { ...plan };
+
+  relaxed.providerFilters = [];
+
+  if (relaxed.timeWindow) {
+    const from = new Date(relaxed.timeWindow.from);
+    const to = new Date(relaxed.timeWindow.to);
+    const span = to.getTime() - from.getTime();
+    relaxed.timeWindow = {
+      from: new Date(from.getTime() - span).toISOString(),
+      to: relaxed.timeWindow.to,
+    };
+  }
+
+  relaxed.requiresSqlFacts = true;
+
+  return relaxed;
+}
+
+export async function retrieveWithCorrection(
+  plan: QueryPlan,
+  queryEmbedding: number[],
+): Promise<RetrievalResult & { corrected: boolean; confidence: ContextConfidence }> {
+  const initial = await retrieveContext(plan, queryEmbedding);
+  const confidence = scoreContextQuality(initial, plan);
+
+  if (confidence.verdict === 'correct') {
+    return { ...initial, corrected: false, confidence };
+  }
+
+  const relaxed = relaxPlan(plan);
+  const retry = await retrieveContext(relaxed, queryEmbedding);
+  const retryConfidence = scoreContextQuality(retry, relaxed);
+
+  if (retryConfidence.score > confidence.score) {
+    return { ...retry, corrected: true, confidence: retryConfidence };
+  }
+
+  return { ...initial, corrected: false, confidence };
 }
 
 export async function fetchSystemSummary(): Promise<string> {
@@ -306,10 +462,12 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
   const alwaysEntity = intent === 'lookup';
   const alwaysSql = intent === 'lookup';
   const forceStats = intent === 'trend' || intent === 'status_check' || intent === 'anomaly';
+  const shouldGraph = intent === 'narrative' || intent === 'lookup' || intent === 'anomaly';
 
   const emptyVector = [] as Array<EventRow & { score: number; source: 'vector' }>;
   const emptySql = [] as Array<EventRow & { score: number; source: 'sql' }>;
   const emptyConcept = [] as Array<EventRow & { score: number; source: 'concept'; concepts: string[] }>;
+  const emptyGraph = [] as Array<EventRow & { score: number; source: 'graph'; entity_names: string[] }>;
 
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     skipVector ? Promise.resolve(emptyVector) : vectorLane(queryEmbedding),
@@ -321,10 +479,34 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     (plan.requiresStats || forceStats) ? statsLane() : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
-  let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents], plan);
+  const seedEntityIds = await extractSeedEntityIds(entityEvents);
+  const graphEvents = shouldGraph && seedEntityIds.length > 0
+    ? await graphLane(seedEntityIds)
+    : emptyGraph;
+
+  let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan);
   if (events.length === 0) {
     events = (await recentLane(plan)).map((event) => ({ ...event, lanes: ['sql' as const] }));
   }
 
   return { events, stats };
+}
+
+async function extractSeedEntityIds(
+  entityEvents: Array<EventRow & { score: number; source: 'entity'; entity_names: string[] }>,
+): Promise<string[]> {
+  if (entityEvents.length === 0) return [];
+
+  const names = new Set<string>();
+  for (const e of entityEvents) {
+    for (const name of e.entity_names) names.add(name);
+  }
+  if (names.size === 0) return [];
+
+  const nameClauses = Array.from(names).map(() => 'canonical_name = ?').join(' OR ');
+  const result = await db.execute({
+    sql: `SELECT id FROM entities WHERE ${nameClauses} LIMIT 10`,
+    args: Array.from(names),
+  });
+  return result.rows.map((r) => r.id as string);
 }

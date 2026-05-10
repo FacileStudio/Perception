@@ -151,6 +151,10 @@ CREATE TABLE IF NOT EXISTS entity_relations (
   PRIMARY KEY (from_entity_id, to_entity_id, relation_concept_id)
 );
 
+CREATE INDEX IF NOT EXISTS entity_relations_from_idx ON entity_relations(from_entity_id);
+CREATE INDEX IF NOT EXISTS entity_relations_to_idx ON entity_relations(to_entity_id);
+CREATE INDEX IF NOT EXISTS entity_relations_source_idx ON entity_relations(source);
+
 CREATE TABLE IF NOT EXISTS provider_schemas (
   id TEXT PRIMARY KEY,
   provider_type TEXT NOT NULL,

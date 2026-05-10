@@ -152,6 +152,14 @@ ALTER TABLE sessions ADD COLUMN user_id TEXT
       name: '005_chat_feedback',
       sql: `ALTER TABLE chat_messages ADD COLUMN feedback TEXT CHECK(feedback IN ('up','down'))`,
     },
+    {
+      name: '006_entity_relations_indexes',
+      sql: `
+CREATE INDEX IF NOT EXISTS entity_relations_from_idx ON entity_relations(from_entity_id);
+CREATE INDEX IF NOT EXISTS entity_relations_to_idx ON entity_relations(to_entity_id);
+CREATE INDEX IF NOT EXISTS entity_relations_source_idx ON entity_relations(source)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

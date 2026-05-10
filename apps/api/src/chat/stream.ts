@@ -55,8 +55,12 @@ export function streamChat(
   message: string,
   plan: QueryPlan,
   context: RetrievalResult,
+  corrected = false,
 ): ReadableStream {
-  const contextBlock = buildContextBlock(context.events, context.stats);
+  let contextBlock = buildContextBlock(context.events, context.stats);
+  if (corrected) {
+    contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
+  }
   const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
   const signalEvents = context.events.filter((e) => e.lanes.some((l) => l !== 'sql'));
