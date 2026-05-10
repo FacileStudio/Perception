@@ -15,6 +15,7 @@
     "@ai-sdk/anthropic": "^1.2.12",
     "@libsql/client": "^0.14.0",
     "ai": "^4.3.16",
+    "email-reply-parser": "^2.3.5",
     "hono": "^4.7.9",
     "jose": "^6.2.3",
     "simple-statistics": "^7.8.8"

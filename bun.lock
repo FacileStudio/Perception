@@ -12,6 +12,7 @@
         "@ai-sdk/anthropic": "^1.2.12",
         "@libsql/client": "^0.14.0",
         "ai": "^4.3.16",
+        "email-reply-parser": "^2.3.5",
         "hono": "^4.7.9",
         "jose": "^6.2.3",
         "simple-statistics": "^7.8.8",
@@ -326,6 +327,8 @@
     "devalue": ["devalue@5.8.0", "", {}, "sha512-2zA9pFEsnp7vWBZbXF5JAgAq0fsUIt/1XPbRiAmRV3lp/2C3upzH+sADiyy66aFCihoLEsrQHxNM5w1gIDfsBg=="],
 
     "diff-match-patch": ["diff-match-patch@1.0.5", "", {}, "sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw=="],
+
+    "email-reply-parser": ["email-reply-parser@2.3.5", "", { "peerDependencies": { "re2": "1.22.1" }, "optionalPeers": ["re2"] }, "sha512-0giLt6y7TKHrd+X1jxblFiDqGeeQmXalGLBkqjyBBl9O0gT19r2da2zMqNa1wHs3uoMZVesjNPny8+g0YtI5fw=="],
 
     "enhanced-resolve": ["enhanced-resolve@5.21.2", "", { "dependencies": { "graceful-fs": "^4.2.4", "tapable": "^2.3.3" } }, "sha512-xe9vQb5kReirPUxgQrXA3ihgbCqssmTiM7cOZ+Gzu+VeGWgpV98lLZvp0dl4yriyAePcewxGUs9UpKD8PET9KQ=="],
 

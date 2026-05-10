@@ -1,19 +1,18 @@
+import EmailReplyParser from 'email-reply-parser';
 import { hashEmail } from './redact';
 
 const EMAIL_RE = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g;
+const parser = new EmailReplyParser();
 
 export function extractEmailExcerpt(text: string): string {
-  let lines = text.split('\n');
+  let cleaned = parser.parseReply(text);
 
-  lines = lines.filter(line => !line.trimStart().startsWith('>'));
-
-  const sigIndex = lines.findIndex(line => /^--\s?$/.test(line));
+  const sigIndex = cleaned.split('\n').findIndex(line => /^--\s?$/.test(line));
   if (sigIndex !== -1) {
-    lines = lines.slice(0, sigIndex);
+    cleaned = cleaned.split('\n').slice(0, sigIndex).join('\n');
   }
 
-  let cleaned = lines.join('\n').trim();
-
+  cleaned = cleaned.trim();
   cleaned = cleaned.replace(EMAIL_RE, (match) => hashEmail(match));
 
   if (cleaned.length > 500) {
