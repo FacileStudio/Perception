@@ -2,14 +2,7 @@ import { randomUUID } from 'crypto';
 import * as ss from 'simple-statistics';
 import { db } from '../db/client';
 import type { StatsSnapshot } from '../types';
-
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function daysAgoIso(days: number): string {
-  return new Date(Date.now() - days * 86400000).toISOString();
-}
+import { nowIso, daysAgoIso } from '../lib/time';
 
 async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);

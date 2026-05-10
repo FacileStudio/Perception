@@ -1,4 +1,5 @@
 import { db } from '../db/client';
+import { daysAgoIso } from '../lib/time';
 
 export type AnomalyAlert = {
   type: string;
@@ -9,10 +10,6 @@ export type AnomalyAlert = {
   entity_name?: string;
   metadata: Record<string, unknown>;
 };
-
-function daysAgoIso(days: number): string {
-  return new Date(Date.now() - days * 86400000).toISOString();
-}
 
 export async function detectEntityVelocitySpikes(): Promise<AnomalyAlert[]> {
   const alerts: AnomalyAlert[] = [];
