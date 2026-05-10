@@ -212,12 +212,48 @@ export async function detectActorAbsence(): Promise<AnomalyAlert[]> {
   return alerts;
 }
 
+export async function detectChangePoints(): Promise<AnomalyAlert[]> {
+  const alerts: AnomalyAlert[] = [];
+  const oneDayAgo = daysAgoIso(1);
+
+  const result = await db.execute({
+    sql: `SELECT cp.entity_id, cp.pre_mean, cp.post_mean, cp.run_length_probability,
+                 e.canonical_name
+          FROM change_points cp
+          JOIN entities e ON e.id = cp.entity_id
+          WHERE cp.detected_at > ?
+          ORDER BY cp.detected_at DESC`,
+    args: [oneDayAgo],
+  });
+
+  for (const row of result.rows) {
+    const name = row.canonical_name as string;
+    const preMean = Number(row.pre_mean);
+    const postMean = Number(row.post_mean);
+    const direction = postMean < preMean ? 'accelerated' : 'slowed down';
+    const severity = Math.abs(postMean - preMean) / Math.max(preMean, 1) > 1 ? 'critical' as const : 'warning' as const;
+
+    alerts.push({
+      type: 'change_point',
+      severity,
+      title: `${name} activity ${direction}`,
+      message: `Regime change detected for ${name}: inter-arrival time shifted from ~${preMean.toFixed(1)}h to ~${postMean.toFixed(1)}h`,
+      entity_id: row.entity_id as string,
+      entity_name: name,
+      metadata: { pre_mean: preMean, post_mean: postMean, probability: row.run_length_probability },
+    });
+  }
+
+  return alerts;
+}
+
 export async function runAllEvaluators(): Promise<AnomalyAlert[]> {
   const results = await Promise.all([
     detectEntityVelocitySpikes().catch(() => []),
     detectServiceHealthDegradation().catch(() => []),
     detectClientSilence().catch(() => []),
     detectActorAbsence().catch(() => []),
+    detectChangePoints().catch(() => []),
   ]);
   return results.flat();
 }

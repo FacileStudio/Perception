@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { api, type WorkerStatus } from '$lib/api';
+  import { api, type WorkerStatus, type GraphHealthSnapshot, type IsolatedEntity, type DriftAlert } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
@@ -105,7 +105,7 @@
     return { label: 'default', icon: 'solar:info-circle-bold-duotone', cls: 'text-zinc-500 bg-zinc-100' };
   }
 
-  onMount(() => { load(); loadEmbeddingStats(); loadWorkers(); });
+  onMount(() => { load(); loadEmbeddingStats(); loadWorkers(); loadGraphHealth(); loadDriftAlerts(); });
   onDestroy(() => {
     if (pollTimer) clearInterval(pollTimer);
     if (workerPollTimer) clearInterval(workerPollTimer);
@@ -248,6 +248,36 @@
     } catch {
     } finally {
       triggeringWorker = null;
+    }
+  }
+
+  let graphHealth = $state<GraphHealthSnapshot | null>(null);
+  let isolatedEntities = $state<IsolatedEntity[]>([]);
+  let driftAlerts = $state<DriftAlert[]>([]);
+  let healthLoading = $state(true);
+  let driftLoading = $state(true);
+
+  async function loadGraphHealth() {
+    try {
+      const res = await api.admin.graphHealth();
+      graphHealth = res.snapshot;
+      isolatedEntities = res.isolated;
+    } catch {
+      graphHealth = null;
+      isolatedEntities = [];
+    } finally {
+      healthLoading = false;
+    }
+  }
+
+  async function loadDriftAlerts() {
+    try {
+      const res = await api.admin.driftAlerts();
+      driftAlerts = res.alerts;
+    } catch {
+      driftAlerts = [];
+    } finally {
+      driftLoading = false;
     }
   }
 </script>
@@ -629,6 +659,115 @@
                       <Icon icon="solar:play-bold-duotone" class="size-3.5" />
                       {triggeringWorker === worker.name ? 'Running…' : 'Run now'}
                     </Button>
+                  </div>
+                </div>
+              {/each}
+            {/if}
+          </Card>
+        </section>
+
+        <section>
+          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Knowledge Graph Health</h2>
+          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100">
+            {#if healthLoading}
+              <div class="px-5 py-8 text-center text-sm text-zinc-400">Loading graph health…</div>
+            {:else if !graphHealth}
+              <div class="px-5 py-8 text-center text-sm text-zinc-400">No graph health data yet. Run the graph-health worker to generate a snapshot.</div>
+            {:else}
+              <div class="px-5 py-4">
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <div>
+                    <p class="text-[11px] text-zinc-400 uppercase tracking-wide">Nodes</p>
+                    <p class="text-lg font-semibold text-zinc-900">{graphHealth.node_count}</p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-zinc-400 uppercase tracking-wide">Edges</p>
+                    <p class="text-lg font-semibold text-zinc-900">{graphHealth.edge_count}</p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-zinc-400 uppercase tracking-wide">Entropy</p>
+                    <p class="text-lg font-semibold text-zinc-900">{graphHealth.degree_entropy.toFixed(2)} <span class="text-xs text-zinc-400">bits</span></p>
+                  </div>
+                  <div>
+                    <p class="text-[11px] text-zinc-400 uppercase tracking-wide">LCC Ratio</p>
+                    <p class="text-lg font-semibold {graphHealth.largest_component_ratio > 0.6 ? 'text-emerald-600' : graphHealth.largest_component_ratio > 0.3 ? 'text-amber-600' : 'text-red-500'}">
+                      {(graphHealth.largest_component_ratio * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-3 flex items-center gap-3">
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                      <span>Isolated entities (dark zones)</span>
+                      <span class="{graphHealth.isolated_node_ratio > 0.3 ? 'text-red-400' : graphHealth.isolated_node_ratio > 0.1 ? 'text-amber-500' : 'text-emerald-500'}">
+                        {(graphHealth.isolated_node_ratio * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100">
+                      <div
+                        class="h-full rounded-full transition-all {graphHealth.isolated_node_ratio > 0.3 ? 'bg-red-400' : graphHealth.isolated_node_ratio > 0.1 ? 'bg-amber-400' : 'bg-emerald-400'}"
+                        style="width: {Math.min(graphHealth.isolated_node_ratio * 100, 100)}%"
+                      ></div>
+                    </div>
+                  </div>
+                  <span class="text-[10px] text-zinc-300">{timeAgo(graphHealth.computed_at)}</span>
+                </div>
+              </div>
+              {#if isolatedEntities.length > 0}
+                <div class="px-5 py-4">
+                  <p class="text-xs font-medium text-zinc-500 mb-2">Isolated entities with events ({isolatedEntities.length})</p>
+                  <div class="max-h-48 overflow-y-auto space-y-1.5">
+                    {#each isolatedEntities as entity}
+                      <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="size-2 rounded-full bg-red-300 shrink-0"></span>
+                          <span class="truncate text-zinc-700">{entity.name}</span>
+                          <span class="shrink-0 text-[10px] text-zinc-400">{entity.type}</span>
+                        </div>
+                        <span class="shrink-0 text-zinc-400">{entity.event_count} events</span>
+                      </div>
+                    {/each}
+                  </div>
+                </div>
+              {/if}
+            {/if}
+          </Card>
+        </section>
+
+        <section>
+          <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">Concept Drift Alerts</h2>
+          <Card class="rounded-[20px] border-zinc-200/80 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-zinc-100">
+            {#if driftLoading}
+              <div class="px-5 py-8 text-center text-sm text-zinc-400">Loading drift alerts…</div>
+            {:else if driftAlerts.length === 0}
+              <div class="px-5 py-8 text-center text-sm text-zinc-400">No drift detected. Schema distributions are stable.</div>
+            {:else}
+              {#each driftAlerts as alert}
+                <div class="px-5 py-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <Icon icon="solar:danger-triangle-bold-duotone" class="size-4 text-amber-500 shrink-0" />
+                        <span class="text-sm font-medium text-zinc-900">{alert.provider_type}</span>
+                        <span class="text-[10px] text-zinc-400">· {alert.field_name}</span>
+                      </div>
+                      <p class="mt-1 text-xs text-zinc-500">
+                        Distribution shifted — drift score: <span class="font-mono font-medium text-amber-600">{alert.drift_score.toFixed(3)}</span>
+                      </p>
+                      <div class="mt-2 flex flex-wrap gap-1">
+                        {#each Object.entries(alert.new_distribution).sort((a, b) => b[1] - a[1]).slice(0, 5) as [key, count]}
+                          {@const oldCount = alert.old_distribution[key] ?? 0}
+                          {@const diff = count - oldCount}
+                          <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] {diff > 0 ? 'bg-emerald-50 text-emerald-700' : diff < 0 ? 'bg-red-50 text-red-600' : 'bg-zinc-100 text-zinc-500'}">
+                            {key}
+                            {#if diff !== 0}
+                              <span class="font-mono">{diff > 0 ? '+' : ''}{diff}</span>
+                            {/if}
+                          </span>
+                        {/each}
+                      </div>
+                    </div>
+                    <span class="shrink-0 text-[10px] text-zinc-400">{timeAgo(alert.detected_at)}</span>
                   </div>
                 </div>
               {/each}

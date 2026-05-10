@@ -84,6 +84,8 @@ export const api = {
     workerHistory: (name: string) => request<{ history: WorkerRun[] }>(`/admin/workers/${name}/history`),
     runWorker: (name: string) => request<{ ok: boolean }>(`/admin/workers/${name}/run`, { method: 'POST' }),
     setWorkersPaused: (paused: boolean) => request<{ ok: boolean; paused: boolean }>('/admin/workers/paused', { method: 'PUT', body: JSON.stringify({ paused }) }),
+    graphHealth: () => request<{ snapshot: GraphHealthSnapshot | null; isolated: IsolatedEntity[] }>('/admin/graph-health'),
+    driftAlerts: () => request<{ alerts: DriftAlert[] }>('/admin/drift-alerts'),
   },
 };
 
@@ -199,4 +201,30 @@ export type WorkerStatus = {
   lastRun: WorkerRun | null;
   totalRuns: number;
   totalErrors: number;
+};
+
+export type GraphHealthSnapshot = {
+  computed_at: string;
+  node_count: number;
+  edge_count: number;
+  degree_entropy: number;
+  isolated_node_ratio: number;
+  largest_component_ratio: number;
+};
+
+export type IsolatedEntity = {
+  id: string;
+  name: string;
+  type: string;
+  event_count: number;
+};
+
+export type DriftAlert = {
+  id: string;
+  provider_type: string;
+  field_name: string;
+  detected_at: string;
+  old_distribution: Record<string, number>;
+  new_distribution: Record<string, number>;
+  drift_score: number;
 };
