@@ -96,6 +96,30 @@ entitiesRoutes.get('/communities', async (c) => {
   return c.json({ communities });
 });
 
+entitiesRoutes.get('/narratives', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT en.entity_id, e.canonical_name AS entity_name,
+            en.narrative_text, en.source_event_count, en.generated_at, en.staleness_score
+     FROM entity_narratives en
+     JOIN entities e ON e.id = en.entity_id
+     ORDER BY en.source_event_count DESC`,
+  );
+
+  return c.json({
+    narratives: result.rows.map((r) => ({
+      entity_id: r.entity_id as string,
+      entity_name: r.entity_name as string,
+      text: r.narrative_text as string,
+      source_event_count: r.source_event_count as number,
+      generated_at: r.generated_at as string,
+      staleness_score: r.staleness_score as number,
+    })),
+  });
+});
+
 entitiesRoutes.get('/:id/narrative', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

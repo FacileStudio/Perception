@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '$lib/api';
-  import type { GraphEntity, EntityRelation, CommunityDetail } from '$lib/api';
+  import type { GraphEntity, EntityRelation, CommunityDetail, EntityNarrativeDetail } from '$lib/api';
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -20,12 +20,15 @@
   let paused = false;
   let communities = $state<CommunityDetail[]>([]);
   let loadingCommunities = $state(false);
+  let narrativesMap = $state<Map<string, EntityNarrativeDetail>>(new Map());
+  let loadingNarratives = $state(false);
   function setMode(m: 'entities' | 'relations' | 'list' | 'communities') {
     viewMode = m;
     if (m === 'list' || m === 'communities') {
       paused = true;
       cancelAnimationFrame(animId);
       if (m === 'communities' && communities.length === 0) loadCommunities();
+      if (m === 'list' && narrativesMap.size === 0) loadNarratives();
     } else {
       drawMode = m;
       if (paused) {
@@ -33,6 +36,19 @@
         loop();
       }
     }
+  }
+
+  async function loadNarratives() {
+    loadingNarratives = true;
+    try {
+      const data = await api.entities.narratives();
+      const map = new Map<string, EntityNarrativeDetail>();
+      for (const n of data.narratives) map.set(n.entity_id, n);
+      narrativesMap = map;
+    } catch {
+      narrativesMap = new Map();
+    }
+    loadingNarratives = false;
   }
 
   async function loadCommunities() {
@@ -657,6 +673,11 @@
                 <span class="ml-auto font-mono text-[11px] text-zinc-400">{node.type_label}</span>
                 <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">{node.event_count} {node.event_count === 1 ? 'event' : 'events'}</span>
               </div>
+              {#if narrativesMap.has(node.id)}
+                <p class="mt-2 border-t border-emerald-100 pt-2 text-xs leading-relaxed text-emerald-700">
+                  {narrativesMap.get(node.id)!.text}
+                </p>
+              {/if}
               {#if connections.length > 0}
                 <div class="mt-2 space-y-1 border-t border-zinc-100 pt-2">
                   {#each connections as { other, label }}

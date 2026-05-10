@@ -72,6 +72,7 @@ export const api = {
     communities: () => request<{ communities: CommunityDetail[] }>('/entities/communities'),
     community: (entityId: string) => request<{ community: EntityCommunity | null }>(`/entities/${entityId}/community`),
     narrative: (entityId: string) => request<{ narrative: EntityNarrativeDetail | null }>(`/entities/${entityId}/narrative`),
+    narratives: () => request<{ narratives: Array<EntityNarrativeDetail & { entity_id: string }> }>('/entities/narratives'),
     resolveRelations: () => request<{ created: number }>('/entities/relations/resolve-all', { method: 'POST' }),
   },
   admin: {
