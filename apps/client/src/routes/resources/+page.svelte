@@ -72,7 +72,7 @@
   function handleFileSelect() {
     if (fileInput?.files?.length) {
       uploadFiles = Array.from(fileInput.files);
-      selectedFiles = uploadFiles;
+      selectedFiles = Array.from(fileInput.files);
     }
   }
 
