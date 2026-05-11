@@ -60,7 +60,8 @@
     try {
       const result = await api.resources.list();
       resources = result.resources;
-    } catch {
+    } catch (e) {
+      console.error('[resources] load failed:', e);
       error = 'Failed to load resources.';
     } finally {
       loading = false;
@@ -81,8 +82,9 @@
       showUpload = false;
       selectedFiles = [];
       await load();
-    } catch {
-      error = 'Upload failed.';
+    } catch (e) {
+      console.error('[resources] upload failed:', e);
+      error = e instanceof Error ? e.message : 'Upload failed.';
     } finally {
       uploading = false;
     }
@@ -94,7 +96,8 @@
       await api.resources.delete(id);
       resources = resources.filter(r => r.id !== id);
       if (detail?.id === id) detail = null;
-    } catch {
+    } catch (e) {
+      console.error('[resources] delete failed:', e);
       error = 'Delete failed.';
     } finally {
       deleting = null;
@@ -105,7 +108,8 @@
     detailLoading = true;
     try {
       detail = await api.resources.get(id);
-    } catch {
+    } catch (e) {
+      console.error('[resources] detail load failed:', e);
       error = 'Failed to load resource details.';
     } finally {
       detailLoading = false;
