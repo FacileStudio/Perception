@@ -21,11 +21,13 @@ function fileMime(f: File): string {
   return dot >= 0 ? (MIME_BY_EXT[f.name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
 }
 
-function toBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
 }
 
 export const api = {
@@ -99,19 +101,12 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      console.log('[upload] start', list.map((f) => `${f.name} (${f.size})`));
-      const encoded = [];
-      for (const f of list) {
-        console.log('[upload] reading', f.name);
-        const buf = await f.arrayBuffer();
-        console.log('[upload] encoding', f.name, buf.byteLength, 'bytes');
-        encoded.push({ name: f.name, type: fileMime(f), data: toBase64(buf) });
-      }
-      const body = JSON.stringify({ files: encoded });
-      console.log('[upload] sending', (body.length / 1024).toFixed(0), 'KB');
+      const encoded = await Promise.all(
+        list.map(async (f) => ({ name: f.name, type: fileMime(f), data: await readAsBase64(f) })),
+      );
       return request<{ ids: string[] }>('/resources', {
         method: 'POST',
-        body,
+        body: JSON.stringify({ files: encoded }),
       });
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
