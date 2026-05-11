@@ -17,7 +17,8 @@
   let uploading = $state(false);
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
-  let fileInput = $state<HTMLInputElement | undefined>();
+  let fileInput: HTMLInputElement | undefined;
+  let uploadFiles: File[] = [];
   let selectedFiles = $state<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
@@ -70,17 +71,18 @@
 
   function handleFileSelect() {
     if (fileInput?.files?.length) {
-      selectedFiles = Array.from(fileInput.files);
+      uploadFiles = Array.from(fileInput.files);
+      selectedFiles = uploadFiles;
     }
   }
 
   async function handleUpload() {
-    const files = fileInput?.files;
-    if (!files?.length || uploading) return;
+    if (!uploadFiles.length || uploading) return;
     uploading = true;
     try {
-      await api.resources.upload(Array.from(files));
+      await api.resources.upload(uploadFiles);
       showUpload = false;
+      uploadFiles = [];
       selectedFiles = [];
       await load();
     } catch (e) {
@@ -204,7 +206,7 @@
           variant="outline"
           size="sm"
           class="rounded-full"
-          onclick={() => { showUpload = false; selectedFiles = []; }}
+          onclick={() => { showUpload = false; uploadFiles = []; selectedFiles = []; }}
         >
           Cancel
         </Button>
