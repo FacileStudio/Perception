@@ -99,16 +99,19 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      const encoded = await Promise.all(
-        list.map(async (f) => ({
-          name: f.name,
-          type: fileMime(f),
-          data: toBase64(await f.arrayBuffer()),
-        })),
-      );
+      console.log('[upload] start', list.map((f) => `${f.name} (${f.size})`));
+      const encoded = [];
+      for (const f of list) {
+        console.log('[upload] reading', f.name);
+        const buf = await f.arrayBuffer();
+        console.log('[upload] encoding', f.name, buf.byteLength, 'bytes');
+        encoded.push({ name: f.name, type: fileMime(f), data: toBase64(buf) });
+      }
+      const body = JSON.stringify({ files: encoded });
+      console.log('[upload] sending', (body.length / 1024).toFixed(0), 'KB');
       return request<{ ids: string[] }>('/resources', {
         method: 'POST',
-        body: JSON.stringify({ files: encoded }),
+        body,
       });
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
