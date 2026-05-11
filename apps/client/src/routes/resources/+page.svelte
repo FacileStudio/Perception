@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
+  import { api, fileMime, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { buildTitle } from '$lib/head';
@@ -18,8 +18,8 @@
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
-  let uploadFiles: File[] = [];
-  let selectedFiles = $state<File[]>([]);
+  let pendingFiles = $state<Array<{ name: string; size: number }>>([]);
+  let encodedFiles: Array<{ name: string; type: string; data: string }> = [];
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
@@ -69,21 +69,31 @@
     }
   }
 
-  function handleFileSelect() {
-    if (fileInput?.files?.length) {
-      uploadFiles = Array.from(fileInput.files);
-      selectedFiles = Array.from(fileInput.files);
+  async function handleFileSelect(e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    if (!input.files?.length) return;
+    const files = Array.from(input.files);
+    pendingFiles = files.map((f) => ({ name: f.name, size: f.size }));
+    encodedFiles = [];
+    for (const f of files) {
+      const data = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(f);
+      });
+      encodedFiles.push({ name: f.name, type: f.type || fileMime(f), data });
     }
   }
 
   async function handleUpload() {
-    if (!uploadFiles.length || uploading) return;
+    if (!encodedFiles.length || uploading) return;
     uploading = true;
     try {
-      await api.resources.upload(uploadFiles);
+      await api.resources.uploadEncoded(encodedFiles);
       showUpload = false;
-      uploadFiles = [];
-      selectedFiles = [];
+      encodedFiles = [];
+      pendingFiles = [];
       await load();
     } catch (e) {
       console.error('[resources] upload failed:', e);
@@ -174,10 +184,10 @@
           class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
         >
           <Icon icon="solar:file-download-bold-duotone" class="size-5" />
-          {#if selectedFiles.length > 1}
-            {selectedFiles.length} files selected ({formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))})
-          {:else if selectedFiles.length === 1}
-            {selectedFiles[0].name} ({formatSize(selectedFiles[0].size)})
+          {#if pendingFiles.length > 1}
+            {pendingFiles.length} files selected ({formatSize(pendingFiles.reduce((s, f) => s + f.size, 0))})
+          {:else if pendingFiles.length === 1}
+            {pendingFiles[0].name} ({formatSize(pendingFiles[0].size)})
           {:else}
             Choose files (PDF, text, markdown, CSV, JSON)
           {/if}
@@ -193,7 +203,7 @@
         <Button
           size="sm"
           class="rounded-full bg-zinc-950 text-white hover:bg-zinc-800"
-          disabled={selectedFiles.length === 0 || uploading}
+          disabled={pendingFiles.length === 0 || uploading}
           onclick={handleUpload}
         >
           {#if uploading}
@@ -206,7 +216,7 @@
           variant="outline"
           size="sm"
           class="rounded-full"
-          onclick={() => { showUpload = false; uploadFiles = []; selectedFiles = []; }}
+          onclick={() => { showUpload = false; encodedFiles = []; pendingFiles = []; }}
         >
           Cancel
         </Button>

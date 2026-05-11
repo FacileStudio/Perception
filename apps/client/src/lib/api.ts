@@ -15,20 +15,12 @@ const MIME_BY_EXT: Record<string, string> = {
   '.csv': 'text/csv', '.json': 'application/json',
 };
 
-function fileMime(f: File): string {
+export function fileMime(f: File): string {
   if (f.type) return f.type;
   const dot = f.name.lastIndexOf('.');
   return dot >= 0 ? (MIME_BY_EXT[f.name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
 }
 
-function readAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
-}
 
 export const api = {
   auth: {
@@ -99,16 +91,11 @@ export const api = {
   resources: {
     list: () => request<{ resources: ResourceRow[] }>('/resources'),
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
-    upload: async (files: File | File[]) => {
-      const list = Array.isArray(files) ? files : [files];
-      const encoded = await Promise.all(
-        list.map(async (f) => ({ name: f.name, type: fileMime(f), data: await readAsBase64(f) })),
-      );
-      return request<{ ids: string[] }>('/resources', {
+    uploadEncoded: (files: Array<{ name: string; type: string; data: string }>) =>
+      request<{ ids: string[] }>('/resources', {
         method: 'POST',
-        body: JSON.stringify({ files: encoded }),
-      });
-    },
+        body: JSON.stringify({ files }),
+      }),
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },
   admin: {
