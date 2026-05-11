@@ -10,31 +10,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const CHUNK_SIZE = 512 * 1024;
-
-const EXTENSION_MIMES: Record<string, string> = {
-  '.pdf': 'application/pdf',
-  '.txt': 'text/plain',
-  '.md': 'text/markdown',
-  '.csv': 'text/csv',
-  '.json': 'application/json',
+const MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf', '.txt': 'text/plain', '.md': 'text/markdown',
+  '.csv': 'text/csv', '.json': 'application/json',
 };
 
-function mimeFromName(name: string): string {
-  const dot = name.lastIndexOf('.');
-  if (dot === -1) return 'application/octet-stream';
-  return EXTENSION_MIMES[name.slice(dot).toLowerCase()] ?? 'application/octet-stream';
+function fileMime(f: File): string {
+  if (f.type) return f.type;
+  const dot = f.name.lastIndexOf('.');
+  return dot >= 0 ? (MIME_BY_EXT[f.name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
 }
 
-function uint8ToBase64(bytes: Uint8Array): string {
-  const parts: string[] = [];
-  for (let i = 0; i < bytes.length; i += 8192) {
-    const end = Math.min(i + 8192, bytes.length);
-    let s = '';
-    for (let j = i; j < end; j++) s += String.fromCharCode(bytes[j]);
-    parts.push(s);
-  }
-  return btoa(parts.join(''));
+function toBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
 }
 
 export const api = {
@@ -108,29 +99,17 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      const ids: string[] = [];
-      for (const f of list) {
-        const bytes = new Uint8Array(await f.arrayBuffer());
-        const totalChunks = Math.max(1, Math.ceil(bytes.length / CHUNK_SIZE));
-        const uploadId = crypto.randomUUID();
-        const mime = f.type || mimeFromName(f.name);
-        for (let i = 0; i < totalChunks; i++) {
-          const chunk = bytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-          const res = await request<{ id?: string }>('/resources', {
-            method: 'POST',
-            body: JSON.stringify({
-              upload_id: uploadId,
-              name: f.name,
-              type: mime,
-              chunk_index: i,
-              total_chunks: totalChunks,
-              data: uint8ToBase64(chunk),
-            }),
-          });
-          if (res.id) ids.push(res.id);
-        }
-      }
-      return { ids };
+      const encoded = await Promise.all(
+        list.map(async (f) => ({
+          name: f.name,
+          type: fileMime(f),
+          data: toBase64(await f.arrayBuffer()),
+        })),
+      );
+      return request<{ ids: string[] }>('/resources', {
+        method: 'POST',
+        body: JSON.stringify({ files: encoded }),
+      });
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },

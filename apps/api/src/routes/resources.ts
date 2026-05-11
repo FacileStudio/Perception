@@ -6,96 +6,48 @@ import { processResource } from '../resources/process';
 
 export const resourcesRoutes = new Hono();
 
-const EXTENSION_MIMES: Record<string, string> = {
-  '.pdf': 'application/pdf',
-  '.txt': 'text/plain',
-  '.md': 'text/markdown',
-  '.csv': 'text/csv',
-  '.json': 'application/json',
+const MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf', '.txt': 'text/plain', '.md': 'text/markdown',
+  '.csv': 'text/csv', '.json': 'application/json',
 };
 
-function mimeFromName(name: string): string {
+const SUPPORTED = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
+
+function resolveMime(name: string, type: string): string {
+  if (type) return type;
   const dot = name.lastIndexOf('.');
-  if (dot === -1) return 'application/octet-stream';
-  return EXTENSION_MIMES[name.slice(dot).toLowerCase()] ?? 'application/octet-stream';
+  return dot >= 0 ? (MIME_BY_EXT[name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
 }
-
-const SUPPORTED_MIMES = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
-
-type PendingUpload = {
-  name: string;
-  type: string;
-  totalChunks: number;
-  chunks: Map<number, Buffer>;
-  createdAt: number;
-};
-
-const pendingUploads = new Map<string, PendingUpload>();
-
-setInterval(() => {
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  for (const [id, u] of pendingUploads) {
-    if (u.createdAt < cutoff) pendingUploads.delete(id);
-  }
-}, 60_000);
 
 resourcesRoutes.post('/', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
-  const body = await c.req.json<{
-    upload_id: string;
-    name: string;
-    type: string;
-    chunk_index: number;
-    total_chunks: number;
-    data: string;
-  }>();
+  const { files } = await c.req.json<{ files: Array<{ name: string; type: string; data: string }> }>();
+  if (!files?.length) return c.json({ error: 'file_required' }, 400);
 
-  if (!body.upload_id || !body.name || body.total_chunks < 1) {
-    return c.json({ error: 'invalid_request' }, 400);
-  }
+  const ids: string[] = [];
 
-  const mime = body.type || mimeFromName(body.name);
-  if (!SUPPORTED_MIMES.some((t) => mime.startsWith(t.split('/')[0]) || mime === t)) {
-    return c.json({ error: 'unsupported_mime_type', mime_type: mime, supported: SUPPORTED_MIMES }, 400);
-  }
-
-  let upload = pendingUploads.get(body.upload_id);
-  if (!upload) {
-    upload = { name: body.name, type: mime, totalChunks: body.total_chunks, chunks: new Map(), createdAt: Date.now() };
-    pendingUploads.set(body.upload_id, upload);
-  }
-
-  upload.chunks.set(body.chunk_index, Buffer.from(body.data, 'base64'));
-
-  if (upload.chunks.size < upload.totalChunks) {
-    return c.json({ ok: true });
-  }
-
-  const buffers: Buffer[] = [];
-  for (let i = 0; i < upload.totalChunks; i++) {
-    const chunk = upload.chunks.get(i);
-    if (!chunk) {
-      pendingUploads.delete(body.upload_id);
-      return c.json({ error: 'missing_chunk', chunk_index: i }, 400);
+  for (const file of files) {
+    const mime = resolveMime(file.name, file.type);
+    if (!SUPPORTED.includes(mime)) {
+      return c.json({ error: 'unsupported_mime_type', mime_type: mime, supported: SUPPORTED }, 400);
     }
-    buffers.push(chunk);
+
+    const id = randomUUID();
+    const now = new Date().toISOString();
+    const buffer = Buffer.from(file.data, 'base64');
+
+    await db.execute({
+      sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
+      args: [id, file.name, '', mime, buffer.length, now, now],
+    });
+
+    processResource(id, buffer, mime).catch(console.error);
+    ids.push(id);
   }
-  const buffer = Buffer.concat(buffers);
-  pendingUploads.delete(body.upload_id);
 
-  const id = randomUUID();
-  const now = new Date().toISOString();
-
-  await db.execute({
-    sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
-    args: [id, upload.name, '', upload.type, buffer.length, now, now],
-  });
-
-  processResource(id, buffer, upload.type).catch(console.error);
-
-  return c.json({ id }, 201);
+  return c.json({ ids }, 201);
 });
 
 resourcesRoutes.get('/', async (c) => {
