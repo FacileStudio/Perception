@@ -10,34 +10,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-const EXTENSION_MIMES: Record<string, string> = {
-  '.pdf': 'application/pdf',
-  '.txt': 'text/plain',
-  '.md': 'text/markdown',
-  '.csv': 'text/csv',
-  '.json': 'application/json',
-};
-
-function mimeFromName(name: string): string {
-  const dot = name.lastIndexOf('.');
-  if (dot === -1) return 'application/octet-stream';
-  return EXTENSION_MIMES[name.slice(dot).toLowerCase()] ?? 'application/octet-stream';
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunks: string[] = [];
-  for (let i = 0; i < bytes.length; i += 8192) {
-    const end = Math.min(i + 8192, bytes.length);
-    let chunk = '';
-    for (let j = i; j < end; j++) {
-      chunk += String.fromCharCode(bytes[j]);
-    }
-    chunks.push(chunk);
-  }
-  return btoa(chunks.join(''));
-}
-
 export const api = {
   auth: {
     login: (password: string) => request('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
@@ -109,15 +81,15 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      const encoded: Array<{ name: string; type: string; data: string }> = [];
-      for (const f of list) {
-        const data = arrayBufferToBase64(await f.arrayBuffer());
-        encoded.push({ name: f.name, type: f.type || mimeFromName(f.name), data });
-      }
-      return request<{ ids: string[] }>('/resources', {
+      const form = new FormData();
+      for (const f of list) form.append('files', f);
+      const res = await fetch(`${API_BASE}/resources`, {
         method: 'POST',
-        body: JSON.stringify({ files: encoded }),
+        credentials: 'include',
+        body: form,
       });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return res.json() as Promise<{ ids: string[] }>;
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },

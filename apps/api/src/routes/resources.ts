@@ -6,31 +6,50 @@ import { processResource } from '../resources/process';
 
 export const resourcesRoutes = new Hono();
 
+const EXTENSION_MIMES: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain',
+  '.md': 'text/markdown',
+  '.csv': 'text/csv',
+  '.json': 'application/json',
+};
+
+function mimeFromName(name: string): string {
+  const dot = name.lastIndexOf('.');
+  if (dot === -1) return 'application/octet-stream';
+  return EXTENSION_MIMES[name.slice(dot).toLowerCase()] ?? 'application/octet-stream';
+}
+
 resourcesRoutes.post('/', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
-  const body = await c.req.json<{ files: Array<{ name: string; type: string; data: string }> }>();
-  if (!body.files?.length) return c.json({ error: 'file_required' }, 400);
+  const body = await c.req.parseBody({ all: true });
+  const raw = body['files'];
+  const files = (Array.isArray(raw) ? raw : raw ? [raw] : []).filter(
+    (f): f is File => f instanceof File,
+  );
+  if (!files.length) return c.json({ error: 'file_required' }, 400);
 
   const supported = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
   const ids: string[] = [];
 
-  for (const file of body.files) {
-    if (!supported.some((t) => file.type.startsWith(t.split('/')[0]) || file.type === t)) {
-      return c.json({ error: 'unsupported_mime_type', mime_type: file.type, supported }, 400);
+  for (const file of files) {
+    const mime = file.type || mimeFromName(file.name);
+    if (!supported.some((t) => mime.startsWith(t.split('/')[0]) || mime === t)) {
+      return c.json({ error: 'unsupported_mime_type', mime_type: mime, supported }, 400);
     }
 
     const id = randomUUID();
     const now = new Date().toISOString();
-    const buffer = Buffer.from(file.data, 'base64');
+    const buffer = Buffer.from(await file.arrayBuffer());
 
     await db.execute({
       sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
-      args: [id, file.name, '', file.type, buffer.length, now, now],
+      args: [id, file.name, '', mime, buffer.length, now, now],
     });
 
-    processResource(id, buffer, file.type).catch(console.error);
+    processResource(id, buffer, mime).catch(console.error);
     ids.push(id);
   }
 
