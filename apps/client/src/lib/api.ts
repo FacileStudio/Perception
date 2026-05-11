@@ -10,6 +10,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const CHUNK_SIZE = 512 * 1024;
+
+const EXTENSION_MIMES: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.txt': 'text/plain',
+  '.md': 'text/markdown',
+  '.csv': 'text/csv',
+  '.json': 'application/json',
+};
+
+function mimeFromName(name: string): string {
+  const dot = name.lastIndexOf('.');
+  if (dot === -1) return 'application/octet-stream';
+  return EXTENSION_MIMES[name.slice(dot).toLowerCase()] ?? 'application/octet-stream';
+}
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += 8192) {
+    const end = Math.min(i + 8192, bytes.length);
+    let s = '';
+    for (let j = i; j < end; j++) s += String.fromCharCode(bytes[j]);
+    parts.push(s);
+  }
+  return btoa(parts.join(''));
+}
+
 export const api = {
   auth: {
     login: (password: string) => request('/auth/login', { method: 'POST', body: JSON.stringify({ password }) }),
@@ -81,15 +108,29 @@ export const api = {
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
     upload: async (files: File | File[]) => {
       const list = Array.isArray(files) ? files : [files];
-      const form = new FormData();
-      for (const f of list) form.append('files', f);
-      const res = await fetch(`${API_BASE}/resources`, {
-        method: 'POST',
-        credentials: 'include',
-        body: form,
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return res.json() as Promise<{ ids: string[] }>;
+      const ids: string[] = [];
+      for (const f of list) {
+        const bytes = new Uint8Array(await f.arrayBuffer());
+        const totalChunks = Math.max(1, Math.ceil(bytes.length / CHUNK_SIZE));
+        const uploadId = crypto.randomUUID();
+        const mime = f.type || mimeFromName(f.name);
+        for (let i = 0; i < totalChunks; i++) {
+          const chunk = bytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+          const res = await request<{ id?: string }>('/resources', {
+            method: 'POST',
+            body: JSON.stringify({
+              upload_id: uploadId,
+              name: f.name,
+              type: mime,
+              chunk_index: i,
+              total_chunks: totalChunks,
+              data: uint8ToBase64(chunk),
+            }),
+          });
+          if (res.id) ids.push(res.id);
+        }
+      }
+      return { ids };
     },
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },
