@@ -75,10 +75,11 @@
   }
 
   async function handleUpload() {
-    if (selectedFiles.length === 0 || uploading) return;
+    const files = fileInput?.files;
+    if (!files?.length || uploading) return;
     uploading = true;
     try {
-      await api.resources.upload(selectedFiles);
+      await api.resources.upload(Array.from(files));
       showUpload = false;
       selectedFiles = [];
       await load();
