@@ -9,6 +9,7 @@
   ensureSolar();
 
   type SimNode = GraphEntity & { x: number; y: number; vx: number; vy: number; r: number };
+  type ResolvedEdge = EntityRelation & { source: SimNode; target: SimNode };
 
   let loading = $state(true);
   let empty = $state(false);
@@ -68,6 +69,9 @@
 
   let nodes: SimNode[] = [];
   let edges: EntityRelation[] = [];
+  let resolvedEdges: ResolvedEdge[] = [];
+  let uniqueEdges: ResolvedEdge[] = [];
+  let nodeMap = new Map<string, SimNode>();
   let hoveredNode: SimNode | null = null;
   let draggedNode: SimNode | null = null;
   let animId: number;
@@ -80,13 +84,6 @@
   let mouseDownPos = { x: 0, y: 0 };
   let mouseDownNode: SimNode | null = null;
   let selectedNode = $state<SimNode | null>(null);
-
-  const RELATION_PALETTE = [
-    '#6366f1', '#059669', '#db2777', '#d97706', '#2563eb', '#7c3aed',
-    '#0891b2', '#65a30d', '#dc2626', '#9333ea', '#0d9488', '#ea580c',
-  ];
-
-  const relationColors = new Map<string, string>();
 
   const COLORS: [string, string][] = [
     ['deployment', '#6366f1'],
@@ -117,27 +114,12 @@
     return '#6b7280';
   }
 
-  function relationColorFor(label: string): string {
-    return relationColors.get(label) ?? '#6b7280';
-  }
-
   function radiusFor(count: number): number {
     return Math.max(8, Math.min(40, 8 + Math.sqrt(count) * 4.2));
   }
 
   function cw(): number { return canvas?.offsetWidth ?? 800; }
   function ch(): number { return canvas?.offsetHeight ?? 600; }
-
-  function fillRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-    ctx.fill();
-  }
 
   const MAX_VELOCITY = 8;
 
@@ -178,10 +160,9 @@
 
     const linkDist = 250;
     const linkStrength = 0.03;
-    for (const edge of edges) {
-      const s = nodes.find((n) => n.id === edge.from_id);
-      const t = nodes.find((n) => n.id === edge.to_id);
-      if (!s || !t) continue;
+    for (const edge of uniqueEdges) {
+      const s = edge.source;
+      const t = edge.target;
       const dx = t.x - s.x;
       const dy = t.y - s.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -243,17 +224,26 @@
     ctx.scale(zoom, zoom);
     ctx.translate(-W / 2, -H / 2);
 
-    for (const edge of edges) {
-      const s = nodes.find((n) => n.id === edge.from_id);
-      const t = nodes.find((n) => n.id === edge.to_id);
-      if (!s || !t) continue;
+    const hovId = hoveredNode?.id;
+    ctx.beginPath();
+    for (const edge of uniqueEdges) {
+      if (hovId && (edge.source.id === hovId || edge.target.id === hovId)) continue;
+      ctx.moveTo(edge.source.x, edge.source.y);
+      ctx.lineTo(edge.target.x, edge.target.y);
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-      const active = hoveredNode?.id === s.id || hoveredNode?.id === t.id;
+    if (hovId) {
       ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(t.x, t.y);
-      ctx.strokeStyle = active ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.08)';
-      ctx.lineWidth = active ? 1.5 : 1;
+      for (const edge of uniqueEdges) {
+        if (edge.source.id !== hovId && edge.target.id !== hovId) continue;
+        ctx.moveTo(edge.source.x, edge.source.y);
+        ctx.lineTo(edge.target.x, edge.target.y);
+      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     }
 
@@ -314,23 +304,6 @@
     };
   }
 
-  function worldToScreen(wx: number, wy: number) {
-    const W = cw();
-    const H = ch();
-    return {
-      x: (wx - W / 2) * zoom + W / 2 + panX,
-      y: (wy - H / 2) * zoom + H / 2 + panY,
-    };
-  }
-
-  function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
-    const dx = bx - ax, dy = by - ay;
-    const lenSq = dx * dx + dy * dy;
-    if (lenSq === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
-    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq));
-    return Math.sqrt((px - (ax + t * dx)) ** 2 + (py - (ay + t * dy)) ** 2);
-  }
-
   function findHovered(sx: number, sy: number): SimNode | null {
     const { x, y } = screenToWorld(sx, sy);
     let best: SimNode | null = null;
@@ -338,21 +311,6 @@
     for (const node of nodes) {
       const d = Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2);
       if (d <= node.r + 4 && d < bestD) { best = node; bestD = d; }
-    }
-    return best;
-  }
-
-  function findHoveredEdge(sx: number, sy: number): EntityRelation | null {
-    const { x, y } = screenToWorld(sx, sy);
-    const threshold = 6 / zoom;
-    let best: EntityRelation | null = null;
-    let bestD = threshold;
-    for (const edge of edges) {
-      const s = nodes.find((n) => n.id === edge.from_id);
-      const t = nodes.find((n) => n.id === edge.to_id);
-      if (!s || !t) continue;
-      const d = pointToSegmentDist(x, y, s.x, s.y, t.x, t.y);
-      if (d < bestD) { best = edge; bestD = d; }
     }
     return best;
   }
@@ -365,20 +323,6 @@
     tooltip.style.display = 'block';
     tooltip.style.left = `${sx + 14}px`;
     tooltip.style.top = `${sy}px`;
-  }
-
-  function showEdgeTooltip(edge: EntityRelation) {
-    if (!tooltip) return;
-    const s = nodes.find((n) => n.id === edge.from_id);
-    const t = nodes.find((n) => n.id === edge.to_id);
-    if (!s || !t) return;
-    const ms = worldToScreen((s.x + t.x) / 2, (s.y + t.y) / 2);
-    tooltipName.textContent = `${s.canonical_name} → ${t.canonical_name}`;
-    tooltipType.textContent = edge.label.replace(/_/g, ' ');
-    tooltipMeta.textContent = `${(edge.confidence * 100).toFixed(0)}% confidence`;
-    tooltip.style.display = 'block';
-    tooltip.style.left = `${ms.x + 14}px`;
-    tooltip.style.top = `${ms.y}px`;
   }
 
   function hideTooltip() {
@@ -474,31 +418,17 @@
     zoom = Math.max(0.15, Math.min(5, zoom * (e.deltaY > 0 ? 0.9 : 1.11)));
   }
 
-  function buildRelationColors() {
-    const labels = [...new Set(edges.map((e) => e.label))].sort();
-    labels.forEach((label, i) => {
-      relationColors.set(label, RELATION_PALETTE[i % RELATION_PALETTE.length]);
-    });
-  }
-
-  let adjacency = $derived(
-    nodes
-      .map((node) => {
-        const connections = edges.flatMap((e) => {
-          if (e.from_id === node.id) {
-            const other = nodes.find((n) => n.id === e.to_id);
-            return other ? [{ other, label: e.label }] : [];
-          }
-          if (e.to_id === node.id) {
-            const other = nodes.find((n) => n.id === e.from_id);
-            return other ? [{ other, label: e.label }] : [];
-          }
-          return [];
-        });
-        return { node, connections };
-      })
-      .sort((a, b) => b.node.event_count - a.node.event_count)
-  );
+  let adjacency = $derived.by(() => {
+    const adjMap = new Map<string, { other: SimNode; label: string }[]>();
+    for (const node of nodes) adjMap.set(node.id, []);
+    for (const edge of resolvedEdges) {
+      adjMap.get(edge.from_id)?.push({ other: edge.target, label: edge.label });
+      adjMap.get(edge.to_id)?.push({ other: edge.source, label: edge.label });
+    }
+    return nodes
+      .map((node) => ({ node, connections: adjMap.get(node.id) ?? [] }))
+      .sort((a, b) => b.node.event_count - a.node.event_count);
+  });
 
   let selectedNodeConnections = $derived(
     selectedNode
@@ -526,11 +456,28 @@
           r: radiusFor(e.event_count),
         };
       });
+      nodeMap = new Map(nodes.map((n) => [n.id, n]));
       edges = data.relations;
+      resolvedEdges = [];
+      const seen = new Set<string>();
+      uniqueEdges = [];
+      for (const edge of edges) {
+        const source = nodeMap.get(edge.from_id);
+        const target = nodeMap.get(edge.to_id);
+        if (!source || !target) continue;
+        const resolved = { ...edge, source, target } as ResolvedEdge;
+        resolvedEdges.push(resolved);
+        const pairKey = edge.from_id < edge.to_id
+          ? `${edge.from_id}:${edge.to_id}`
+          : `${edge.to_id}:${edge.from_id}`;
+        if (!seen.has(pairKey)) {
+          seen.add(pairKey);
+          uniqueEdges.push(resolved);
+        }
+      }
       entityCount = nodes.length;
-      relationCount = edges.length;
+      relationCount = resolvedEdges.length;
       empty = nodes.length === 0;
-      buildRelationColors();
       for (let i = 0; i < 40; i++) tick();
     } catch {
       empty = true;
