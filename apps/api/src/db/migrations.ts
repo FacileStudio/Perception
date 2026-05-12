@@ -594,9 +594,97 @@ CREATE INDEX IF NOT EXISTS strategy_forecasts_strategy_idx ON strategy_forecasts
       `,
     },
     {
-      name: '030_workspace_id',
+      name: '030_better_auth_tables',
+      sql: `
+CREATE TABLE IF NOT EXISTS user (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL UNIQUE,
+  emailVerified INTEGER NOT NULL DEFAULT 0,
+  image TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS account (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  accountId TEXT NOT NULL,
+  providerId TEXT NOT NULL,
+  accessToken TEXT,
+  refreshToken TEXT,
+  idToken TEXT,
+  accessTokenExpiresAt TEXT,
+  refreshTokenExpiresAt TEXT,
+  scope TEXT,
+  password TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS verification (
+  id TEXT PRIMARY KEY,
+  identifier TEXT NOT NULL,
+  value TEXT NOT NULL,
+  expiresAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS session (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  token TEXT NOT NULL UNIQUE,
+  expiresAt TEXT NOT NULL,
+  ipAddress TEXT,
+  userAgent TEXT,
+  activeOrganizationId TEXT,
+  createdAt TEXT NOT NULL,
+  updatedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS organization (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE,
+  logo TEXT,
+  metadata TEXT,
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS member (
+  id TEXT PRIMARY KEY,
+  userId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  organizationId TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member',
+  createdAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS invitation (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  inviterId TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+  organizationId TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected','canceled')),
+  expiresAt TEXT NOT NULL,
+  createdAt TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS user_email_idx ON user(email);
+CREATE INDEX IF NOT EXISTS session_userId_idx ON session(userId);
+CREATE INDEX IF NOT EXISTS session_token_idx ON session(token);
+CREATE INDEX IF NOT EXISTS account_userId_idx ON account(userId);
+CREATE INDEX IF NOT EXISTS member_userId_idx ON member(userId);
+CREATE INDEX IF NOT EXISTS member_orgId_idx ON member(organizationId);
+CREATE INDEX IF NOT EXISTS invitation_orgId_idx ON invitation(organizationId)
+      `,
+    },
+    {
+      name: '031_workspace_id',
       sql: `
 ALTER TABLE events ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE event_embeddings ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
 ALTER TABLE dynamic_facts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
 ALTER TABLE ontology_concepts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
 ALTER TABLE ontology_concept_aliases ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';

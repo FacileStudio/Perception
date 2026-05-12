@@ -79,6 +79,13 @@ await bootstrapDefaultWorkspace();
 console.log(`[perception] API ready on :${config.port}`);
 
 async function bootstrapDefaultWorkspace() {
+  try {
+    await db.execute("SELECT 1 FROM organization LIMIT 0");
+  } catch {
+    console.log('[workspace] organization table not ready yet, skipping bootstrap');
+    return;
+  }
+
   const existing = await db.execute("SELECT id FROM organization WHERE slug = 'default'");
   if (existing.rows.length > 0) return;
 
