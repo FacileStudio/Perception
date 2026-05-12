@@ -13,7 +13,7 @@
 
   ensureSolar();
 
-  const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:8787';
+  const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 
   let password = $state('');
   let error = $state($page.url.searchParams.get('error') === 'oidc_failed' ? 'SSO login failed. Please try again.' : '');
