@@ -114,69 +114,73 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
     const decoder = new TextDecoder();
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') break;
-        try {
-          const parsed = JSON.parse(data) as {
-            text?: string;
-            error?: string;
-            done?: boolean;
-            sources?: ChatSource[];
-            session_id?: string;
-            message_id?: string;
-            sql_query?: SqlQueryMeta;
-            community_summaries?: CommunitySummaryMeta[];
-            narratives?: NarrativeMeta[];
-            memory_episodes?: MemoryEpisodeMeta[];
-            resources?: ResourceMeta[];
-            sub_queries?: string[];
-          };
-          if (parsed.session_id && !sessionId) {
-            sessionId = parsed.session_id;
-            setActiveChatSession(parsed.session_id);
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data) as {
+              text?: string;
+              error?: string;
+              done?: boolean;
+              sources?: ChatSource[];
+              session_id?: string;
+              message_id?: string;
+              sql_query?: SqlQueryMeta;
+              community_summaries?: CommunitySummaryMeta[];
+              narratives?: NarrativeMeta[];
+              memory_episodes?: MemoryEpisodeMeta[];
+              resources?: ResourceMeta[];
+              sub_queries?: string[];
+            };
+            if (parsed.session_id && !sessionId) {
+              sessionId = parsed.session_id;
+              setActiveChatSession(parsed.session_id);
+            }
+            if (parsed.error) throw new Error(parsed.error);
+            if (parsed.text) {
+              chatState.pending = false;
+              chatState.streaming = true;
+              chatState.messages[idx].content += parsed.text;
+            }
+            if (parsed.sources?.length) {
+              chatState.messages[idx].sources = parsed.sources;
+            }
+            if (parsed.message_id) {
+              chatState.messages[idx].id = parsed.message_id;
+            }
+            if (parsed.sql_query) {
+              chatState.messages[idx].sql_query = parsed.sql_query;
+            }
+            if (parsed.community_summaries?.length) {
+              chatState.messages[idx].community_summaries = parsed.community_summaries;
+            }
+            if (parsed.narratives?.length) {
+              chatState.messages[idx].narratives = parsed.narratives;
+            }
+            if (parsed.memory_episodes?.length) {
+              chatState.messages[idx].memory_episodes = parsed.memory_episodes;
+            }
+            if (parsed.resources?.length) {
+              chatState.messages[idx].resources = parsed.resources;
+            }
+            if (parsed.sub_queries?.length) {
+              chatState.messages[idx].sub_queries = parsed.sub_queries;
+            }
+          } catch (error) {
+            if (error instanceof Error) throw error;
           }
-          if (parsed.error) throw new Error(parsed.error);
-          if (parsed.text) {
-            chatState.pending = false;
-            chatState.streaming = true;
-            chatState.messages[idx].content += parsed.text;
-          }
-          if (parsed.sources?.length) {
-            chatState.messages[idx].sources = parsed.sources;
-          }
-          if (parsed.message_id) {
-            chatState.messages[idx].id = parsed.message_id;
-          }
-          if (parsed.sql_query) {
-            chatState.messages[idx].sql_query = parsed.sql_query;
-          }
-          if (parsed.community_summaries?.length) {
-            chatState.messages[idx].community_summaries = parsed.community_summaries;
-          }
-          if (parsed.narratives?.length) {
-            chatState.messages[idx].narratives = parsed.narratives;
-          }
-          if (parsed.memory_episodes?.length) {
-            chatState.messages[idx].memory_episodes = parsed.memory_episodes;
-          }
-          if (parsed.resources?.length) {
-            chatState.messages[idx].resources = parsed.resources;
-          }
-          if (parsed.sub_queries?.length) {
-            chatState.messages[idx].sub_queries = parsed.sub_queries;
-          }
-        } catch (error) {
-          if (error instanceof Error) throw error;
         }
       }
+    } finally {
+      reader.releaseLock();
     }
 
     if (!chatState.messages[idx].content) {

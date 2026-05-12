@@ -86,6 +86,11 @@
 
   async function createForecast() {
     if (!formQuestion.trim() || !formCriteria.trim() || !formDeadline) return;
+    const deadline = new Date(formDeadline);
+    if (isNaN(deadline.getTime()) || deadline.getTime() <= Date.now()) {
+      error = 'Deadline must be a future date.';
+      return;
+    }
     submitting = true;
     error = '';
     try {
@@ -93,7 +98,7 @@
         question: formQuestion.trim(),
         question_type: formType,
         resolution_criteria: formCriteria.trim(),
-        resolves_at: new Date(formDeadline).toISOString(),
+        resolves_at: deadline.toISOString(),
       });
       items = [result.forecast, ...items];
       showForm = false;

@@ -27,7 +27,7 @@ async function evaluateCandidate(
     const parsed = JSON.parse(text);
     return !!parsed.pass;
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -44,8 +44,6 @@ export async function filterByQuality(candidates: CandidateQuestion[]): Promise<
     for (let j = 0; j < results.length; j++) {
       const result = results[j];
       if (result.status === 'fulfilled' && result.value) {
-        passed.push(batch[j]);
-      } else if (result.status === 'rejected') {
         passed.push(batch[j]);
       }
     }

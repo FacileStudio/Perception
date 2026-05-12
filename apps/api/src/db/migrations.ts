@@ -475,7 +475,8 @@ CREATE TABLE IF NOT EXISTS forecasts (
 );
 CREATE INDEX IF NOT EXISTS forecasts_status_idx ON forecasts(status);
 CREATE INDEX IF NOT EXISTS forecasts_resolves_idx ON forecasts(resolves_at);
-CREATE INDEX IF NOT EXISTS forecasts_entity_idx ON forecasts(entity_id)
+CREATE INDEX IF NOT EXISTS forecasts_entity_idx ON forecasts(entity_id);
+CREATE INDEX IF NOT EXISTS forecasts_dedup_idx ON forecasts(entity_id, source_signal, question_type, status)
       `,
     },
   ];

@@ -124,11 +124,22 @@ async function detectUnsignedContracts(): Promise<RawProposal[]> {
 }
 
 export async function generateProposals(): Promise<RawProposal[]> {
-  const [silent, atRisk, unsigned] = await Promise.all([
+  const results = await Promise.allSettled([
     detectSilentClients(),
     detectAtRiskClients(),
     detectUnsignedContracts(),
   ]);
+
+  const silent = results[0].status === 'fulfilled' ? results[0].value : [];
+  const atRisk = results[1].status === 'fulfilled' ? results[1].value : [];
+  const unsigned = results[2].status === 'fulfilled' ? results[2].value : [];
+
+  for (let i = 0; i < results.length; i++) {
+    if (results[i].status === 'rejected') {
+      const label = ['silent_clients', 'at_risk_clients', 'unsigned_contracts'][i];
+      console.error(`[proposals] detection failed for ${label}:`, (results[i] as PromiseRejectedResult).reason);
+    }
+  }
 
   const all = [...silent, ...atRisk, ...unsigned];
   const deduplicated: RawProposal[] = [];

@@ -8,6 +8,17 @@ import type { ActionProposal } from '../proposals/types';
 
 export const proposalRoutes = new Hono();
 
+const VALID_ACTION_TYPES = ['create_task', 'tag_client', 'annotate_contract'];
+
+function safeParseJson(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
 function rowToProposal(r: Record<string, unknown>): ActionProposal {
   return {
     id: r.id as string,
@@ -17,7 +28,7 @@ function rowToProposal(r: Record<string, unknown>): ActionProposal {
     target_entity_name: r.target_entity_name as string | null,
     title: r.title as string,
     description: r.description as string,
-    payload: JSON.parse((r.payload as string) || '{}'),
+    payload: safeParseJson(r.payload as string),
     confidence: r.confidence as number,
     status: r.status as ActionProposal['status'],
     proposed_at: r.proposed_at as string,
@@ -55,22 +66,17 @@ proposalRoutes.patch('/:id/approve', async (c) => {
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const result = await db.execute({
-    sql: `SELECT * FROM action_proposals WHERE id = ? AND status = 'proposed'`,
+  const updateResult = await db.execute({
+    sql: `UPDATE action_proposals SET status = 'approved' WHERE id = ? AND status = 'proposed'`,
     args: [id],
   });
 
-  if (result.rows.length === 0) {
+  if (updateResult.rowsAffected === 0) {
     return c.json({ error: 'proposal_not_found_or_not_proposed' }, 404);
   }
 
-  await db.execute({
-    sql: `UPDATE action_proposals SET status = 'approved' WHERE id = ?`,
-    args: [id],
-  });
-
+  const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ?`, args: [id] });
   const proposal = rowToProposal(result.rows[0] as Record<string, unknown>);
-  proposal.status = 'approved';
 
   await executeProposal(proposal);
 
@@ -116,6 +122,10 @@ proposalRoutes.post('/', async (c) => {
 
   if (!body.action_type || !body.target_provider || !body.title || !body.description) {
     return c.json({ error: 'missing_required_fields' }, 400);
+  }
+
+  if (!VALID_ACTION_TYPES.includes(body.action_type)) {
+    return c.json({ error: 'invalid_action_type' }, 400);
   }
 
   const id = randomUUID();

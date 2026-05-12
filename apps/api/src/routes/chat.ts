@@ -4,7 +4,8 @@ import { buildQueryPlan } from '../chat/planner';
 import { retrieveWithCorrection } from '../chat/retrieve';
 import type { RetrievalResult, RetrievalMeta } from '../chat/retrieve';
 import { streamChat, streamChatComposite } from '../chat/stream';
-import { decomposeAndRetrieve } from '../chat/decompose';
+import { decomposeAndRetrieve, type DecomposedResult } from '../chat/decompose';
+import { getActiveWeights } from '../chat/lanes/merge';
 import { embedQuery } from '../embeddings/voyage';
 import {
   loadSessionSummaries,
@@ -106,20 +107,32 @@ chatRoutes.post('/', async (c) => {
   let stream: ReadableStream;
   let retrievalMeta: RetrievalMeta | null = null;
 
+  let compositeResult: DecomposedResult | null = null;
+  let compositeWeights: Record<string, number> = {};
+
   if (plan.isComposite && plan.subqueries.length > 1) {
-    const decomposed = await decomposeAndRetrieve(plan.subqueries);
-    stream = streamChatComposite(sessionId, body.message, plan, decomposed.mergedContext, decomposed.contextBlock, (messageId) => {
-      const topIds = decomposed.mergedContext.events.slice(0, 5).map((e) => e.id);
-      const activeLanes = [...new Set(decomposed.mergedContext.events.flatMap((e) => e.lanes))];
+    try {
+      const { weights } = await getActiveWeights();
+      compositeWeights = (weights[plan.intent] ?? {}) as Record<string, number>;
+      compositeResult = await decomposeAndRetrieve(plan.subqueries);
+    } catch (err) {
+      console.warn('[chat] composite decomposition failed, falling back to simple retrieval', err);
+    }
+  }
+
+  if (compositeResult) {
+    stream = streamChatComposite(sessionId, body.message, plan, compositeResult.mergedContext, compositeResult.contextBlock, (messageId) => {
+      const topIds = compositeResult!.mergedContext.events.slice(0, 5).map((e) => e.id);
+      const activeLanes = [...new Set(compositeResult!.mergedContext.events.flatMap((e) => e.lanes))];
       recordRetrievalOutcome(
         messageId,
         sessionId,
         plan.intent,
-        {} as Record<string, number>,
+        compositeWeights,
         activeLanes as string[],
         topIds,
       ).catch(() => {});
-    }, decomposed.subqueries);
+    }, compositeResult.subqueries);
   } else {
     let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [], causalLinks: [], resourceChunks: [] };
     let corrected = false;

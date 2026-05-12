@@ -72,6 +72,11 @@ forecastRoutes.post('/', async (c) => {
     return c.json({ error: 'invalid_question_type' }, 400);
   }
 
+  const parsedDate = new Date(body.resolves_at);
+  if (isNaN(parsedDate.getTime()) || parsedDate.getTime() <= Date.now()) {
+    return c.json({ error: 'resolves_at_must_be_future' }, 400);
+  }
+
   const id = randomUUID();
   const now = new Date().toISOString();
 
@@ -115,6 +120,11 @@ forecastRoutes.patch('/:id/extend', async (c) => {
   const body = await c.req.json<{ resolves_at: string }>();
 
   if (!body.resolves_at) return c.json({ error: 'missing_resolves_at' }, 400);
+
+  const parsedDate = new Date(body.resolves_at);
+  if (isNaN(parsedDate.getTime()) || parsedDate.getTime() <= Date.now()) {
+    return c.json({ error: 'resolves_at_must_be_future' }, 400);
+  }
 
   const result = await db.execute({
     sql: `UPDATE forecasts SET resolves_at = ? WHERE id = ? AND status = 'open'`,
