@@ -539,6 +539,7 @@ CREATE TABLE IF NOT EXISTS calibration_snapshots (
   log_score REAL NOT NULL,
   resolution_score REAL NOT NULL,
   reliability_score REAL NOT NULL,
+  uncertainty_score REAL NOT NULL DEFAULT 0,
   sharpness_score REAL NOT NULL,
   domain_scores TEXT NOT NULL DEFAULT '{}',
   forecast_count INTEGER NOT NULL DEFAULT 0
@@ -574,7 +575,8 @@ CREATE TABLE IF NOT EXISTS forecast_strategies (
   brier_count INTEGER NOT NULL DEFAULT 0,
   log_weight REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL
-)
+);
+CREATE INDEX IF NOT EXISTS forecast_strategies_active_idx ON forecast_strategies(is_active)
       `,
     },
     {

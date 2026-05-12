@@ -66,6 +66,7 @@ forecastRoutes.get('/calibration', async (c) => {
       log_score: Number(r.log_score),
       resolution_score: Number(r.resolution_score),
       reliability_score: Number(r.reliability_score),
+      uncertainty_score: Number(r.uncertainty_score ?? 0),
       sharpness_score: Number(r.sharpness_score),
       domain_scores: JSON.parse((r.domain_scores as string) || '{}'),
       forecast_count: Number(r.forecast_count),

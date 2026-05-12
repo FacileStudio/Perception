@@ -23,8 +23,8 @@ async function run(): Promise<void> {
 
   await db.execute({
     sql: `INSERT INTO calibration_snapshots
-      (id, computed_at, bin_edges, bin_counts, bin_actuals, brier_score, log_score, resolution_score, reliability_score, sharpness_score, domain_scores, forecast_count)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, computed_at, bin_edges, bin_counts, bin_actuals, brier_score, log_score, resolution_score, reliability_score, uncertainty_score, sharpness_score, domain_scores, forecast_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       snapshot.id,
       snapshot.computed_at,
@@ -35,6 +35,7 @@ async function run(): Promise<void> {
       snapshot.log_score,
       snapshot.resolution_score,
       snapshot.reliability_score,
+      snapshot.uncertainty_score,
       snapshot.sharpness_score,
       JSON.stringify(snapshot.domain_scores),
       snapshot.forecast_count,

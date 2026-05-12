@@ -36,8 +36,8 @@ async function fetchResolvedForecasts(): Promise<ResolvedForecast[]> {
     probability: Number(r.probability),
     outcome: Number(r.outcome),
     question_type: r.question_type as string,
-    provider_type: (r.provider_type as string) ?? null,
-    entity_type: (r.entity_type as string) ?? null,
+    provider_type: (r.provider_type as string | null) ?? null,
+    entity_type: (r.entity_type as string | null) ?? null,
   }));
 }
 
@@ -69,6 +69,7 @@ type BinResult = {
   bin_actuals: number[];
   reliability: number;
   resolution: number;
+  uncertainty: number;
 };
 
 function computeBins(forecasts: ResolvedForecast[]): BinResult {
@@ -92,6 +93,7 @@ function computeBins(forecasts: ResolvedForecast[]): BinResult {
 
   const N = forecasts.length;
   const o_bar = N > 0 ? forecasts.reduce((acc, f) => acc + f.outcome, 0) / N : 0;
+  const uncertainty = o_bar * (1 - o_bar);
   const bin_actuals: number[] = [];
 
   let reliability = 0;
@@ -115,7 +117,7 @@ function computeBins(forecasts: ResolvedForecast[]): BinResult {
     resolution /= N;
   }
 
-  return { bin_edges, bin_counts, bin_actuals, reliability, resolution };
+  return { bin_edges, bin_counts, bin_actuals, reliability, resolution, uncertainty };
 }
 
 function computeDomainScores(forecasts: ResolvedForecast[]): Record<string, { brier: number; count: number }> {
@@ -186,7 +188,9 @@ function applyPav(pavMap: PavPoint[], rawProbability: number): number {
 
   for (let i = 0; i < pavMap.length - 1; i++) {
     if (rawProbability >= pavMap[i].x && rawProbability <= pavMap[i + 1].x) {
-      const t = (rawProbability - pavMap[i].x) / (pavMap[i + 1].x - pavMap[i].x);
+      const dx = pavMap[i + 1].x - pavMap[i].x;
+      if (dx === 0) return pavMap[i].y;
+      const t = (rawProbability - pavMap[i].x) / dx;
       return pavMap[i].y + t * (pavMap[i + 1].y - pavMap[i].y);
     }
   }
@@ -203,10 +207,12 @@ export async function computeCalibration(): Promise<CalibrationSnapshot> {
   const domainScores = computeDomainScores(forecasts);
   const pavMap = fitIsotonicRegression(forecasts);
 
-  await db.execute({
-    sql: `INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('recalibration_map', ?, ?)`,
-    args: [JSON.stringify(pavMap), new Date().toISOString()],
-  });
+  if (forecasts.length > 0) {
+    await db.execute({
+      sql: `INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('recalibration_map', ?, ?)`,
+      args: [JSON.stringify(pavMap), new Date().toISOString()],
+    });
+  }
 
   return {
     id: randomUUID(),
@@ -218,6 +224,7 @@ export async function computeCalibration(): Promise<CalibrationSnapshot> {
     log_score: logScore,
     resolution_score: bins.resolution,
     reliability_score: bins.reliability,
+    uncertainty_score: bins.uncertainty,
     sharpness_score: sharpness,
     domain_scores: domainScores,
     forecast_count: forecasts.length,
@@ -232,6 +239,10 @@ export async function getRecalibrated(rawProbability: number): Promise<number> {
 
   if (result.rows.length === 0) return rawProbability;
 
-  const pavMap: PavPoint[] = JSON.parse(result.rows[0].value as string);
-  return applyPav(pavMap, rawProbability);
+  try {
+    const pavMap: PavPoint[] = JSON.parse(result.rows[0].value as string);
+    return applyPav(pavMap, rawProbability);
+  } catch {
+    return rawProbability;
+  }
 }

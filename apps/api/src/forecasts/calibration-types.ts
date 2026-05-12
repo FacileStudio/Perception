@@ -8,6 +8,7 @@ export type CalibrationSnapshot = {
   log_score: number;
   resolution_score: number;
   reliability_score: number;
+  uncertainty_score: number;
   sharpness_score: number;
   domain_scores: Record<string, { brier: number; count: number }>;
   forecast_count: number;

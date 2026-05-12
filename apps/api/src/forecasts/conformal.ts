@@ -11,7 +11,24 @@ const MIN_CALIBRATION_SIZE = 20;
 const COVERAGE_DRIFT_THRESHOLD = 0.05;
 const COVERAGE_WIDEN_FACTOR = 1.1;
 
-let alphaT = 1 - DEFAULT_COVERAGE_TARGET;
+async function loadAlphaT(): Promise<number> {
+  const result = await db.execute({
+    sql: `SELECT value FROM app_settings WHERE key = 'conformal_alpha_t'`,
+    args: [],
+  });
+  if (result.rows.length > 0) {
+    const val = Number(result.rows[0].value);
+    if (!isNaN(val) && val >= 0.01 && val <= 0.5) return val;
+  }
+  return 1 - DEFAULT_COVERAGE_TARGET;
+}
+
+async function saveAlphaT(alphaT: number): Promise<void> {
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('conformal_alpha_t', ?, ?)`,
+    args: [String(alphaT), new Date().toISOString()],
+  });
+}
 
 function getCalibrationScores(rows: Array<Record<string, unknown>>): number[] {
   return rows
@@ -22,16 +39,15 @@ function getCalibrationScores(rows: Array<Record<string, unknown>>): number[] {
 function computeQuantile(scores: number[], alpha: number): number {
   const sorted = [...scores].sort((a, b) => a - b);
   const n = sorted.length;
-  const level = Math.ceil((n + 1) * (1 - alpha)) / n;
-  const idx = Math.min(Math.floor(level * n), n - 1);
-  return sorted[idx];
+  const idx = Math.min(Math.ceil((n + 1) * (1 - alpha)) - 1, n - 1);
+  return sorted[Math.max(0, idx)];
 }
 
 function clampInterval(lower: number, upper: number, questionType: QuestionType): [number, number] {
   if (questionType === 'binary') {
     return [Math.max(0, lower), Math.min(1, upper)];
   }
-  return [lower, upper];
+  return [Math.max(0, lower), upper];
 }
 
 export async function computeInterval(
@@ -40,12 +56,16 @@ export async function computeInterval(
   probability: number,
   questionType: QuestionType,
 ): Promise<ForecastInterval> {
+  const alphaT = await loadAlphaT();
+
   const calibrationResult = await db.execute({
     sql: `SELECT fi.nonconformity_score FROM forecast_intervals fi
           JOIN forecasts f ON f.id = fi.forecast_id
-          WHERE f.status = 'resolved' AND fi.nonconformity_score IS NOT NULL
+          WHERE f.status = 'resolved'
+            AND f.question_type = ?
+            AND fi.nonconformity_score IS NOT NULL
           ORDER BY f.resolved_at DESC LIMIT ?`,
-    args: [CALIBRATION_WINDOW],
+    args: [questionType, CALIBRATION_WINDOW],
   });
 
   const scores = getCalibrationScores(calibrationResult.rows as Array<Record<string, unknown>>);
@@ -54,13 +74,13 @@ export async function computeInterval(
   let upper: number;
 
   if (scores.length < MIN_CALIBRATION_SIZE) {
-    const defaultWidth = questionType === 'binary' ? 0.4 : probability * 0.5;
+    const defaultWidth = questionType === 'binary' ? 0.4 : Math.max(0.1, probability * 0.5);
     lower = probability - defaultWidth;
     upper = probability + defaultWidth;
   } else {
     let quantile = computeQuantile(scores, alphaT);
 
-    const empirical = await computeEmpiricalCoverage();
+    const empirical = await computeEmpiricalCoverage(questionType);
     if (empirical < DEFAULT_COVERAGE_TARGET - COVERAGE_DRIFT_THRESHOLD) {
       quantile *= COVERAGE_WIDEN_FACTOR;
     }
@@ -91,42 +111,51 @@ export async function computeInterval(
 }
 
 export async function updateNonconformityScore(forecastId: string, actualValue: number): Promise<void> {
-  const intervals = await db.execute({
-    sql: `SELECT fi.id, fi.lower_bound, fi.upper_bound, fb.probability
+  const latest = await db.execute({
+    sql: `SELECT fi.id, fb.probability, fi.lower_bound, fi.upper_bound
           FROM forecast_intervals fi
           JOIN forecast_beliefs fb ON fb.forecast_id = fi.forecast_id AND fb.step = fi.belief_step
           WHERE fi.forecast_id = ?
-          ORDER BY fi.belief_step DESC`,
+          ORDER BY fi.belief_step DESC LIMIT 1`,
     args: [forecastId],
   });
 
-  for (const row of intervals.rows) {
-    const predicted = Number((row as Record<string, unknown>).probability);
-    const score = Math.abs(actualValue - predicted);
-    const intervalId = (row as Record<string, unknown>).id as string;
+  if (latest.rows.length === 0) return;
 
-    await db.execute({
-      sql: `UPDATE forecast_intervals SET nonconformity_score = ? WHERE id = ?`,
-      args: [score, intervalId],
-    });
+  const row = latest.rows[0] as Record<string, unknown>;
+  const predicted = Number(row.probability);
+  const score = Math.abs(actualValue - predicted);
 
-    const lower = Number((row as Record<string, unknown>).lower_bound);
-    const upper = Number((row as Record<string, unknown>).upper_bound);
-    const covered = actualValue >= lower && actualValue <= upper;
-    const errT = covered ? 0 : 1;
-    alphaT = alphaT + ACI_GAMMA * ((1 - DEFAULT_COVERAGE_TARGET) - errT);
-    alphaT = Math.max(0.01, Math.min(0.5, alphaT));
-  }
+  await db.execute({
+    sql: `UPDATE forecast_intervals SET nonconformity_score = ? WHERE forecast_id = ?`,
+    args: [score, forecastId],
+  });
+
+  const lower = Number(row.lower_bound);
+  const upper = Number(row.upper_bound);
+  const covered = actualValue >= lower && actualValue <= upper;
+  const errT = covered ? 0 : 1;
+
+  let alphaT = await loadAlphaT();
+  alphaT = alphaT + ACI_GAMMA * ((1 - DEFAULT_COVERAGE_TARGET) - errT);
+  alphaT = Math.max(0.01, Math.min(0.5, alphaT));
+  await saveAlphaT(alphaT);
 }
 
-async function computeEmpiricalCoverage(): Promise<number> {
+async function computeEmpiricalCoverage(questionType?: string): Promise<number> {
+  const whereExtra = questionType ? ' AND f.question_type = ?' : '';
+  const args: (string | number)[] = [];
+  if (questionType) args.push(questionType);
+  args.push(COVERAGE_MONITOR_WINDOW);
+
   const result = await db.execute({
     sql: `SELECT fi.lower_bound, fi.upper_bound, f.resolution_value
           FROM forecast_intervals fi
           JOIN forecasts f ON f.id = fi.forecast_id
           WHERE f.status = 'resolved' AND f.resolution_value IS NOT NULL AND fi.nonconformity_score IS NOT NULL
+          ${whereExtra}
           ORDER BY f.resolved_at DESC LIMIT ?`,
-    args: [COVERAGE_MONITOR_WINDOW],
+    args,
   });
 
   if (result.rows.length === 0) return DEFAULT_COVERAGE_TARGET;
@@ -154,6 +183,7 @@ export async function getConformalState(): Promise<ConformalState> {
 
   const scores = getCalibrationScores(calibrationResult.rows as Array<Record<string, unknown>>);
   const empirical = await computeEmpiricalCoverage();
+  const alphaT = await loadAlphaT();
 
   return {
     calibration_scores: scores,
@@ -172,7 +202,7 @@ export async function checkForChangePointReset(entityId: string): Promise<void> 
   });
 
   if (recent.rows.length > 0) {
-    alphaT = 1 - DEFAULT_COVERAGE_TARGET;
+    await saveAlphaT(1 - DEFAULT_COVERAGE_TARGET);
     console.log(`[conformal] alpha_t reset due to change point for entity ${entityId}`);
   }
 }

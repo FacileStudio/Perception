@@ -7,7 +7,7 @@ const RETIRE_BRIER_THRESHOLD = 0.35;
 const RETIRE_MIN_FORECASTS = 50;
 const EXPLORATION_RATE = 0.1;
 const SHRINKAGE_VARIANCE_THRESHOLD = 2.0;
-const EPSILON = 0.01;
+const EPSILON = 0.05;
 
 const BUILT_IN_STRATEGIES: Array<{ name: string; description: string; strategy_type: StrategyType }> = [
   { name: 'base_rate', description: 'Pure reference class frequency from historical data', strategy_type: 'base_rate' },
@@ -22,6 +22,8 @@ function logit(p: number): number {
 }
 
 function sigmoid(x: number): number {
+  if (x > 500) return 1;
+  if (x < -500) return 0;
   return 1 / (1 + Math.exp(-x));
 }
 
@@ -40,13 +42,9 @@ function rowToStrategy(r: Record<string, unknown>): ForecastStrategy {
 }
 
 export async function ensureStrategiesSeeded(): Promise<void> {
-  const existing = await db.execute(`SELECT name FROM forecast_strategies`);
-  const names = new Set(existing.rows.map((r) => r.name as string));
-
   for (const s of BUILT_IN_STRATEGIES) {
-    if (names.has(s.name)) continue;
     await db.execute({
-      sql: `INSERT INTO forecast_strategies (id, name, description, strategy_type, is_active, brier_score, brier_count, log_weight, created_at)
+      sql: `INSERT OR IGNORE INTO forecast_strategies (id, name, description, strategy_type, is_active, brier_score, brier_count, log_weight, created_at)
             VALUES (?, ?, ?, ?, 1, NULL, 0, 0, ?)`,
       args: [randomUUID(), s.name, s.description, s.strategy_type, new Date().toISOString()],
     });
@@ -96,10 +94,10 @@ async function causalPredict(forecastId: string): Promise<number | null> {
 
   const causalLinks = await db.execute({
     sql: `SELECT direction, p_value FROM causal_links
-          WHERE (cause_series LIKE ? OR effect_series LIKE ?)
+          WHERE (cause_series = ? OR effect_series = ?)
           AND superseded_at IS NULL AND p_value < 0.05
           ORDER BY detected_at DESC LIMIT 3`,
-    args: [`%${entityId}%`, `%${entityId}%`],
+    args: [entityId, entityId],
   });
   if (causalLinks.rows.length > 0) {
     adjustment += 0.05 * causalLinks.rows.length / 3;
@@ -170,24 +168,36 @@ export async function generateStrategyForecasts(forecastId: string): Promise<voi
   const now = new Date().toISOString();
 
   for (const strategy of strategies) {
-    const existing = await db.execute({
-      sql: `SELECT id FROM strategy_forecasts WHERE forecast_id = ? AND strategy_id = ?`,
-      args: [forecastId, strategy.id],
-    });
-    if (existing.rows.length > 0) continue;
+    try {
+      const existing = await db.execute({
+        sql: `SELECT id FROM strategy_forecasts WHERE forecast_id = ? AND strategy_id = ?`,
+        args: [forecastId, strategy.id],
+      });
+      if (existing.rows.length > 0) continue;
 
-    const runner = strategyRunners[strategy.strategy_type];
-    if (!runner) continue;
+      const runner = strategyRunners[strategy.strategy_type];
+      if (!runner) continue;
 
-    const probability = await runner(forecastId);
-    if (probability == null) continue;
+      const probability = await runner(forecastId);
+      if (probability == null) continue;
 
-    await db.execute({
-      sql: `INSERT INTO strategy_forecasts (id, forecast_id, strategy_id, probability, created_at)
-            VALUES (?, ?, ?, ?, ?)`,
-      args: [randomUUID(), forecastId, strategy.id, probability, now],
-    });
+      await db.execute({
+        sql: `INSERT INTO strategy_forecasts (id, forecast_id, strategy_id, probability, created_at)
+              VALUES (?, ?, ?, ?, ?)`,
+        args: [randomUUID(), forecastId, strategy.id, probability, now],
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ensemble] strategy ${strategy.name} failed for forecast ${forecastId}: ${msg}`);
+    }
   }
+}
+
+function computeWeight(brierScore: number | null, brierCount: number, totalStrategies: number): number {
+  if (brierCount < COLD_START_THRESHOLD || brierScore == null) {
+    return 1 / totalStrategies;
+  }
+  return 1 / (brierScore + EPSILON);
 }
 
 export async function aggregateEnsemble(forecastId: string): Promise<{
@@ -210,13 +220,9 @@ export async function aggregateEnsemble(forecastId: string): Promise<{
     const row = r as Record<string, unknown>;
     const brierCount = Number(row.brier_count ?? 0);
     const brierScore = row.brier_score != null ? Number(row.brier_score) : null;
-
-    let weight: number;
-    if (isExploration || brierCount < COLD_START_THRESHOLD || brierScore == null) {
-      weight = 1 / predictions.rows.length;
-    } else {
-      weight = 1 / (brierScore + EPSILON);
-    }
+    const weight = isExploration
+      ? 1 / predictions.rows.length
+      : computeWeight(brierScore, brierCount, predictions.rows.length);
 
     return {
       name: row.name as string,
@@ -296,7 +302,7 @@ export async function updateStrategyScores(forecastId: string, actualOutcome: nu
 
     const newCount = prevCount + 1;
     const newBrier = (prevBrier * prevCount + brierContrib) / newCount;
-    const newLogWeight = prevLogWeight + logLikelihood;
+    const newLogWeight = Math.max(-100, Math.min(100, prevLogWeight + logLikelihood));
 
     await db.execute({
       sql: `UPDATE forecast_strategies SET brier_score = ?, brier_count = ?, log_weight = ? WHERE id = ?`,

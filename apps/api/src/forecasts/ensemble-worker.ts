@@ -17,9 +17,16 @@ async function run(): Promise<void> {
   );
 
   let generated = 0;
+  let errors = 0;
   for (const row of openForecasts.rows) {
-    await generateStrategyForecasts(row.id as string);
-    generated++;
+    try {
+      await generateStrategyForecasts(row.id as string);
+      generated++;
+    } catch (err) {
+      errors++;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ensemble-worker] failed to generate for ${row.id}: ${msg}`);
+    }
   }
 
   const lastScoredResult = await db.execute({
@@ -42,25 +49,25 @@ async function run(): Promise<void> {
   });
 
   let scored = 0;
-  let latestResolvedAt = lastScoredAt;
   for (const row of resolved.rows) {
-    await updateStrategyScores(row.id as string, Number(row.resolution_value));
-    scored++;
-    const resolvedAt = row.resolved_at as string;
-    if (resolvedAt > latestResolvedAt) latestResolvedAt = resolvedAt;
-  }
-
-  if (scored > 0) {
-    await db.execute({
-      sql: `INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('ensemble_last_scored_at', ?, ?)`,
-      args: [latestResolvedAt, new Date().toISOString()],
-    });
+    try {
+      await updateStrategyScores(row.id as string, Number(row.resolution_value));
+      scored++;
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO app_settings (key, value, updated_at) VALUES ('ensemble_last_scored_at', ?, ?)`,
+        args: [row.resolved_at as string, new Date().toISOString()],
+      });
+    } catch (err) {
+      errors++;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[ensemble-worker] failed to score ${row.id}: ${msg}`);
+    }
   }
 
   const retired = await retireUnderperformers();
 
-  if (generated > 0 || scored > 0 || retired > 0) {
-    console.log(`[ensemble-worker] generated=${generated} scored=${scored} retired=${retired}`);
+  if (generated > 0 || scored > 0 || retired > 0 || errors > 0) {
+    console.log(`[ensemble-worker] generated=${generated} scored=${scored} retired=${retired} errors=${errors}`);
   }
 }
 
