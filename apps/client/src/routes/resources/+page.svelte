@@ -74,13 +74,15 @@
     pendingFiles = Array.from(input.files);
   }
 
-  function readFileAsBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
-      r.onerror = () => reject(r.error);
-      r.readAsDataURL(file);
-    });
+  async function readFileAsBase64(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    const chunk = 8192;
+    for (let i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
   }
 
   async function handleUpload() {
