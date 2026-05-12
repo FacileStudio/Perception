@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, fileMime, type ResourceRow, type ResourceDetail } from '$lib/api';
+  import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { buildTitle } from '$lib/head';
@@ -74,28 +74,12 @@
     pendingFiles = Array.from(input.files);
   }
 
-  async function readFileAsBase64(file: File): Promise<string> {
-    const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    const chunk = 8192;
-    for (let i = 0; i < bytes.length; i += chunk) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-    }
-    return btoa(binary);
-  }
-
   async function handleUpload() {
     if (!pendingFiles.length || uploading) return;
     uploading = true;
     error = '';
     try {
-      const encoded: Array<{ name: string; type: string; data: string }> = [];
-      for (const f of pendingFiles) {
-        const data = await readFileAsBase64(f);
-        encoded.push({ name: f.name, type: f.type || fileMime(f), data });
-      }
-      await api.resources.upload(encoded);
+      await api.resources.upload(pendingFiles);
       showUpload = false;
       pendingFiles = [];
       await load();
