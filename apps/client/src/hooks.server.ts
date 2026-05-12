@@ -22,13 +22,15 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
   }
 
+  const method = event.request.method;
+  const hasBody = method !== 'GET' && method !== 'HEAD';
+  const body = hasBody ? await event.request.arrayBuffer() : null;
+
   const res = await fetch(url, {
-    method: event.request.method,
+    method,
     headers,
-    body: event.request.body,
+    body,
     redirect: 'manual',
-    // @ts-expect-error duplex needed for streaming request body
-    duplex: 'half',
   });
 
   const responseHeaders = new Headers();
