@@ -514,6 +514,227 @@ Multiple forecasting strategies compete. The best-calibrated strategies earn mor
 
 ---
 
+## Phase 8 — Hardening & Production Readiness
+
+The system grew fast through 7 phases. Before expanding the surface area, make what exists reliable, observable, and testable. No new features — just trust.
+
+**Architecture principle:** A prediction engine nobody can debug is a liability, not a feature. Hardening is the difference between a prototype and a product.
+
+| Status | # | Task | Effort | Depends On |
+|--------|---|------|--------|------------|
+| [ ] | 8.1 | Worker lifecycle manager | Medium | — |
+| [ ] | 8.2 | Structured logging & observability | Medium | 8.1 |
+| [ ] | 8.3 | Math module test suite | High | — |
+| [ ] | 8.4 | Retrieval & integration test suite | Medium | 5.3 |
+| [ ] | 8.5 | Automated backup & recovery | Medium | — |
+| [ ] | 8.6 | Graceful shutdown & startup ordering | Low | 8.1 |
+| [ ] | 8.7 | CI pipeline & quality gate | Medium | 8.3, 8.4 |
+
+---
+
+### 8.1 Worker Lifecycle Manager
+
+10+ background workers (BOCPD, Granger, communities, narratives, beliefs, resolution, calibration, TDA, drift, digests, embedding, eval, bandit, resource embedding) run as intervals with no coordination or health tracking.
+
+- [ ] `worker_heartbeats` table: `worker_name`, `last_beat_at`, `status` (running | idle | failed), `last_error`, `run_count`, `avg_duration_ms`
+- [ ] Migration for `worker_heartbeats`
+- [ ] Worker registry: central `WorkerManager` class — registers all workers with name, interval, handler, and timeout
+- [ ] Heartbeat protocol: each worker updates its row on start, completion, and failure — includes duration and error if any
+- [ ] Dead worker detection: if `last_beat_at` older than 3x interval → notification with `type = 'worker_stall'`
+- [ ] Admin endpoint: `GET /admin/workers` — list all registered workers with status, last run, next scheduled, error count
+- [ ] Admin UI: worker health dashboard on settings page — status badges, last error preview, manual trigger button
+
+---
+
+### 8.2 Structured Logging & Observability
+
+Replace `console.log` scatter with structured, queryable logs.
+
+- [ ] Structured logger: thin wrapper producing JSON lines — `{ ts, level, worker, msg, duration_ms, error?, meta? }`
+- [ ] Log levels: `debug`, `info`, `warn`, `error` — configurable per worker via env
+- [ ] Request logging middleware: Hono middleware logging `method`, `path`, `status`, `duration_ms` per request
+- [ ] Worker run logging: automatic log entry on worker start, completion (with duration), and failure (with error)
+- [ ] Metrics endpoint: `GET /admin/metrics` — worker run counts, error rates, p50/p95 durations, active sessions, event ingest rate, embedding queue depth
+- [ ] Log rotation: daily rotation with configurable retention (default 14 days) when writing to file
+
+---
+
+### 8.3 Math Module Test Suite
+
+Pure math modules (BOCPD, Granger, conformal, Brier, ADWIN, Louvain, TDA, VAR) are the most testable and most dangerous to get wrong.
+
+- [ ] BOCPD tests: known change point sequences (step function, ramp, plateau) — verify detection within 3 observations of true change point
+- [ ] Granger causality tests: synthetic VAR(1) with known coefficients — verify recovered lag, direction, and F-statistic bounds
+- [ ] Conformal prediction tests: verify empirical coverage on synthetic calibration set matches target (90% ± 3% over 500 samples)
+- [ ] Brier score tests: perfect calibration (score = 0), random calibration (score ≈ 0.25), adversarial overconfidence — verify decomposition sums
+- [ ] ADWIN tests: stationary stream (no drift), abrupt shift, gradual drift — verify detection timing and false positive rate
+- [ ] Louvain community detection tests: known community structure (planted partition model) — verify modularity and membership
+- [ ] TDA/persistence tests: known topology (circle = 1 H1 feature, two clusters = 2 H0 features) — verify persistence pairs
+- [ ] VAR fitting tests: OLS normal equations on small known matrices — verify coefficient recovery to 1e-6 tolerance
+- [ ] Property-based tests: BOCPD probability sums to 1.0 at each step, Brier score bounded [0, 1], conformal intervals monotonically widen with lower alpha
+
+---
+
+### 8.4 Retrieval & Integration Test Suite
+
+End-to-end retrieval quality beyond the existing eval harness — focused on lane interaction and edge cases.
+
+- [ ] Fixture dataset: 50+ synthetic events covering all provider types, entity configurations, and edge cases (empty facts, multi-entity, degraded quality)
+- [ ] Lane isolation tests: verify each lane (vector, FTS, SQL, entity, concept, stats, community, narrative, memory, resource, text-to-sql, causal) returns expected results independently
+- [ ] Lane merge tests: verify deduplication, score combination, and context budget enforcement across lanes
+- [ ] Intent routing tests: verify planner maps queries to correct intents and lane weight overrides
+- [ ] Corrective RAG tests: verify re-plan triggers on sparse context and improves coverage
+- [ ] Chat mode tests: verify `full` / `history` / `light` mode classification on 30+ query examples
+- [ ] Regression snapshots: store retrieval outputs as snapshots — diff against baseline on changes
+
+---
+
+### 8.5 Automated Backup & Recovery
+
+libSQL on a single node with no backup is one disk failure from total loss.
+
+- [ ] Scheduled backup: daily SQLite `.backup` command to timestamped file in configurable backup directory
+- [ ] Backup rotation: keep last 7 daily + 4 weekly backups — prune older automatically
+- [ ] Backup verification: after each backup, open the copy and run `PRAGMA integrity_check` — alert on failure
+- [ ] Recovery documentation: step-by-step restore procedure in `docs/ops/backup-recovery.md`
+- [ ] Offsite sync: optional rsync/rclone to remote storage (S3-compatible or SSH target) — configurable via env
+- [ ] Backup status endpoint: `GET /admin/backup` — last backup time, size, integrity status
+- [ ] Startup integrity check: `PRAGMA integrity_check` on boot — warn in logs if database is damaged
+
+---
+
+### 8.6 Graceful Shutdown & Startup Ordering
+
+Bun process with 10+ interval workers needs clean shutdown to avoid data corruption and orphaned state.
+
+- [ ] Signal handlers: `SIGTERM` and `SIGINT` trigger orderly shutdown — stop accepting new requests, drain in-flight workers
+- [ ] Worker drain: each registered worker gets a `stop()` signal — current run completes, no new runs start
+- [ ] Shutdown timeout: if workers don't complete within 30s, force exit with error log
+- [ ] Startup ordering: migrations run first, then embedding workers, then compute workers (BOCPD/Granger depend on embeddings existing), then HTTP server
+- [ ] Health endpoint semantics: `GET /health` returns 503 during shutdown drain — allows load balancer to stop routing
+
+---
+
+### 8.7 CI Pipeline & Quality Gate
+
+Automated quality checks that prevent regression.
+
+- [ ] GitHub Actions workflow: `typecheck` → `lint` → `test` → `build` on every push and PR
+- [ ] Fix lint setup: install `prettier-plugin-svelte`, resolve existing lint errors so pipeline starts green
+- [ ] Test coverage reporting: track coverage percentage, fail if math modules drop below 80%
+- [ ] Build verification: both API and client Docker images build successfully
+- [ ] Eval regression gate: run eval harness in CI with fixture dataset — fail if precision@5 drops >5% vs baseline
+- [ ] Branch protection: require CI pass before merge to main
+
+---
+
+## Phase 9 — Entity Resolution & Adaptive Ontology
+
+Deepen entity resolution from exact matching to fuzzy resolution, and move from hardcoded type enums to capability-based classification. Makes Perception truly provider-agnostic and self-improving.
+
+**Architecture principle:** Bad merges are worse than duplicates. Duplicates are annoying; bad merges poison answers. Conservative matching with user review beats aggressive auto-merging.
+
+| Status | # | Task | Effort | Depends On |
+|--------|---|------|--------|------------|
+| [ ] | 9.1 | Fuzzy entity resolver | High | — |
+| [ ] | 9.2 | Entity merge/split operations | Medium | 9.1 |
+| [ ] | 9.3 | Entity review queue | Medium | 9.1, 9.2 |
+| [ ] | 9.4 | Capability-based ontology migration | High | — |
+| [ ] | 9.5 | Ontology inference worker | High | 9.4 |
+| [ ] | 9.6 | Cross-provider entity linking | Medium | 9.1, 9.4 |
+
+---
+
+### 9.1 Fuzzy Entity Resolver
+
+Move beyond exact name/ID matching to similarity-based entity linking with confidence scoring.
+
+- [ ] Blocking strategy: group candidate pairs by shared capability, provider, or first 3 characters of normalized name — avoid O(n²) all-pairs comparison
+- [ ] String similarity scoring: Jaro-Winkler distance (best for names) with configurable threshold (default 0.88)
+- [ ] Domain similarity: extract email domains and website domains — same domain + compatible capabilities = high confidence link
+- [ ] Multi-signal scoring: weighted combination of name similarity (0.4), domain match (0.3), shared event co-occurrence (0.2), capability overlap (0.1) → single confidence score
+- [ ] `entity_merge_candidates` table: `id`, `entity_a_id`, `entity_b_id`, `confidence`, `signals` (JSON — which signals contributed), `status` (pending | confirmed | rejected), `created_at`, `resolved_at`
+- [ ] Migration for `entity_merge_candidates`
+- [ ] Candidate generation worker (daily): scan new entities since last run, generate candidates above 0.70 threshold
+- [ ] Auto-merge gate: only auto-merge when confidence >= 0.95 AND no conflicting domains AND same capability set — everything else goes to review queue
+- [ ] Negative signal tracking: conflicting domains, incompatible capabilities, different provider-scoped IDs for same provider → penalize or block merge
+
+---
+
+### 9.2 Entity Merge/Split Operations
+
+Reversible entity manipulation with full audit trail.
+
+- [ ] Merge operation: given two entity IDs, merge B into A — reassign all `event_entities`, `entity_relations`, `entity_aliases`, `entity_narratives` from B to A, mark B as `status = 'merged'` with pointer to A
+- [ ] Split operation: given an entity ID and a set of event IDs, create new entity from subset — move specified `event_entities` and regenerate aliases from remaining events
+- [ ] `entity_audit_log` table: `id`, `action` (merge | split | confirm | reject | rename), `primary_entity_id`, `secondary_entity_id`, `details` (JSON), `performed_by` (user | system), `performed_at`
+- [ ] Migration for `entity_audit_log`
+- [ ] Merge/split API: `POST /entities/:id/merge`, `POST /entities/:id/split` — require explicit confirmation payload
+- [ ] Cascade updates: after merge/split, mark affected entity narratives as stale, recompute community membership, update causal links referencing merged entity
+- [ ] Undo support: merge creates a reversible snapshot — `POST /entities/:id/undo-merge` restores from audit log within 7 days
+
+---
+
+### 9.3 Entity Review Queue
+
+Human-in-the-loop interface for entity corrections — tentative matches, ambiguous merges, and confidence below threshold.
+
+- [ ] Review queue API: `GET /entities/review` — paginated list of pending merge candidates, sorted by confidence descending
+- [ ] Review actions: `POST /entities/review/:id/confirm`, `POST /entities/review/:id/reject` — both record decision in audit log
+- [ ] Bulk operations: `POST /entities/review/bulk` — confirm or reject multiple candidates in one request
+- [ ] Review UI page: `/entities/review` — side-by-side entity comparison cards showing name, aliases, provider sources, event count, capabilities, shared events, and confidence breakdown
+- [ ] Decision feedback: confirmed merges become positive training examples for future candidate scoring; rejections become negative examples
+- [ ] Review notifications: when review queue exceeds 20 pending items → notification with `type = 'entity_review_backlog'`
+- [ ] Auto-escalation: candidates pending > 14 days without review → increase visibility in dashboard
+
+---
+
+### 9.4 Capability-Based Ontology Migration
+
+Replace hardcoded `entity_type` string enums with a capability system grounded in `ontology_concepts`.
+
+- [ ] `ontology_capabilities` table: `id`, `name` (unique slug like `commercial_account`, `document`, `person`), `description`, `parent_capability_id` (nullable — hierarchical), `is_primitive` (boolean), `created_at`
+- [ ] Seed capability set: ~15 primitive capabilities covering current entity types — `organization`, `commercial_account`, `person`, `contact`, `document`, `financial_record`, `contract`, `project`, `service`, `repository`, `work_item`, `deployment`, `status`, `amount`, `deadline`
+- [ ] `concept_capabilities` join table: `concept_id`, `capability_id` — many-to-many between ontology concepts and capabilities
+- [ ] Migration for both tables + seed data
+- [ ] Capability inheritance: `commercial_account` inherits from `organization` — capability checks walk the hierarchy
+- [ ] Entity capability resolver: `entity.capabilities` derived from `type_concept → concept_capabilities → ontology_capabilities` chain
+- [ ] Retrieval migration: replace all `entity_type === 'client'` checks with `entity.capabilities.includes('commercial_account')` throughout retrieval lanes
+- [ ] Stats migration: update stats aggregation to group by capability instead of raw entity type
+- [ ] Backward compatibility: keep `entity_type` column populated from primary capability for display purposes
+
+---
+
+### 9.5 Ontology Inference Worker
+
+Automatically generate ontology concepts when Perception encounters unknown provider/event shapes — with structured proposals, confidence gates, and review integration.
+
+- [ ] Unknown shape detector: trigger inference when — unknown provider+event_type pair, unknown subject type, new payload key hash, or repeated `degraded` events for same shape (5+ in 24h)
+- [ ] `ontology_inference_jobs` table: `id`, `provider_type`, `event_type`, `subject_type`, `sample_count`, `sample_keys` (JSON), `sample_values` (JSON), `status` (pending | processing | completed | failed), `proposals` (JSON), `created_at`, `completed_at`
+- [ ] Migration for `ontology_inference_jobs`
+- [ ] Inference worker: for each pending job, call Haiku with structured output — produce concept proposals with `kind`, `label`, `description`, `capabilities[]`, and `confidence`
+- [ ] Deduplication pass: before creating concepts, check existing ontology for label/capability overlap — prefer reuse over creation, create aliases when appropriate
+- [ ] Confidence gates: `>= 0.92` → auto-confirm and use; `0.75–0.91` → tentative (use with lower rank, disclose uncertainty); `< 0.75` → draft only (store, don't use in retrieval or stats)
+- [ ] Review integration: medium-confidence concepts and new primitive capabilities → queued for review (9.3)
+- [ ] Concept promotion: concepts used in 20+ events without rejection → auto-promote from tentative to confirmed
+- [ ] Admin UI: ontology explorer page — concept tree with capability inheritance, confidence indicators, and event count per concept
+
+---
+
+### 9.6 Cross-Provider Entity Linking
+
+Link the same real-world entity across different SaaS providers when identifiers don't match.
+
+- [ ] Provider identity signals: email domain (Charles → email → Docuseal), project/repo name similarity, shared human names in actor fields, temporal co-occurrence of events about same entity
+- [ ] Cross-provider candidate generation: for each new entity, compare against entities from other providers using blocking by capability + one of the identity signals
+- [ ] Link confidence model: weighted combination of domain match (strongest), name similarity, temporal proximity, and capability compatibility
+- [ ] `entity_provider_links` table: `id`, `entity_id`, `provider_type`, `provider_entity_id`, `provider_name`, `link_confidence`, `link_method` (domain | name | temporal | manual), `confirmed`, `created_at`
+- [ ] Migration for `entity_provider_links`
+- [ ] Provider link enrichment: when entity is accessed, show all provider appearances — "This entity appears in Charles as 'Acme Corp', in Docuseal as 'ACME SAS', in email as 'acme.fr'"
+- [ ] Retrieval expansion: when an entity is identified in a query, automatically include events from linked provider entities — weighted by link confidence
+
+---
+
 ## Dependency Graph
 
 ```
@@ -560,6 +781,23 @@ Phase 7 (Predictive)                      │
   7.4 Calibration & scoring ─────(7.2,7.3)
   7.5 Conformal intervals ───────(4.1,7.4)
   7.6 Ensemble aggregation ──────(7.2,7.4)
+                                          │
+Phase 8 (Hardening)                       │
+  8.1 Worker lifecycle manager ───────────┤
+  8.2 Structured logging ────────────(8.1)│
+  8.3 Math test suite ────────────────────┤
+  8.4 Retrieval test suite ──────────(5.3)│
+  8.5 Automated backup ──────────────────-┤
+  8.6 Graceful shutdown ─────────────(8.1)│
+  8.7 CI pipeline ───────────────(8.3,8.4)
+                                          │
+Phase 9 (Entity Resolution)              │
+  9.1 Fuzzy entity resolver ──────────────┤
+  9.2 Entity merge/split ────────────(9.1)│
+  9.3 Entity review queue ───────(9.1,9.2)│
+  9.4 Capability ontology migration ──────┤
+  9.5 Ontology inference worker ─────(9.4)│
+  9.6 Cross-provider linking ────(9.1,9.4)
 ```
 
 ---
@@ -574,6 +812,10 @@ Phase 7 (Predictive)                      │
 
 **Phase 7 internal parallelism:** 7.1 (question engine) and 7.3 (resolution oracle) can be built together — resolution is the other end of the question lifecycle. 7.5 (conformal) and 7.6 (ensemble) both need 7.4 but are independent of each other. The critical path is: 7.1 → 7.2 → 7.4 → (7.5 | 7.6). The system produces value at 7.1 alone (structured forecast tracking), becomes predictive at 7.2, and becomes *trustworthy* at 7.4+.
 
+**Phase 8 is almost fully parallelizable:** 8.1 (worker manager) gates 8.2 (logging) and 8.6 (shutdown), but 8.3 (math tests), 8.4 (retrieval tests), and 8.5 (backup) are independent of each other and can run in parallel from day one. 8.7 (CI) gates on tests being written first. Critical path: (8.1 | 8.3 | 8.4 | 8.5) → 8.7.
+
+**Phase 9 has two independent tracks:** 9.1-9.3 (fuzzy resolution + review) and 9.4-9.5 (capability ontology + inference) can be built in parallel. 9.6 (cross-provider linking) needs both tracks. The entity track is user-facing immediately (review queue drives quality); the ontology track is infrastructure that pays off when new providers appear.
+
 **Token cost profile:**
 - Phase 1: minimal (embedding input change is free, intent classification uses existing Haiku call)
 - Phase 2: one additional Haiku call for corrective re-plan, only when triggered
@@ -582,6 +824,8 @@ Phase 7 (Predictive)                      │
 - Phase 5: Text-to-SQL adds one Haiku call per qualifying query; multi-agent fans out existing pipeline
 - Phase 6: counterfactual uses existing Granger data, minimal new LLM cost
 - Phase 7: belief updates = 1 Haiku call per step (capped at 20/forecast); question generation = daily batch; calibration/conformal = pure math; ensemble = pure math. Heaviest cost is 7.2 belief loop but amortized over forecast lifetime (days/weeks), not per-query
+- Phase 8: zero LLM cost (infrastructure, tests, logging)
+- Phase 9: ontology inference = 1 Haiku call per unknown shape (rare after initial learning); fuzzy matching and capability resolution = pure computation
 
 ---
 
