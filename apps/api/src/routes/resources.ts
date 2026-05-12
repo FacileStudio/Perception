@@ -28,7 +28,13 @@ resourcesRoutes.post('/', async (c) => {
   const contentType = c.req.header('content-type') ?? '';
 
   if (contentType.includes('multipart/form-data')) {
-    const body = await c.req.parseBody({ all: true });
+    let body: Record<string, string | File | (string | File)[]>;
+    try {
+      body = await c.req.parseBody({ all: true });
+    } catch (err) {
+      console.error('[resources] multipart parse failed:', err);
+      return c.json({ error: 'invalid_multipart_body' }, 400);
+    }
     const raw = body['files'];
     const fileEntries = Array.isArray(raw) ? raw : raw ? [raw] : [];
     const files = fileEntries.filter((f): f is File => f instanceof File);

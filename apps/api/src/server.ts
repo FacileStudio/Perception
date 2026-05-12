@@ -54,6 +54,12 @@ app.route('/resources', resourcesRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);
+  const origin = c.req.header('origin');
+  const allowed = ['http://localhost:3000', 'http://localhost:5173', process.env.CLIENT_ORIGIN ?? ''].filter(Boolean);
+  if (origin && allowed.includes(origin)) {
+    c.header('Access-Control-Allow-Origin', origin);
+    c.header('Access-Control-Allow-Credentials', 'true');
+  }
   return c.json({ error: 'internal_error' }, 500);
 });
 
