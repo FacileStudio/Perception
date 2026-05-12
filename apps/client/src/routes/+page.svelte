@@ -3,8 +3,6 @@
   import { goto } from '$app/navigation';
   import { auth, checkAuth } from '$lib/stores';
   import { Button } from '$lib/components/ui/button';
-  import { Card } from '$lib/components/ui/card';
-  import { Separator } from '$lib/components/ui/separator';
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import { ensureSolar } from '$lib/solar';
   import Icon from '@iconify/svelte';
@@ -21,182 +19,114 @@
     }
     redirecting = false;
   });
-
-  const capabilities = [
-    {
-      icon: 'solar:chat-round-dots-bold-duotone',
-      title: 'Grounded chat',
-      description: 'Ask in plain language. Answers cite real events, not hallucinations — powered by hybrid retrieval across vector, full-text, SQL, entity, and knowledge graph lanes.',
-    },
-    {
-      icon: 'solar:graph-new-bold-duotone',
-      title: 'Entity intelligence',
-      description: 'Automatic entity resolution across providers. Cross-reference clients, projects, contracts, and services into a unified knowledge graph with community detection.',
-    },
-    {
-      icon: 'solar:telescope-bold-duotone',
-      title: 'Predictive forecasting',
-      description: 'Bayesian belief forecasting with calibrated confidence scores, conformal prediction intervals, and ensemble aggregation. The system scores itself and improves.',
-    },
-    {
-      icon: 'solar:pulse-2-bold-duotone',
-      title: 'Change point detection',
-      description: 'Bayesian Online Change Point Detection surfaces regime shifts in real time. Granger causality reveals which events actually drive downstream effects.',
-    },
-    {
-      icon: 'solar:bell-bing-bold-duotone',
-      title: 'Proactive alerts',
-      description: 'Anomaly detection, velocity spikes, client silence, and actor absence — surfaced automatically before you think to ask.',
-    },
-    {
-      icon: 'solar:branching-paths-up-bold-duotone',
-      title: 'Counterfactual simulation',
-      description: 'Ask "what if" questions. Monte Carlo simulations propagate through causal graphs to show how changes ripple across your operations.',
-    },
-    {
-      icon: 'solar:documents-bold-duotone',
-      title: 'Document knowledge base',
-      description: 'Upload PDFs, markdown, and text files. Chunked, embedded, and woven into retrieval alongside live operational data.',
-    },
-    {
-      icon: 'solar:hand-shake-bold-duotone',
-      title: 'Action proposals',
-      description: 'Perception identifies gaps and proposes write-back actions to source systems — task creation, client tagging, contract annotation — with one-click approval.',
-    },
-    {
-      icon: 'solar:shield-check-bold-duotone',
-      title: 'Self-correcting retrieval',
-      description: 'Corrective RAG detects sparse context and retries with relaxed queries. Outcome-guided learning tunes retrieval weights from your feedback.',
-    },
-  ];
-
-  const stats = [
-    { value: '12+', label: 'retrieval lanes' },
-    { value: '10+', label: 'background workers' },
-    { value: '0', label: 'telemetry sent' },
-  ];
 </script>
 
 <svelte:head>
   <title>Perception — Operational Intelligence</title>
-  <meta name="description" content="Operational intelligence that explains the past, detects the present, and forecasts the future. Self-hosted. AI-powered. Grounded in your data." />
+  <meta name="description" content="Operational intelligence that explains the past, detects the present, and forecasts the future." />
 </svelte:head>
 
 {#if !redirecting}
 <div class="min-h-screen bg-background text-foreground">
   <header class="border-b border-border">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
       <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-6" titleClass="text-xl font-bold" class="gap-2" />
-      <div class="flex items-center gap-2">
-        <Button href="/login">
-          Sign in
-          <Icon icon="solar:login-3-bold" class="ml-1.5 size-4" />
-        </Button>
-      </div>
+      <Button href="/login">
+        Sign in
+        <Icon icon="solar:login-3-bold" class="ml-1.5 size-4" />
+      </Button>
     </div>
   </header>
 
   <main>
-    <section class="mx-auto max-w-6xl px-6 pb-20 pt-24 text-center">
-      <p class="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-zinc-50 px-4 py-1.5 text-xs font-medium text-muted-foreground">
-        <Icon icon="solar:shield-check-bold-duotone" class="size-3.5" />
-        Self-hosted &middot; No telemetry &middot; Your data stays yours
+
+    <section class="mx-auto max-w-5xl px-6 py-28 md:py-36">
+      <p class="mb-5 inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1 text-xs text-muted-foreground">
+        <Icon icon="solar:lock-keyhole-bold-duotone" class="size-3" />
+        Self-hosted &middot; Zero telemetry
       </p>
-      <h1 class="font-[Goga] text-5xl tracking-tight md:text-6xl">
-        Operational intelligence<br />
-        <span class="text-muted-foreground">that thinks ahead.</span>
+      <h1 class="max-w-3xl font-[Goga] text-5xl leading-[1.08] tracking-tight md:text-6xl">
+        Operational intelligence<br class="hidden sm:block" />
+        that thinks ahead.
       </h1>
-      <p class="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-        Perception ingests events from your entire stack, builds a living knowledge graph, detects anomalies with statistical rigor, and forecasts what happens next — all grounded in evidence, not guesswork.
+      <p class="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+        Ingest events from your stack. Build a living knowledge graph. Detect anomalies. Forecast what happens next — grounded in evidence, not guesswork.
       </p>
-      <div class="mt-10 flex justify-center gap-3">
-        <Button size="lg" href="/login">
-          Get started
-          <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
-        </Button>
-      </div>
+      <Button class="mt-10" size="lg" href="/login">
+        Get started
+        <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
+      </Button>
     </section>
 
-    <Separator />
-
-    <section class="mx-auto max-w-6xl px-6 py-16">
-      <div class="mb-12 text-center">
-        <h2 class="font-[Goga] text-3xl tracking-tight">From raw events to actionable foresight.</h2>
-        <p class="mt-3 text-muted-foreground">Every layer builds on the last. No black boxes.</p>
-      </div>
-
-      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {#each capabilities as cap}
-          <Card class="group p-6 transition-colors hover:bg-zinc-50/80">
-            <div class="mb-4 flex size-10 items-center justify-center rounded-lg border border-border bg-white transition-colors group-hover:border-zinc-300">
-              <Icon icon={cap.icon} class="size-5 text-zinc-700" />
-            </div>
-            <p class="font-semibold text-foreground">{cap.title}</p>
-            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-              {cap.description}
-            </p>
-          </Card>
-        {/each}
-      </div>
-    </section>
-
-    <Separator />
-
-    <section class="mx-auto max-w-6xl px-6 py-16">
-      <div class="grid gap-8 md:grid-cols-3">
-        {#each stats as stat}
-          <div class="text-center">
-            <p class="font-[Goga] text-4xl tracking-tight">{stat.value}</p>
-            <p class="mt-1 text-sm text-muted-foreground">{stat.label}</p>
+    <section class="border-y border-border bg-zinc-50/60">
+      <div class="mx-auto grid max-w-5xl divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+        {#each [
+          { icon: 'solar:chat-round-dots-bold-duotone', title: 'Ask anything', text: 'Hybrid retrieval across twelve lanes — vector, full-text, SQL, entity graph, knowledge communities — so answers cite real evidence.' },
+          { icon: 'solar:graph-new-bold-duotone', title: 'See connections', text: 'Automatic entity resolution and community detection build a knowledge graph that links clients, projects, contracts, and services across providers.' },
+          { icon: 'solar:telescope-bold-duotone', title: 'Predict outcomes', text: 'Bayesian forecasting with calibrated confidence, conformal prediction intervals, and ensemble strategies that score themselves and improve.' },
+        ] as pillar}
+          <div class="px-6 py-10 md:py-14">
+            <Icon icon={pillar.icon} class="mb-4 size-6 text-zinc-400" />
+            <p class="text-base font-semibold">{pillar.title}</p>
+            <p class="mt-2 text-sm leading-relaxed text-muted-foreground">{pillar.text}</p>
           </div>
         {/each}
       </div>
     </section>
 
-    <Separator />
-
-    <section class="mx-auto max-w-6xl px-6 py-16">
-      <div class="grid items-center gap-10 md:grid-cols-2">
-        <div>
+    <section class="mx-auto max-w-5xl px-6 py-24">
+      <div class="grid items-start gap-16 md:grid-cols-2">
+        <div class="md:sticky md:top-24">
           <h2 class="font-[Goga] text-3xl tracking-tight">Built on math,<br />not magic.</h2>
-          <p class="mt-4 text-muted-foreground leading-relaxed">
-            BOCPD for change point detection. Granger causality for causal inference. Conformal prediction for distribution-free uncertainty bounds. Brier scoring for calibration tracking. Louvain for community detection. Persistent homology for knowledge gap analysis. Every prediction carries provenance and a calibration-aware confidence score.
+          <p class="mt-4 max-w-md leading-relaxed text-muted-foreground">
+            Every prediction carries provenance and a calibration-aware confidence score.
+            No black boxes — deterministic algorithms you can audit.
           </p>
         </div>
-        <div class="space-y-3">
-          <div class="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Icon icon="solar:chart-bold-duotone" class="mt-0.5 size-5 shrink-0 text-zinc-500" />
+        <dl class="space-y-8">
+          {#each [
+            { term: 'Change point detection', def: 'BOCPD surfaces regime shifts the moment they happen. Not after the postmortem.' },
+            { term: 'Causal inference', def: 'Granger causality on event co-occurrence reveals which signals actually drive downstream effects.' },
+            { term: 'Calibration tracking', def: 'Brier scoring, reliability diagrams, and isotonic recalibration. A 70% prediction comes true ~70% of the time.' },
+            { term: 'Conformal intervals', def: 'Distribution-free prediction bounds with guaranteed coverage. Honest about what it doesn\'t know.' },
+            { term: 'Knowledge gap detection', def: 'Persistent homology over the entity graph finds structural blind spots in your operational data.' },
+          ] as item}
             <div>
-              <p class="text-sm font-medium">Calibration dashboard</p>
-              <p class="mt-0.5 text-xs text-muted-foreground">Reliability diagrams, Brier decomposition, per-domain accuracy breakdown.</p>
+              <dt class="text-sm font-semibold">{item.term}</dt>
+              <dd class="mt-1 text-sm leading-relaxed text-muted-foreground">{item.def}</dd>
             </div>
-          </div>
-          <div class="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Icon icon="solar:tuning-2-bold-duotone" class="mt-0.5 size-5 shrink-0 text-zinc-500" />
-            <div>
-              <p class="text-sm font-medium">Ensemble strategies</p>
-              <p class="mt-0.5 text-xs text-muted-foreground">Multiple forecasting methods compete. Track-record weighting evolves the best mix.</p>
+          {/each}
+        </dl>
+      </div>
+    </section>
+
+    <section class="border-y border-border bg-zinc-50/60">
+      <div class="mx-auto max-w-5xl px-6 py-20">
+        <h2 class="mb-10 font-[Goga] text-3xl tracking-tight">And the rest.</h2>
+        <div class="grid gap-x-16 gap-y-5 sm:grid-cols-2">
+          {#each [
+            { icon: 'solar:bell-bing-bold-duotone', label: 'Proactive anomaly alerts' },
+            { icon: 'solar:branching-paths-up-bold-duotone', label: 'Counterfactual what-if simulation' },
+            { icon: 'solar:documents-bold-duotone', label: 'Document knowledge base' },
+            { icon: 'solar:hand-shake-bold-duotone', label: 'Write-back action proposals' },
+            { icon: 'solar:shield-check-bold-duotone', label: 'Self-correcting retrieval (CRAG)' },
+            { icon: 'solar:database-bold-duotone', label: 'Natural language to SQL' },
+            { icon: 'solar:history-bold-duotone', label: 'Persistent conversational memory' },
+            { icon: 'solar:code-scan-bold-duotone', label: 'Temporal diff queries' },
+          ] as feat}
+            <div class="flex items-center gap-3 py-1.5">
+              <Icon icon={feat.icon} class="size-4 shrink-0 text-zinc-400" />
+              <span class="text-sm">{feat.label}</span>
             </div>
-          </div>
-          <div class="flex items-start gap-3 rounded-lg border border-border p-4">
-            <Icon icon="solar:target-bold-duotone" class="mt-0.5 size-5 shrink-0 text-zinc-500" />
-            <div>
-              <p class="text-sm font-medium">Conformal intervals</p>
-              <p class="mt-0.5 text-xs text-muted-foreground">Distribution-free prediction intervals with guaranteed coverage. Honest uncertainty.</p>
-            </div>
-          </div>
+          {/each}
         </div>
       </div>
     </section>
 
-    <Separator />
-
-    <section class="mx-auto max-w-6xl px-6 py-20 text-center">
-      <h2 class="font-[Goga] text-3xl tracking-tight">
-        Ready to see clearly?
-      </h2>
-      <p class="mt-4 text-muted-foreground">
-        Deploy on your infrastructure. Connect your event sources. Start asking questions.
+    <section class="mx-auto max-w-5xl px-6 py-24 text-center">
+      <h2 class="font-[Goga] text-3xl tracking-tight">Ready to see clearly?</h2>
+      <p class="mt-3 text-muted-foreground">
+        Deploy on your infrastructure. Connect your sources. Start asking.
       </p>
       <Button class="mt-8" size="lg" href="/login">
         Sign in
@@ -205,8 +135,8 @@
     </section>
   </main>
 
-  <footer class="border-t border-border text-center text-muted">
-    <div class="mx-auto max-w-6xl px-6 py-6 text-sm text-muted-foreground">
+  <footer class="border-t border-border">
+    <div class="mx-auto max-w-5xl px-6 py-6 text-center text-sm text-muted-foreground">
       &copy; {new Date().getFullYear()} Perception by <a href="https://facile.studio" class="font-semibold underline hover:cursor-pointer">Facile.</a>
     </div>
   </footer>
