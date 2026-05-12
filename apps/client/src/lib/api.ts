@@ -80,17 +80,11 @@ export const api = {
   resources: {
     list: () => request<{ resources: ResourceRow[] }>('/resources'),
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
-    upload: async (files: File[]) => {
-      const form = new FormData();
-      for (const f of files) form.append('files', f);
-      const res = await fetch(`${API_BASE}/resources`, {
+    upload: (files: Array<{ name: string; type: string; data: string }>) =>
+      request<{ ids: string[] }>('/resources', {
         method: 'POST',
-        credentials: 'include',
-        body: form,
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return res.json() as Promise<{ ids: string[] }>;
-    },
+        body: JSON.stringify({ files }),
+      }),
     downloadUrl: (id: string) => `${API_BASE}/resources/${id}/file`,
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },

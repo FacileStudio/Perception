@@ -74,12 +74,29 @@
     pendingFiles = Array.from(input.files);
   }
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.substring(result.indexOf(',') + 1));
+      };
+      reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleUpload() {
     if (!pendingFiles.length || uploading) return;
     uploading = true;
     error = '';
     try {
-      await api.resources.upload(pendingFiles);
+      const encoded: Array<{ name: string; type: string; data: string }> = [];
+      for (const f of pendingFiles) {
+        const data = await fileToBase64(f);
+        encoded.push({ name: f.name, type: f.type, data });
+      }
+      await api.resources.upload(encoded);
       showUpload = false;
       pendingFiles = [];
       await load();
