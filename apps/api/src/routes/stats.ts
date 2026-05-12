@@ -24,7 +24,7 @@ statsRoutes.get('/', async (c) => {
 
   const [snapshots, graphHealthRow] = await Promise.all([
     getLatestSnapshots(),
-    db.execute(`SELECT * FROM graph_health_snapshots ORDER BY computed_at DESC LIMIT 1`).catch(() => ({ rows: [] })),
+    db.execute({ sql: `SELECT * FROM graph_health_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`, args: [ws.workspaceId] }).catch(() => ({ rows: [] })),
   ]);
 
   const graphHealth = graphHealthRow.rows.length > 0
@@ -61,56 +61,59 @@ statsRoutes.get('/intelligence', async (c) => {
     isolatedEntities,
     driftAlertsList,
   ] = await Promise.all([
-    db.execute(`SELECT * FROM graph_health_snapshots ORDER BY computed_at DESC LIMIT 1`).catch(() => ({ rows: [] })),
-    db.execute(`SELECT COUNT(*) AS cnt FROM memory_episodes`).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM change_points WHERE detected_at > ?`, args: [thirtyDaysAgo] }).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM concept_drift_alerts WHERE detected_at > ?`, args: [thirtyDaysAgo] }).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute(`SELECT COUNT(*) AS cnt FROM entities`).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute(`SELECT COUNT(*) AS cnt FROM entity_narratives`).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute(`SELECT COUNT(DISTINCT m.value) AS cnt FROM entity_communities ec, json_each(ec.member_entity_ids) AS m WHERE ec.stale = 0`).catch(() => ({ rows: [{ cnt: 0 }] })),
-    db.execute(`SELECT COUNT(*) AS cnt FROM (SELECT DISTINCT from_entity_id AS eid FROM entity_relations UNION SELECT DISTINCT to_entity_id AS eid FROM entity_relations)`).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT * FROM graph_health_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`, args: [ws.workspaceId] }).catch(() => ({ rows: [] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM memory_episodes WHERE workspace_id = ?`, args: [ws.workspaceId] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM change_points WHERE workspace_id = ? AND detected_at > ?`, args: [ws.workspaceId, thirtyDaysAgo] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM concept_drift_alerts WHERE workspace_id = ? AND detected_at > ?`, args: [ws.workspaceId, thirtyDaysAgo] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM entities WHERE workspace_id = ?`, args: [ws.workspaceId] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM entity_narratives WHERE workspace_id = ?`, args: [ws.workspaceId] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(DISTINCT m.value) AS cnt FROM entity_communities ec, json_each(ec.member_entity_ids) AS m WHERE ec.workspace_id = ? AND ec.stale = 0`, args: [ws.workspaceId] }).catch(() => ({ rows: [{ cnt: 0 }] })),
+    db.execute({ sql: `SELECT COUNT(*) AS cnt FROM (SELECT DISTINCT from_entity_id AS eid FROM entity_relations WHERE workspace_id = ? UNION SELECT DISTINCT to_entity_id AS eid FROM entity_relations WHERE workspace_id = ?)`, args: [ws.workspaceId, ws.workspaceId] }).catch(() => ({ rows: [{ cnt: 0 }] })),
     db.execute({
       sql: `SELECT cp.entity_id, e.canonical_name, cp.pre_mean, cp.post_mean, cp.detected_at
             FROM change_points cp
             JOIN entities e ON e.id = cp.entity_id
-            WHERE cp.detected_at > ?
+            WHERE cp.workspace_id = ? AND cp.detected_at > ?
             ORDER BY cp.detected_at DESC
             LIMIT 15`,
-      args: [thirtyDaysAgo],
+      args: [ws.workspaceId, thirtyDaysAgo],
     }).catch(() => ({ rows: [] })),
     db.execute({
       sql: `SELECT
               ev.provider_type,
               ev.provider_name,
               COUNT(*) AS event_count,
-              (SELECT COUNT(*) FROM concept_drift_alerts cda WHERE cda.provider_type = ev.provider_type AND cda.detected_at > ?) AS drift_count,
-              (SELECT CASE WHEN ps.confirmed_at IS NOT NULL THEN 1 ELSE 0 END FROM provider_schemas ps WHERE ps.provider_type = ev.provider_type LIMIT 1) AS schema_confirmed
+              (SELECT COUNT(*) FROM concept_drift_alerts cda WHERE cda.provider_type = ev.provider_type AND cda.workspace_id = ? AND cda.detected_at > ?) AS drift_count,
+              (SELECT CASE WHEN ps.confirmed_at IS NOT NULL THEN 1 ELSE 0 END FROM provider_schemas ps WHERE ps.provider_type = ev.provider_type AND ps.workspace_id = ? LIMIT 1) AS schema_confirmed
             FROM events ev
-            WHERE ev.occurred_at > ?
+            WHERE ev.workspace_id = ? AND ev.occurred_at > ?
             GROUP BY ev.provider_type, ev.provider_name
             ORDER BY event_count DESC`,
-      args: [thirtyDaysAgo, thirtyDaysAgo],
+      args: [ws.workspaceId, thirtyDaysAgo, ws.workspaceId, ws.workspaceId, thirtyDaysAgo],
     }).catch(() => ({ rows: [] })),
-    db.execute(`
-      SELECT e.id, e.canonical_name, oc.label AS type_label,
-             (SELECT COUNT(*) FROM event_entities ee WHERE ee.entity_id = e.id) AS event_count
+    db.execute({
+      sql: `SELECT e.id, e.canonical_name, oc.label AS type_label,
+             (SELECT COUNT(*) FROM event_entities ee WHERE ee.entity_id = e.id AND ee.workspace_id = ?) AS event_count
       FROM entities e
       JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-      WHERE e.id NOT IN (
-        SELECT from_entity_id FROM entity_relations
+      WHERE e.workspace_id = ? AND e.id NOT IN (
+        SELECT from_entity_id FROM entity_relations WHERE workspace_id = ?
         UNION
-        SELECT to_entity_id FROM entity_relations
+        SELECT to_entity_id FROM entity_relations WHERE workspace_id = ?
       )
-      AND e.id IN (SELECT DISTINCT entity_id FROM event_entities)
+      AND e.id IN (SELECT DISTINCT entity_id FROM event_entities WHERE workspace_id = ?)
       ORDER BY event_count DESC
-      LIMIT 20
-    `).catch(() => ({ rows: [] })),
-    db.execute(`
-      SELECT id, provider_type, field_name, detected_at, drift_score
+      LIMIT 20`,
+      args: [ws.workspaceId, ws.workspaceId, ws.workspaceId, ws.workspaceId, ws.workspaceId],
+    }).catch(() => ({ rows: [] })),
+    db.execute({
+      sql: `SELECT id, provider_type, field_name, detected_at, drift_score
       FROM concept_drift_alerts
+      WHERE workspace_id = ?
       ORDER BY detected_at DESC
-      LIMIT 10
-    `).catch(() => ({ rows: [] })),
+      LIMIT 10`,
+      args: [ws.workspaceId],
+    }).catch(() => ({ rows: [] })),
   ]);
 
   const totalEnt = Number(totalEntities.rows[0]?.cnt ?? 0);

@@ -9,20 +9,23 @@ export type EntityNarrative = {
   stalenessScore: number;
 };
 
-export async function fetchNarratives(seedEntityIds: string[]): Promise<EntityNarrative[]> {
+export async function fetchNarratives(seedEntityIds: string[], workspaceId: string = ''): Promise<EntityNarrative[]> {
   if (seedEntityIds.length === 0) return [];
 
   try {
     const placeholders = seedEntityIds.map(() => '?').join(',');
+    const wsFilter = workspaceId ? ' AND en.workspace_id = ?' : '';
+    const args: (string | number | null)[] = [...seedEntityIds];
+    if (workspaceId) args.push(workspaceId);
     const result = await db.execute({
       sql: `SELECT en.entity_id, e.canonical_name AS entity_name,
               en.narrative_text, en.source_event_count, en.generated_at, en.staleness_score
             FROM entity_narratives en
             JOIN entities e ON e.id = en.entity_id
-            WHERE en.entity_id IN (${placeholders})
+            WHERE en.entity_id IN (${placeholders})${wsFilter}
             ORDER BY en.source_event_count DESC
             LIMIT 3`,
-      args: seedEntityIds,
+      args,
     });
 
     return result.rows.map((r) => ({

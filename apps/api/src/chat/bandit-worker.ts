@@ -47,14 +47,15 @@ function normalVariate(): number {
   return u * Math.sqrt(-2 * Math.log(s) / s);
 }
 
-async function fitWeights(): Promise<{ weights: WeightMatrix; sampleSize: number; avgReward: number } | null> {
+async function fitWeights(workspaceId: string = ''): Promise<{ weights: WeightMatrix; sampleSize: number; avgReward: number } | null> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   const rows = await db.execute({
     sql: `SELECT intent, lane_weights, active_lanes, outcome_label
           FROM retrieval_outcomes
-          WHERE outcome_label IS NOT NULL
+          WHERE outcome_label IS NOT NULL${wsAnd}
           ORDER BY occurred_at DESC
           LIMIT 5000`,
-    args: [],
+    args: workspaceId ? [workspaceId] : [],
   });
 
   if (rows.rows.length < 20) return null;
@@ -106,21 +107,25 @@ async function fitWeights(): Promise<{ weights: WeightMatrix; sampleSize: number
   };
 }
 
-async function persistVersion(weights: WeightMatrix, sampleSize: number, avgReward: number): Promise<void> {
-  const lastVersion = await db.execute(`SELECT MAX(version) AS v FROM retrieval_weight_versions`);
+async function persistVersion(weights: WeightMatrix, sampleSize: number, avgReward: number, workspaceId: string = ''): Promise<void> {
+  const wsWhere = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const lastVersion = await db.execute({
+    sql: `SELECT MAX(version) AS v FROM retrieval_weight_versions${wsWhere}`,
+    args: workspaceId ? [workspaceId] : [],
+  });
   const nextVersion = ((lastVersion.rows[0]?.v as number | null) ?? 0) + 1;
 
   await db.execute({
-    sql: `INSERT INTO retrieval_weight_versions (id, version, weights, sample_size, avg_reward, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)`,
-    args: [randomUUID(), nextVersion, JSON.stringify(weights), sampleSize, avgReward, new Date().toISOString()],
+    sql: `INSERT INTO retrieval_weight_versions (id, workspace_id, version, weights, sample_size, avg_reward, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [randomUUID(), workspaceId, nextVersion, JSON.stringify(weights), sampleSize, avgReward, new Date().toISOString()],
   });
 }
 
-async function run(): Promise<void> {
-  const result = await fitWeights();
+async function run(workspaceId: string = ''): Promise<void> {
+  const result = await fitWeights(workspaceId);
   if (!result) return;
-  await persistVersion(result.weights, result.sampleSize, result.avgReward);
+  await persistVersion(result.weights, result.sampleSize, result.avgReward, workspaceId);
 }
 
 export const banditWorker = { run };

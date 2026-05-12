@@ -5,9 +5,14 @@ import type { QueryPlan } from '../planner';
 import type { ScoredEvent, TemporalPeriod } from './types';
 import { EVENT_LIST_ORDER_BY } from '../../events/order';
 
-export function buildSqlConditions(plan: QueryPlan, window: { from: string; to: string } | null): { where: string; args: InValue[] } {
+export function buildSqlConditions(plan: QueryPlan, window: { from: string; to: string } | null, workspaceId: string = ''): { where: string; args: InValue[] } {
   const conditions: string[] = ['1=1'];
   const args: InValue[] = [];
+
+  if (workspaceId) {
+    conditions.push('workspace_id = ?');
+    args.push(workspaceId);
+  }
 
   if (plan.providerFilters.length > 0) {
     const placeholders = plan.providerFilters.map(() => '?').join(',');
@@ -29,8 +34,8 @@ export function buildSqlConditions(plan: QueryPlan, window: { from: string; to: 
   return { where: conditions.join(' AND '), args };
 }
 
-export async function sqlLane(plan: QueryPlan): Promise<ScoredEvent<'sql'>[]> {
-  const { where, args } = buildSqlConditions(plan, plan.timeWindow);
+export async function sqlLane(plan: QueryPlan, workspaceId: string = ''): Promise<ScoredEvent<'sql'>[]> {
+  const { where, args } = buildSqlConditions(plan, plan.timeWindow, workspaceId);
   const result = await db.execute({
     sql: `SELECT * FROM events WHERE ${where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
     args,
@@ -45,7 +50,7 @@ export async function sqlLane(plan: QueryPlan): Promise<ScoredEvent<'sql'>[]> {
 
   if (!plan.compareWindow) return currentEvents;
 
-  const prev = buildSqlConditions(plan, plan.compareWindow);
+  const prev = buildSqlConditions(plan, plan.compareWindow, workspaceId);
   const prevResult = await db.execute({
     sql: `SELECT * FROM events WHERE ${prev.where} ORDER BY ${EVENT_LIST_ORDER_BY} LIMIT 30`,
     args: prev.args,
@@ -61,9 +66,14 @@ export async function sqlLane(plan: QueryPlan): Promise<ScoredEvent<'sql'>[]> {
   return [...currentEvents, ...previousEvents];
 }
 
-export async function recentLane(plan: QueryPlan): Promise<ScoredEvent<'sql'>[]> {
+export async function recentLane(plan: QueryPlan, workspaceId: string = ''): Promise<ScoredEvent<'sql'>[]> {
   const conditions: string[] = ['1=1'];
   const args: InValue[] = [];
+
+  if (workspaceId) {
+    conditions.push('workspace_id = ?');
+    args.push(workspaceId);
+  }
 
   if (plan.providerFilters.length > 0) {
     const placeholders = plan.providerFilters.map(() => '?').join(',');

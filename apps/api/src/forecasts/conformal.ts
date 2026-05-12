@@ -55,17 +55,23 @@ export async function computeInterval(
   beliefStep: number,
   probability: number,
   questionType: QuestionType,
+  workspaceId: string = '',
 ): Promise<ForecastInterval> {
   const alphaT = await loadAlphaT();
+
+  const wsFilter = workspaceId ? ' AND f.workspace_id = ?' : '';
+  const calibrationArgs: (string | number | null)[] = [questionType];
+  if (workspaceId) calibrationArgs.push(workspaceId);
+  calibrationArgs.push(CALIBRATION_WINDOW);
 
   const calibrationResult = await db.execute({
     sql: `SELECT fi.nonconformity_score FROM forecast_intervals fi
           JOIN forecasts f ON f.id = fi.forecast_id
           WHERE f.status = 'resolved'
             AND f.question_type = ?
-            AND fi.nonconformity_score IS NOT NULL
+            AND fi.nonconformity_score IS NOT NULL${wsFilter}
           ORDER BY f.resolved_at DESC LIMIT ?`,
-    args: [questionType, CALIBRATION_WINDOW],
+    args: calibrationArgs,
   });
 
   const scores = getCalibrationScores(calibrationResult.rows as Array<Record<string, unknown>>);
@@ -80,7 +86,7 @@ export async function computeInterval(
   } else {
     let quantile = computeQuantile(scores, alphaT);
 
-    const empirical = await computeEmpiricalCoverage(questionType);
+    const empirical = await computeEmpiricalCoverage(questionType, workspaceId);
     if (empirical < DEFAULT_COVERAGE_TARGET - COVERAGE_DRIFT_THRESHOLD) {
       quantile *= COVERAGE_WIDEN_FACTOR;
     }
@@ -102,15 +108,15 @@ export async function computeInterval(
   };
 
   await db.execute({
-    sql: `INSERT INTO forecast_intervals (id, forecast_id, belief_step, lower_bound, upper_bound, coverage_target, nonconformity_score)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [interval.id, interval.forecast_id, interval.belief_step, interval.lower_bound, interval.upper_bound, interval.coverage_target, null],
+    sql: `INSERT INTO forecast_intervals (id, forecast_id, belief_step, lower_bound, upper_bound, coverage_target, nonconformity_score, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [interval.id, interval.forecast_id, interval.belief_step, interval.lower_bound, interval.upper_bound, interval.coverage_target, null, workspaceId],
   });
 
   return interval;
 }
 
-export async function updateNonconformityScore(forecastId: string, actualValue: number): Promise<void> {
+export async function updateNonconformityScore(forecastId: string, actualValue: number, _workspaceId: string = ''): Promise<void> {
   const latest = await db.execute({
     sql: `SELECT fi.id, fb.probability, fi.lower_bound, fi.upper_bound
           FROM forecast_intervals fi
@@ -142,10 +148,12 @@ export async function updateNonconformityScore(forecastId: string, actualValue: 
   await saveAlphaT(alphaT);
 }
 
-async function computeEmpiricalCoverage(questionType?: string): Promise<number> {
+async function computeEmpiricalCoverage(questionType?: string, workspaceId: string = ''): Promise<number> {
   const whereExtra = questionType ? ' AND f.question_type = ?' : '';
+  const wsFilter = workspaceId ? ' AND f.workspace_id = ?' : '';
   const args: (string | number)[] = [];
   if (questionType) args.push(questionType);
+  if (workspaceId) args.push(workspaceId);
   args.push(COVERAGE_MONITOR_WINDOW);
 
   const result = await db.execute({
@@ -153,7 +161,7 @@ async function computeEmpiricalCoverage(questionType?: string): Promise<number> 
           FROM forecast_intervals fi
           JOIN forecasts f ON f.id = fi.forecast_id
           WHERE f.status = 'resolved' AND f.resolution_value IS NOT NULL AND fi.nonconformity_score IS NOT NULL
-          ${whereExtra}
+          ${whereExtra}${wsFilter}
           ORDER BY f.resolved_at DESC LIMIT ?`,
     args,
   });
@@ -172,17 +180,22 @@ async function computeEmpiricalCoverage(questionType?: string): Promise<number> 
   return covered / result.rows.length;
 }
 
-export async function getConformalState(): Promise<ConformalState> {
+export async function getConformalState(workspaceId: string = ''): Promise<ConformalState> {
+  const wsFilter = workspaceId ? ' AND f.workspace_id = ?' : '';
+  const confArgs: (string | number | null)[] = [];
+  if (workspaceId) confArgs.push(workspaceId);
+  confArgs.push(CALIBRATION_WINDOW);
+
   const calibrationResult = await db.execute({
     sql: `SELECT fi.nonconformity_score FROM forecast_intervals fi
           JOIN forecasts f ON f.id = fi.forecast_id
-          WHERE f.status = 'resolved' AND fi.nonconformity_score IS NOT NULL
+          WHERE f.status = 'resolved' AND fi.nonconformity_score IS NOT NULL${wsFilter}
           ORDER BY f.resolved_at DESC LIMIT ?`,
-    args: [CALIBRATION_WINDOW],
+    args: confArgs,
   });
 
   const scores = getCalibrationScores(calibrationResult.rows as Array<Record<string, unknown>>);
-  const empirical = await computeEmpiricalCoverage();
+  const empirical = await computeEmpiricalCoverage(undefined, workspaceId);
   const alphaT = await loadAlphaT();
 
   return {
@@ -193,12 +206,16 @@ export async function getConformalState(): Promise<ConformalState> {
   };
 }
 
-export async function checkForChangePointReset(entityId: string): Promise<void> {
+export async function checkForChangePointReset(entityId: string, workspaceId: string = ''): Promise<void> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const cpArgs: (string | number | null)[] = [entityId];
+  if (workspaceId) cpArgs.push(workspaceId);
+
   const recent = await db.execute({
     sql: `SELECT id FROM change_points
-          WHERE entity_id = ? AND detected_at > datetime('now', '-12 hours')
+          WHERE entity_id = ? AND detected_at > datetime('now', '-12 hours')${wsFilter}
           LIMIT 1`,
-    args: [entityId],
+    args: cpArgs,
   });
 
   if (recent.rows.length > 0) {

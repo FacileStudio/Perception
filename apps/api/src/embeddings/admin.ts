@@ -1,26 +1,35 @@
 import { db } from '../db/client';
 import { config } from '../config';
 
-export async function retryFailedEmbeddings(): Promise<number> {
+export async function retryFailedEmbeddings(workspaceId: string = ''): Promise<number> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `UPDATE event_embeddings SET status = 'pending', attempts = 0, last_error = NULL WHERE status = 'error'`,
-    args: [],
+    sql: `UPDATE event_embeddings SET status = 'pending', attempts = 0, last_error = NULL WHERE status = 'error'${wsFilter}`,
+    args,
   });
   return result.rowsAffected;
 }
 
-export async function backfillMissingEmbeddings(): Promise<number> {
+export async function backfillMissingEmbeddings(workspaceId: string = ''): Promise<number> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [config.embeddingModel, config.embeddingDimensions];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `INSERT OR IGNORE INTO event_embeddings (event_id, model, dimensions, input_hash, status) SELECT id, ?, ?, '', 'pending' FROM events WHERE id NOT IN (SELECT event_id FROM event_embeddings)`,
-    args: [config.embeddingModel, config.embeddingDimensions],
+    sql: `INSERT OR IGNORE INTO event_embeddings (event_id, model, dimensions, input_hash, status, workspace_id) SELECT id, ?, ?, '', 'pending', workspace_id FROM events WHERE id NOT IN (SELECT event_id FROM event_embeddings)${wsFilter}`,
+    args,
   });
   return result.rowsAffected;
 }
 
-export async function getEmbeddingStats(): Promise<{ total: number; pending: number; ready: number; error: number; locked: number }> {
+export async function getEmbeddingStats(workspaceId: string = ''): Promise<{ total: number; pending: number; ready: number; error: number; locked: number }> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT status, COUNT(*) AS cnt FROM event_embeddings GROUP BY status`,
-    args: [],
+    sql: `SELECT status, COUNT(*) AS cnt FROM event_embeddings${wsFilter} GROUP BY status`,
+    args,
   });
 
   const stats: Record<string, number> = { pending: 0, ready: 0, error: 0, locked: 0 };
@@ -32,10 +41,13 @@ export async function getEmbeddingStats(): Promise<{ total: number; pending: num
   return { total, ...stats } as { total: number; pending: number; ready: number; error: number; locked: number };
 }
 
-export async function reembedAll(): Promise<number> {
+export async function reembedAll(workspaceId: string = ''): Promise<number> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `UPDATE event_embeddings SET status = 'pending', attempts = 0, last_error = NULL WHERE status IN ('ready', 'error')`,
-    args: [],
+    sql: `UPDATE event_embeddings SET status = 'pending', attempts = 0, last_error = NULL WHERE status IN ('ready', 'error')${wsFilter}`,
+    args,
   });
   return result.rowsAffected;
 }

@@ -25,15 +25,16 @@ function stableEntityId(providerType: string, providerId: string | null, entityT
   return `entity_${hash}`;
 }
 
-async function findExistingEntity(providerType: string, providerId: string | null, entityId: string | null, entityName: string | null): Promise<string | null> {
+async function findExistingEntity(providerType: string, providerId: string | null, entityId: string | null, entityName: string | null, workspaceId: string = ''): Promise<string | null> {
   const aliases: Array<{ type: string; value: string }> = [];
   if (providerId && entityId) aliases.push({ type: 'provider_id', value: `${providerType}:${providerId}:${entityId}` });
   if (entityName) aliases.push({ type: 'name', value: normalizeAlias(entityName) });
 
   for (const alias of aliases) {
+    const wsClause = workspaceId ? ' AND workspace_id = ?' : '';
     const existing = await db.execute({
-      sql: 'SELECT entity_id FROM entity_aliases WHERE alias_type = ? AND alias_value = ? LIMIT 1',
-      args: [alias.type, alias.value],
+      sql: `SELECT entity_id FROM entity_aliases WHERE alias_type = ? AND alias_value = ?${wsClause} LIMIT 1`,
+      args: workspaceId ? [alias.type, alias.value, workspaceId] : [alias.type, alias.value],
     });
     if (existing.rows.length > 0) return existing.rows[0].entity_id as string;
   }
@@ -45,6 +46,7 @@ export async function resolveEventEntity(
   envelope: NookEventEnvelope,
   extracted: Omit<ExtractedEvent, 'facts' | 'quality'>,
   typeConceptId: string,
+  workspaceId: string = '',
 ): Promise<ResolvedEntity | null> {
   const entityName = extracted.entity_name ?? extracted.entity_id ?? null;
   if (!entityName) return null;
@@ -55,6 +57,7 @@ export async function resolveEventEntity(
     envelope.provider.id,
     extracted.entity_id,
     extracted.entity_name,
+    workspaceId,
   );
   const entityId = existingId ?? stableEntityId(
     envelope.provider.type,
@@ -67,8 +70,8 @@ export async function resolveEventEntity(
 
   await db.execute({
     sql: `INSERT INTO entities (
-      id, type_concept_id, canonical_name, description, status, confidence, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      id, type_concept_id, canonical_name, description, status, confidence, created_at, updated_at, workspace_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       canonical_name = CASE
         WHEN entities.canonical_name = '' THEN excluded.canonical_name
@@ -85,6 +88,7 @@ export async function resolveEventEntity(
       confidence,
       now,
       now,
+      workspaceId,
     ],
   });
 
@@ -109,8 +113,8 @@ export async function resolveEventEntity(
   for (const alias of aliases) {
     await db.execute({
       sql: `INSERT INTO entity_aliases (
-        id, entity_id, alias_type, alias_value, provider_type, confidence, first_seen_at, last_seen_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        id, entity_id, alias_type, alias_value, provider_type, confidence, first_seen_at, last_seen_at, workspace_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(alias_type, alias_value) DO UPDATE SET
         last_seen_at = excluded.last_seen_at,
         confidence = max(entity_aliases.confidence, excluded.confidence)`,
@@ -123,6 +127,7 @@ export async function resolveEventEntity(
         alias.confidence,
         now,
         now,
+        workspaceId,
       ],
     });
   }

@@ -529,10 +529,10 @@ Workspace separation, proper auth, and team-based data isolation. Every business
 | [x] | 8.5 | Workspace-scoped ingest pipeline | Medium | 8.2 |
 | [x] | 8.6 | Worker workspace iteration helper | Medium | 8.2 |
 | [x] | 8.7 | SvelteKit auth client + workspace routing | High | 8.1 |
-| [ ] | 8.8 | Deep workspace scoping in all SQL queries | Very High | 8.4 |
-| [ ] | 8.9 | Worker per-workspace execution | High | 8.6, 8.8 |
-| [ ] | 8.10 | Team roles & permissions enforcement | Medium | 8.1 |
-| [ ] | 8.11 | Workspace admin UI (members, invites, settings) | Medium | 8.7, 8.10 |
+| [x] | 8.8 | Deep workspace scoping in all SQL queries | Very High | 8.4 |
+| [x] | 8.9 | Worker per-workspace execution | High | 8.6, 8.8 |
+| [x] | 8.10 | Team roles & permissions enforcement | Medium | 8.1 |
+| [x] | 8.11 | Workspace admin UI (members, invites, settings) | Medium | 8.7, 8.10 |
 
 ---
 
@@ -604,43 +604,43 @@ Workspace separation, proper auth, and team-based data isolation. Every business
 
 Every SQL query that reads or writes business data must include `WHERE workspace_id = ?`. This is the largest remaining task — ~60+ files with raw SQL.
 
-- [ ] Events query module: all WHERE clauses include workspace_id
-- [ ] Chat retrieval lanes: vector, FTS, SQL, entity, concept, stats, community, narrative, memory, resource, text-to-sql, causal — all scoped
-- [ ] Entity resolver: scoped entity lookup and creation
-- [ ] Ontology labels: scoped concept lookup
-- [ ] Stats computation: scoped aggregation
-- [ ] Forecast system: all queries scoped
-- [ ] Notification generation: scoped anomaly evaluation
+- [x] Events query module: all WHERE clauses include workspace_id
+- [x] Chat retrieval lanes: vector, FTS, SQL, entity, concept, stats, community, narrative, memory, resource, text-to-sql, causal — all scoped
+- [x] Entity resolver: scoped entity lookup and creation
+- [x] Ontology labels: scoped concept lookup
+- [x] Stats computation: scoped aggregation
+- [x] Forecast system: all queries scoped
+- [x] Notification generation: scoped anomaly evaluation
 
 ---
 
 ### 8.9 Worker Per-Workspace Execution
 
-- [ ] Each worker wraps its `run()` in `forEachWorkspace()` loop
-- [ ] Embedding worker: process events per workspace
-- [ ] Community/narrative workers: detect and summarize per workspace
-- [ ] BOCPD/Granger/TDA workers: compute per workspace
-- [ ] Forecast workers: generate/resolve/calibrate per workspace
+- [x] Each worker wraps its `run()` in `forEachWorkspace()` loop
+- [x] Embedding worker: process events per workspace
+- [x] Community/narrative workers: detect and summarize per workspace
+- [x] BOCPD/Granger/TDA workers: compute per workspace
+- [x] Forecast workers: generate/resolve/calibrate per workspace
 
 ---
 
 ### 8.10 Team Roles & Permissions Enforcement
 
-- [ ] `owner`: full access + workspace settings + member management
-- [ ] `admin`: read/write + approve proposals + manage forecasts
-- [ ] `member`: read/write + chat (no destructive operations)
-- [ ] Role checks on: delete events, approve proposals, manage workspace settings, invite members
-- [ ] Superadmin concept for cross-workspace operations
+- [x] `owner`: full access + workspace settings + member management
+- [x] `admin`: read/write + approve proposals + manage forecasts
+- [x] `member`: read/write + chat (no destructive operations)
+- [x] Role checks on: delete events, approve proposals, manage workspace settings, invite members
+- [x] Superadmin concept for cross-workspace operations
 
 ---
 
 ### 8.11 Workspace Admin UI
 
-- [ ] Workspace settings page: name, slug, webhook keys
-- [ ] Member list with role badges and remove/change-role actions
-- [ ] Invitation form: email + role → Better Auth invitation flow
-- [ ] Workspace switcher dropdown in sidebar
-- [ ] Workspace creation flow for new teams
+- [x] Workspace settings page: name, slug, webhook keys
+- [x] Member list with role badges and remove/change-role actions
+- [x] Invitation form: email + role → Better Auth invitation flow
+- [x] Workspace switcher dropdown in sidebar
+- [x] Workspace creation flow for new teams
 
 ---
 

@@ -42,24 +42,30 @@ function rowToBelief(r: Record<string, unknown>): BeliefState {
   };
 }
 
-export async function getLatestBelief(forecastId: string): Promise<BeliefState | null> {
+export async function getLatestBelief(forecastId: string, workspaceId: string = ''): Promise<BeliefState | null> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [forecastId];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT * FROM forecast_beliefs WHERE forecast_id = ? ORDER BY step DESC LIMIT 1`,
-    args: [forecastId],
+    sql: `SELECT * FROM forecast_beliefs WHERE forecast_id = ?${wsFilter} ORDER BY step DESC LIMIT 1`,
+    args,
   });
   if (result.rows.length === 0) return null;
   return rowToBelief(result.rows[0] as Record<string, unknown>);
 }
 
-export async function getAllBeliefs(forecastId: string): Promise<BeliefState[]> {
+export async function getAllBeliefs(forecastId: string, workspaceId: string = ''): Promise<BeliefState[]> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [forecastId];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT * FROM forecast_beliefs WHERE forecast_id = ? ORDER BY step ASC`,
-    args: [forecastId],
+    sql: `SELECT * FROM forecast_beliefs WHERE forecast_id = ?${wsFilter} ORDER BY step ASC`,
+    args,
   });
   return result.rows.map((r) => rowToBelief(r as Record<string, unknown>));
 }
 
-async function seedInitialBelief(forecastId: string, baseRate: number | null): Promise<BeliefState> {
+async function seedInitialBelief(forecastId: string, baseRate: number | null, workspaceId: string = ''): Promise<BeliefState> {
   const now = new Date().toISOString();
   const belief: BeliefState = {
     id: randomUUID(),
@@ -75,9 +81,9 @@ async function seedInitialBelief(forecastId: string, baseRate: number | null): P
   };
 
   await db.execute({
-    sql: `INSERT INTO forecast_beliefs (id, forecast_id, step, probability, confidence, evidence_for, evidence_against, open_questions, update_reasoning, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [belief.id, belief.forecast_id, belief.step, belief.probability, belief.confidence, belief.evidence_for, belief.evidence_against, belief.open_questions, belief.update_reasoning, belief.created_at],
+    sql: `INSERT INTO forecast_beliefs (id, forecast_id, step, probability, confidence, evidence_for, evidence_against, open_questions, update_reasoning, created_at, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [belief.id, belief.forecast_id, belief.step, belief.probability, belief.confidence, belief.evidence_for, belief.evidence_against, belief.open_questions, belief.update_reasoning, belief.created_at, workspaceId],
   });
 
   return belief;
@@ -218,17 +224,20 @@ function clampDelta(current: number, proposed: number): number {
   return proposed;
 }
 
-export async function updateBelief(forecastId: string, wideSearch: boolean = false): Promise<BeliefState | null> {
+export async function updateBelief(forecastId: string, wideSearch: boolean = false, workspaceId: string = ''): Promise<BeliefState | null> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const fcArgs: (string | number | null)[] = [forecastId];
+  if (workspaceId) fcArgs.push(workspaceId);
   const forecast = await db.execute({
-    sql: `SELECT * FROM forecasts WHERE id = ? AND status = 'open'`,
-    args: [forecastId],
+    sql: `SELECT * FROM forecasts WHERE id = ? AND status = 'open'${wsFilter}`,
+    args: fcArgs,
   });
   if (forecast.rows.length === 0) return null;
   const fc = forecast.rows[0] as Record<string, unknown>;
 
-  let current = await getLatestBelief(forecastId);
+  let current = await getLatestBelief(forecastId, workspaceId);
   if (!current) {
-    current = await seedInitialBelief(forecastId, fc.base_rate != null ? Number(fc.base_rate) : null);
+    current = await seedInitialBelief(forecastId, fc.base_rate != null ? Number(fc.base_rate) : null, workspaceId);
   }
 
   if (current.step >= MAX_STEPS) return current;
@@ -291,29 +300,34 @@ export async function updateBelief(forecastId: string, wideSearch: boolean = fal
   };
 
   await db.execute({
-    sql: `INSERT INTO forecast_beliefs (id, forecast_id, step, probability, confidence, evidence_for, evidence_against, open_questions, update_reasoning, created_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [newBelief.id, newBelief.forecast_id, newBelief.step, newBelief.probability, newBelief.confidence, newBelief.evidence_for, newBelief.evidence_against, newBelief.open_questions, newBelief.update_reasoning, newBelief.created_at],
+    sql: `INSERT INTO forecast_beliefs (id, forecast_id, step, probability, confidence, evidence_for, evidence_against, open_questions, update_reasoning, created_at, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [newBelief.id, newBelief.forecast_id, newBelief.step, newBelief.probability, newBelief.confidence, newBelief.evidence_for, newBelief.evidence_against, newBelief.open_questions, newBelief.update_reasoning, newBelief.created_at, workspaceId],
   });
 
   return newBelief;
 }
 
-export async function hasNewEvidence(forecastId: string): Promise<boolean> {
-  const latest = await getLatestBelief(forecastId);
+export async function hasNewEvidence(forecastId: string, workspaceId: string = ''): Promise<boolean> {
+  const latest = await getLatestBelief(forecastId, workspaceId);
   if (!latest) return true;
 
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const fcArgs: (string | number | null)[] = [forecastId];
+  if (workspaceId) fcArgs.push(workspaceId);
   const forecast = await db.execute({
-    sql: `SELECT entity_id FROM forecasts WHERE id = ?`,
-    args: [forecastId],
+    sql: `SELECT entity_id FROM forecasts WHERE id = ?${wsFilter}`,
+    args: fcArgs,
   });
   if (forecast.rows.length === 0) return false;
   const entityId = forecast.rows[0].entity_id as string | null;
   if (!entityId) return false;
 
+  const evArgs: (string | number | null)[] = [entityId, latest.created_at];
+  if (workspaceId) evArgs.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT COUNT(*) as cnt FROM events WHERE entity_id = ? AND created_at > ?`,
-    args: [entityId, latest.created_at],
+    sql: `SELECT COUNT(*) as cnt FROM events WHERE entity_id = ? AND created_at > ?${wsFilter}`,
+    args: evArgs,
   });
   return Number(result.rows[0].cnt) > 0;
 }

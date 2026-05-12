@@ -54,8 +54,8 @@ resourcesRoutes.post('/', async (c) => {
       const filePath = await saveUpload(id, buffer, mime);
 
       await db.execute({
-        sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
-        args: [id, file.name, '', mime, buffer.length, filePath, now, now],
+        sql: `INSERT INTO resources (id, workspace_id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
+        args: [id, ws.workspaceId, file.name, '', mime, buffer.length, filePath, now, now],
       });
 
       processResource(id, buffer, mime).catch(console.error);
@@ -81,8 +81,8 @@ resourcesRoutes.post('/', async (c) => {
     const filePath = await saveUpload(id, buffer, mime);
 
     await db.execute({
-      sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
-      args: [id, file.name, '', mime, buffer.length, filePath, now, now],
+      sql: `INSERT INTO resources (id, workspace_id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
+      args: [id, ws.workspaceId, file.name, '', mime, buffer.length, filePath, now, now],
     });
 
     processResource(id, buffer, mime).catch(console.error);
@@ -96,11 +96,12 @@ resourcesRoutes.get('/', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT id, title, description, mime_type, file_size, source_type, chunk_count, status, error, uploaded_at, updated_at,
+  const result = await db.execute({
+    sql: `SELECT id, title, description, mime_type, file_size, source_type, chunk_count, status, error, uploaded_at, updated_at,
             file_path IS NOT NULL AS has_file
-     FROM resources ORDER BY uploaded_at DESC LIMIT 100`,
-  );
+     FROM resources WHERE workspace_id = ? ORDER BY uploaded_at DESC LIMIT 100`,
+    args: [ws.workspaceId],
+  });
 
   return c.json({
     resources: result.rows.map((r) => ({
@@ -126,8 +127,8 @@ resourcesRoutes.get('/:id', async (c) => {
 
   const id = c.req.param('id');
   const [resource, chunks] = await Promise.all([
-    db.execute({ sql: `SELECT *, file_path IS NOT NULL AS has_file FROM resources WHERE id = ?`, args: [id] }),
-    db.execute({ sql: `SELECT id, chunk_index, content, token_count, embedding_status FROM resource_chunks WHERE resource_id = ? ORDER BY chunk_index`, args: [id] }),
+    db.execute({ sql: `SELECT *, file_path IS NOT NULL AS has_file FROM resources WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] }),
+    db.execute({ sql: `SELECT id, chunk_index, content, token_count, embedding_status FROM resource_chunks WHERE resource_id = ? AND workspace_id = ? ORDER BY chunk_index`, args: [id, ws.workspaceId] }),
   ]);
 
   if (resource.rows.length === 0) return c.json({ error: 'not_found' }, 404);
@@ -161,7 +162,7 @@ resourcesRoutes.get('/:id/file', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const result = await db.execute({ sql: `SELECT title, mime_type, file_path FROM resources WHERE id = ?`, args: [id] });
+  const result = await db.execute({ sql: `SELECT title, mime_type, file_path FROM resources WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
 
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
@@ -190,13 +191,13 @@ resourcesRoutes.delete('/:id', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const result = await db.execute({ sql: `SELECT id, file_path FROM resources WHERE id = ?`, args: [id] });
+  const result = await db.execute({ sql: `SELECT id, file_path FROM resources WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
   const filePath = result.rows[0].file_path as string | null;
 
-  await db.execute({ sql: `DELETE FROM resource_chunks WHERE resource_id = ?`, args: [id] });
-  await db.execute({ sql: `DELETE FROM resources WHERE id = ?`, args: [id] });
+  await db.execute({ sql: `DELETE FROM resource_chunks WHERE resource_id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
+  await db.execute({ sql: `DELETE FROM resources WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
 
   if (filePath) {
     await removeUpload(filePath).catch(console.error);

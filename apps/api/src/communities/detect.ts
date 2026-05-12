@@ -3,12 +3,15 @@ import { db } from '../db/client';
 type Edge = { from: string; to: string; weight: number };
 type Graph = { nodes: Set<string>; edges: Edge[]; adjacency: Map<string, Map<string, number>> };
 
-async function loadGraph(): Promise<Graph> {
-  const result = await db.execute(
-    `SELECT from_entity_id, to_entity_id, MAX(confidence) AS weight
-     FROM entity_relations
+async function loadGraph(workspaceId: string = ''): Promise<Graph> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
+  const result = await db.execute({
+    sql: `SELECT from_entity_id, to_entity_id, MAX(confidence) AS weight
+     FROM entity_relations${wsFilter}
      GROUP BY from_entity_id, to_entity_id`,
-  );
+    args: wsArgs,
+  });
 
   const nodes = new Set<string>();
   const edges: Edge[] = [];
@@ -123,8 +126,8 @@ export type DetectedCommunity = {
   memberEntityIds: string[];
 };
 
-export async function detectCommunities(minSize = 2): Promise<DetectedCommunity[]> {
-  const graph = await loadGraph();
+export async function detectCommunities(minSize = 2, workspaceId: string = ''): Promise<DetectedCommunity[]> {
+  const graph = await loadGraph(workspaceId);
   const assignments = louvain(graph);
 
   const groups = new Map<number, string[]>();

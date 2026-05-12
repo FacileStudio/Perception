@@ -173,7 +173,7 @@ function ensureLimit(sql: string, maxRows = 100): string {
   return trimmed;
 }
 
-export async function textToSqlLane(plan: QueryPlan): Promise<SqlQueryResult | null> {
+export async function textToSqlLane(plan: QueryPlan, workspaceId: string = ''): Promise<SqlQueryResult | null> {
   try {
     const apiKey = await getEffectiveSetting('anthropic_api_key');
     const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
@@ -202,8 +202,32 @@ export async function textToSqlLane(plan: QueryPlan): Promise<SqlQueryResult | n
       return null;
     }
 
-    const safeSql = ensureLimit(rawSql);
-    const result = await db.execute(safeSql);
+    let safeSql = ensureLimit(rawSql);
+
+    if (workspaceId) {
+      const whereIdx = safeSql.search(/\bWHERE\b/i);
+      if (whereIdx !== -1) {
+        const insertAt = whereIdx + 'WHERE'.length;
+        safeSql = `${safeSql.slice(0, insertAt)} workspace_id = ? AND${safeSql.slice(insertAt)}`;
+      } else {
+        const fromIdx = safeSql.search(/\bFROM\b/i);
+        if (fromIdx !== -1) {
+          const afterFrom = safeSql.slice(fromIdx);
+          const nextClause = afterFrom.search(/\b(GROUP|ORDER|LIMIT|HAVING|UNION)\b/i);
+          if (nextClause > 0) {
+            const insertPos = fromIdx + nextClause;
+            safeSql = `${safeSql.slice(0, insertPos)} WHERE workspace_id = ? ${safeSql.slice(insertPos)}`;
+          } else {
+            safeSql = `${safeSql} WHERE workspace_id = ?`;
+          }
+        }
+      }
+    }
+
+    const result = await db.execute({
+      sql: safeSql,
+      args: workspaceId ? [workspaceId] : [],
+    });
 
     if (result.rows.length === 0) return null;
 

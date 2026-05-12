@@ -140,9 +140,9 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
-          VALUES (?, ?, 'auto', ?, 'system', ?)`,
-    args: [randomUUID(), forecast.id, JSON.stringify(outcome.evidence), now],
+    sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at, workspace_id)
+          VALUES (?, ?, 'auto', ?, 'system', ?, ?)`,
+    args: [randomUUID(), forecast.id, JSON.stringify(outcome.evidence), now, forecast.workspace_id ?? ''],
   });
 
   await db.execute({
@@ -153,11 +153,14 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
   return 'resolved';
 }
 
-export async function resolveMaturedForecasts(): Promise<ResolutionResult> {
+export async function resolveMaturedForecasts(workspaceId: string = ''): Promise<ResolutionResult> {
   const now = new Date().toISOString();
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [now];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT * FROM forecasts WHERE resolves_at <= ? AND status = 'open'`,
-    args: [now],
+    sql: `SELECT * FROM forecasts WHERE resolves_at <= ? AND status = 'open'${wsFilter}`,
+    args,
   });
 
   let resolved = 0;
@@ -181,6 +184,7 @@ export async function resolveMaturedForecasts(): Promise<ResolutionResult> {
       resolved_at: (row.resolved_at as string) ?? null,
       resolution_value: row.resolution_value != null ? Number(row.resolution_value) : null,
       status: row.status as Forecast['status'],
+      workspace_id: (row.workspace_id as string) ?? '',
     };
 
     const outcome = await resolveOne(forecast);

@@ -56,8 +56,14 @@ function computeReciprocalRank(retrieved: string[], expected: Set<string>): numb
   return 0;
 }
 
-async function loadFixtures(): Promise<EvalFixture[]> {
-  const result = await db.execute(`SELECT id, question, expected_event_ids, expected_lanes, intent FROM eval_fixtures ORDER BY created_at`);
+async function loadFixtures(workspaceId: string = ''): Promise<EvalFixture[]> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
+  const result = await db.execute({
+    sql: `SELECT id, question, expected_event_ids, expected_lanes, intent FROM eval_fixtures${wsFilter} ORDER BY created_at`,
+    args,
+  });
   return result.rows.map((r) => ({
     id: r.id as string,
     question: r.question as string,
@@ -92,10 +98,14 @@ async function evaluateFixture(fixture: EvalFixture): Promise<FixtureResult> {
   };
 }
 
-async function checkRegression(currentScore: number): Promise<boolean> {
-  const prev = await db.execute(
-    `SELECT precision_at_5, recall_at_5, mrr FROM eval_runs ORDER BY ran_at DESC LIMIT 1`,
-  );
+async function checkRegression(currentScore: number, workspaceId: string = ''): Promise<boolean> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
+  const prev = await db.execute({
+    sql: `SELECT precision_at_5, recall_at_5, mrr FROM eval_runs${wsFilter} ORDER BY ran_at DESC LIMIT 1`,
+    args,
+  });
   if (prev.rows.length === 0) return false;
 
   const lastPrecision = prev.rows[0].precision_at_5 as number;
@@ -106,8 +116,8 @@ async function checkRegression(currentScore: number): Promise<boolean> {
   return currentScore < lastAvg - 0.05;
 }
 
-export async function runEvaluation(): Promise<RunResult> {
-  const fixtures = await loadFixtures();
+export async function runEvaluation(workspaceId: string = ''): Promise<RunResult> {
+  const fixtures = await loadFixtures(workspaceId);
   if (fixtures.length === 0) {
     throw new Error('No eval fixtures found');
   }
@@ -156,33 +166,34 @@ export async function runEvaluation(): Promise<RunResult> {
   }
 
   const avgScore = (precisionAt5 + recallAt5 + mrr) / 3;
-  const regressionDetected = await checkRegression(avgScore);
+  const regressionDetected = await checkRegression(avgScore, workspaceId);
 
   const runId = randomUUID();
   const ranAt = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO eval_runs (id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [runId, ranAt, fixtures.length, precisionAt5, recallAt5, mrr, JSON.stringify(laneHitRates), durationMs, regressionDetected ? 1 : 0],
+    sql: `INSERT INTO eval_runs (id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [runId, ranAt, fixtures.length, precisionAt5, recallAt5, mrr, JSON.stringify(laneHitRates), durationMs, regressionDetected ? 1 : 0, workspaceId],
   });
 
   const resultStatements = results.map((r) => ({
-    sql: `INSERT INTO eval_results (id, run_id, fixture_id, retrieved_event_ids, retrieved_lanes, precision_val, recall_val, reciprocal_rank, score)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [randomUUID(), runId, r.fixtureId, JSON.stringify(r.retrievedEventIds), JSON.stringify(r.retrievedLanes), r.precision, r.recall, r.reciprocalRank, r.score],
+    sql: `INSERT INTO eval_results (id, run_id, fixture_id, retrieved_event_ids, retrieved_lanes, precision_val, recall_val, reciprocal_rank, score, workspace_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [randomUUID(), runId, r.fixtureId, JSON.stringify(r.retrievedEventIds), JSON.stringify(r.retrievedLanes), r.precision, r.recall, r.reciprocalRank, r.score, workspaceId],
   }));
 
   await db.batch(resultStatements);
 
   if (regressionDetected) {
     await db.execute({
-      sql: `INSERT INTO notifications (id, type, severity, title, message, created_at) VALUES (?, 'eval_regression', 'warning', ?, ?, ?)`,
+      sql: `INSERT INTO notifications (id, type, severity, title, message, created_at, workspace_id) VALUES (?, 'eval_regression', 'warning', ?, ?, ?, ?)`,
       args: [
         randomUUID(),
         'Retrieval quality regression detected',
         `Eval run scored P@5=${precisionAt5.toFixed(3)} R@5=${recallAt5.toFixed(3)} MRR=${mrr.toFixed(3)}, which is >5% below the previous run.`,
         ranAt,
+        workspaceId,
       ],
     });
   }

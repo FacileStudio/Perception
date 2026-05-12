@@ -9,12 +9,14 @@ export async function recordRetrievalOutcome(
   laneWeights: Record<string, number>,
   activeLanes: string[],
   topEventIds: string[],
+  workspaceId: string = '',
 ): Promise<void> {
   await db.execute({
-    sql: `INSERT INTO retrieval_outcomes (id, message_id, session_id, intent, lane_weights, active_lanes, top_event_ids, occurred_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO retrieval_outcomes (id, workspace_id, message_id, session_id, intent, lane_weights, active_lanes, top_event_ids, occurred_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       randomUUID(),
+      workspaceId,
       messageId,
       sessionId,
       intent,
@@ -29,35 +31,48 @@ export async function recordRetrievalOutcome(
 export async function labelOutcome(
   messageId: string,
   label: 'up' | 'down' | 'implicit_negative',
+  workspaceId: string = '',
 ): Promise<void> {
   if (label === 'implicit_negative') {
     await db.execute({
-      sql: `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND outcome_label IS NULL`,
-      args: [label, messageId],
+      sql: workspaceId
+        ? `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND outcome_label IS NULL AND workspace_id = ?`
+        : `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND outcome_label IS NULL`,
+      args: workspaceId ? [label, messageId, workspaceId] : [label, messageId],
     });
   } else {
     await db.execute({
-      sql: `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ?`,
-      args: [label, messageId],
+      sql: workspaceId
+        ? `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND workspace_id = ?`
+        : `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ?`,
+      args: workspaceId ? [label, messageId, workspaceId] : [label, messageId],
     });
   }
 }
 
-export async function clearOutcomeLabel(messageId: string): Promise<void> {
+export async function clearOutcomeLabel(messageId: string, workspaceId: string = ''): Promise<void> {
   await db.execute({
-    sql: `UPDATE retrieval_outcomes SET outcome_label = NULL WHERE message_id = ?`,
-    args: [messageId],
+    sql: workspaceId
+      ? `UPDATE retrieval_outcomes SET outcome_label = NULL WHERE message_id = ? AND workspace_id = ?`
+      : `UPDATE retrieval_outcomes SET outcome_label = NULL WHERE message_id = ?`,
+    args: workspaceId ? [messageId, workspaceId] : [messageId],
   });
 }
 
-export async function detectImplicitNegative(sessionId: string): Promise<void> {
+export async function detectImplicitNegative(sessionId: string, workspaceId: string = ''): Promise<void> {
   const result = await db.execute({
-    sql: `SELECT cm.id, cm.created_at
+    sql: workspaceId
+      ? `SELECT cm.id, cm.created_at
+          FROM chat_messages cm
+          WHERE cm.session_id = ? AND cm.role = 'assistant' AND cm.workspace_id = ?
+          ORDER BY cm.created_at DESC
+          LIMIT 1`
+      : `SELECT cm.id, cm.created_at
           FROM chat_messages cm
           WHERE cm.session_id = ? AND cm.role = 'assistant'
           ORDER BY cm.created_at DESC
           LIMIT 1`,
-    args: [sessionId],
+    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
   });
 
   if (result.rows.length === 0) return;
@@ -67,6 +82,6 @@ export async function detectImplicitNegative(sessionId: string): Promise<void> {
   const now = Date.now();
 
   if (now - assistantTime < 30_000) {
-    await labelOutcome(row.id as string, 'implicit_negative');
+    await labelOutcome(row.id as string, 'implicit_negative', workspaceId);
   }
 }

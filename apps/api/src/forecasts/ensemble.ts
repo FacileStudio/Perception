@@ -41,18 +41,24 @@ function rowToStrategy(r: Record<string, unknown>): ForecastStrategy {
   };
 }
 
-export async function ensureStrategiesSeeded(): Promise<void> {
+export async function ensureStrategiesSeeded(workspaceId: string = ''): Promise<void> {
   for (const s of BUILT_IN_STRATEGIES) {
     await db.execute({
-      sql: `INSERT OR IGNORE INTO forecast_strategies (id, name, description, strategy_type, is_active, brier_score, brier_count, log_weight, created_at)
-            VALUES (?, ?, ?, ?, 1, NULL, 0, 0, ?)`,
-      args: [randomUUID(), s.name, s.description, s.strategy_type, new Date().toISOString()],
+      sql: `INSERT OR IGNORE INTO forecast_strategies (id, name, description, strategy_type, is_active, brier_score, brier_count, log_weight, created_at, workspace_id)
+            VALUES (?, ?, ?, ?, 1, NULL, 0, 0, ?, ?)`,
+      args: [randomUUID(), s.name, s.description, s.strategy_type, new Date().toISOString(), workspaceId],
     });
   }
 }
 
-async function getActiveStrategies(): Promise<ForecastStrategy[]> {
-  const result = await db.execute(`SELECT * FROM forecast_strategies WHERE is_active = 1`);
+async function getActiveStrategies(workspaceId: string = ''): Promise<ForecastStrategy[]> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
+  const result = await db.execute({
+    sql: `SELECT * FROM forecast_strategies WHERE is_active = 1${wsFilter}`,
+    args,
+  });
   return result.rows.map((r) => rowToStrategy(r as Record<string, unknown>));
 }
 
@@ -163,8 +169,8 @@ const strategyRunners: Record<StrategyType, (forecastId: string) => Promise<numb
   human: async () => null,
 };
 
-export async function generateStrategyForecasts(forecastId: string): Promise<void> {
-  const strategies = await getActiveStrategies();
+export async function generateStrategyForecasts(forecastId: string, workspaceId: string = ''): Promise<void> {
+  const strategies = await getActiveStrategies(workspaceId);
   const now = new Date().toISOString();
 
   for (const strategy of strategies) {
@@ -182,9 +188,9 @@ export async function generateStrategyForecasts(forecastId: string): Promise<voi
       if (probability == null) continue;
 
       await db.execute({
-        sql: `INSERT INTO strategy_forecasts (id, forecast_id, strategy_id, probability, created_at)
-              VALUES (?, ?, ?, ?, ?)`,
-        args: [randomUUID(), forecastId, strategy.id, probability, now],
+        sql: `INSERT INTO strategy_forecasts (id, forecast_id, strategy_id, probability, created_at, workspace_id)
+              VALUES (?, ?, ?, ?, ?, ?)`,
+        args: [randomUUID(), forecastId, strategy.id, probability, now, workspaceId],
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -273,7 +279,7 @@ export async function aggregateEnsemble(forecastId: string): Promise<{
   };
 }
 
-export async function updateStrategyScores(forecastId: string, actualOutcome: number): Promise<void> {
+export async function updateStrategyScores(forecastId: string, actualOutcome: number, _workspaceId: string = ''): Promise<void> {
   const predictions = await db.execute({
     sql: `SELECT sf.strategy_id, sf.probability FROM strategy_forecasts sf
           JOIN forecast_strategies fs ON fs.id = sf.strategy_id
@@ -311,21 +317,28 @@ export async function updateStrategyScores(forecastId: string, actualOutcome: nu
   }
 }
 
-export async function retireUnderperformers(): Promise<number> {
+export async function retireUnderperformers(workspaceId: string = ''): Promise<number> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [RETIRE_BRIER_THRESHOLD, RETIRE_MIN_FORECASTS];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
     sql: `UPDATE forecast_strategies SET is_active = 0
-          WHERE is_active = 1 AND brier_score > ? AND brier_count >= ?`,
-    args: [RETIRE_BRIER_THRESHOLD, RETIRE_MIN_FORECASTS],
+          WHERE is_active = 1 AND brier_score > ? AND brier_count >= ?${wsFilter}`,
+    args,
   });
   return result.rowsAffected;
 }
 
-export async function getStrategyLeaderboard(): Promise<StrategyScore[]> {
-  const result = await db.execute(
-    `SELECT id, name, strategy_type, brier_score, brier_count, log_weight, is_active
-     FROM forecast_strategies
+export async function getStrategyLeaderboard(workspaceId: string = ''): Promise<StrategyScore[]> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
+  const result = await db.execute({
+    sql: `SELECT id, name, strategy_type, brier_score, brier_count, log_weight, is_active
+     FROM forecast_strategies${wsFilter}
      ORDER BY CASE WHEN brier_score IS NULL THEN 1 ELSE 0 END, brier_score ASC`,
-  );
+    args,
+  });
 
   const strategies = result.rows.map((r) => {
     const row = r as Record<string, unknown>;

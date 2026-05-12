@@ -11,17 +11,17 @@ const EXPECTED_KINDS = [
   'event_volume_30d',
 ];
 
-export async function refreshSnapshots(): Promise<void> {
+export async function refreshSnapshots(workspaceId: string = ''): Promise<void> {
   const [[snapshots7, snapshots30], volumeSnap] = await Promise.all([
-    Promise.all([computeAllStats(7), computeAllStats(30)]),
-    import('./compute').then((m) => m.computeEventVolume().catch(() => null)),
+    Promise.all([computeAllStats(7, workspaceId), computeAllStats(30, workspaceId)]),
+    import('./compute').then((m) => m.computeEventVolume(workspaceId).catch(() => null)),
   ]);
 
   const all = [...snapshots7, ...snapshots30, ...(volumeSnap ? [volumeSnap] : [])];
 
   for (const snapshot of all) {
     await db.execute({
-      sql: `INSERT INTO stats_snapshots (id, kind, window_start, window_end, generated_at, source_count, min_sample_met, data_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO stats_snapshots (id, kind, window_start, window_end, generated_at, source_count, min_sample_met, data_json, workspace_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         snapshot.id,
         snapshot.kind,
@@ -31,6 +31,7 @@ export async function refreshSnapshots(): Promise<void> {
         snapshot.source_count,
         snapshot.min_sample_met ? 1 : 0,
         JSON.stringify(snapshot.data),
+        workspaceId,
       ],
     });
   }
@@ -38,26 +39,35 @@ export async function refreshSnapshots(): Promise<void> {
   const staleThreshold = new Date(Date.now() - 48 * 3600000).toISOString();
   const kinds = [...new Set(all.map((s) => s.kind))];
   for (const kind of kinds) {
+    const wsDelFilter = workspaceId ? ' AND workspace_id = ?' : '';
+    const delArgs: (string | number | null)[] = [kind, staleThreshold];
+    if (workspaceId) delArgs.push(workspaceId);
     await db.execute({
-      sql: `DELETE FROM stats_snapshots WHERE kind = ? AND generated_at < ?`,
-      args: [kind, staleThreshold],
+      sql: `DELETE FROM stats_snapshots WHERE kind = ? AND generated_at < ?${wsDelFilter}`,
+      args: delArgs,
     });
   }
 }
 
-export async function hasAllExpectedKinds(): Promise<boolean> {
+export async function hasAllExpectedKinds(workspaceId: string = ''): Promise<boolean> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT DISTINCT kind FROM stats_snapshots`,
-    args: [],
+    sql: `SELECT DISTINCT kind FROM stats_snapshots${wsFilter}`,
+    args,
   });
   const existing = new Set(result.rows.map((r) => r.kind as string));
   return EXPECTED_KINDS.every((k) => existing.has(k));
 }
 
-export async function getLatestSnapshots(): Promise<StatsSnapshot[]> {
+export async function getLatestSnapshots(workspaceId: string = ''): Promise<StatsSnapshot[]> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 50`,
-    args: [],
+    sql: `SELECT * FROM stats_snapshots${wsFilter} ORDER BY generated_at DESC LIMIT 50`,
+    args,
   });
 
   return result.rows.map((r) => ({
@@ -72,10 +82,13 @@ export async function getLatestSnapshots(): Promise<StatsSnapshot[]> {
   }));
 }
 
-export async function getLatestSnapshotGeneratedAt(): Promise<string | null> {
+export async function getLatestSnapshotGeneratedAt(workspaceId: string = ''): Promise<string | null> {
+  const wsFilter = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
-    sql: `SELECT generated_at FROM stats_snapshots ORDER BY generated_at DESC LIMIT 1`,
-    args: [],
+    sql: `SELECT generated_at FROM stats_snapshots${wsFilter} ORDER BY generated_at DESC LIMIT 1`,
+    args,
   });
 
   if (result.rows.length === 0) {

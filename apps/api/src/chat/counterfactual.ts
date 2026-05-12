@@ -39,13 +39,15 @@ type CausalEdge = {
 const MAX_HOPS = 3;
 const MONTE_CARLO_SAMPLES = 500;
 
-async function loadCausalGraph(): Promise<CausalEdge[]> {
-  const result = await db.execute(
-    `SELECT cause_series, effect_series, lag_days, p_value, direction
+async function loadCausalGraph(workspaceId: string = ''): Promise<CausalEdge[]> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
+  const result = await db.execute({
+    sql: `SELECT cause_series, effect_series, lag_days, p_value, direction
      FROM causal_links
-     WHERE superseded_at IS NULL AND p_value < 0.05
+     WHERE superseded_at IS NULL AND p_value < 0.05${wsAnd}
      ORDER BY p_value ASC`,
-  );
+    args: workspaceId ? [workspaceId] : [],
+  });
 
   return result.rows.map((r) => ({
     causeSeries: r.cause_series as string,
@@ -66,32 +68,40 @@ function buildAdjacency(edges: CausalEdge[]): Map<string, CausalEdge[]> {
   return adj;
 }
 
-async function resolveEntitySeries(entityHint: string): Promise<string[]> {
+async function resolveEntitySeries(entityHint: string, workspaceId: string = ''): Promise<string[]> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   const result = await db.execute({
     sql: `SELECT DISTINCT series_key FROM event_counts_daily
-          WHERE series_key LIKE ? OR series_key LIKE ?
+          WHERE (series_key LIKE ? OR series_key LIKE ?)${wsAnd}
           LIMIT 10`,
-    args: [`%${entityHint.toLowerCase()}%`, `%${entityHint}%`],
+    args: workspaceId
+      ? [`%${entityHint.toLowerCase()}%`, `%${entityHint}%`, workspaceId]
+      : [`%${entityHint.toLowerCase()}%`, `%${entityHint}%`],
   });
 
   if (result.rows.length > 0) {
     return result.rows.map((r) => r.series_key as string);
   }
 
+  const wsEntAnd = workspaceId ? ' AND e.workspace_id = ?' : '';
   const entityResult = await db.execute({
     sql: `SELECT DISTINCT e.id FROM entities e
-          WHERE LOWER(e.canonical_name) LIKE ?
+          WHERE LOWER(e.canonical_name) LIKE ?${wsEntAnd}
           LIMIT 5`,
-    args: [`%${entityHint.toLowerCase()}%`],
+    args: workspaceId
+      ? [`%${entityHint.toLowerCase()}%`, workspaceId]
+      : [`%${entityHint.toLowerCase()}%`],
   });
 
   if (entityResult.rows.length > 0) {
     const entityIds = entityResult.rows.map((r) => r.id as string);
+    const seriesArgs = entityIds.map((id) => `%${id}%`);
+    if (workspaceId) seriesArgs.push(workspaceId);
     const seriesResult = await db.execute({
       sql: `SELECT DISTINCT series_key FROM event_counts_daily
-            WHERE ${entityIds.map(() => 'series_key LIKE ?').join(' OR ')}
+            WHERE (${entityIds.map(() => 'series_key LIKE ?').join(' OR ')})${wsAnd}
             LIMIT 10`,
-      args: entityIds.map((id) => `%${id}%`),
+      args: seriesArgs,
     });
     return seriesResult.rows.map((r) => r.series_key as string);
   }
@@ -103,15 +113,19 @@ async function estimateCoefficient(
   causeSeries: string,
   effectSeries: string,
   lagDays: number,
+  workspaceId: string = '',
 ): Promise<{ coefficient: number; variance: number; sampleSize: number }> {
+  const wsAnd = workspaceId ? ' AND ec1.workspace_id = ?' : '';
   const result = await db.execute({
     sql: `SELECT ec1.cnt AS cause_cnt, ec2.cnt AS effect_cnt
           FROM event_counts_daily ec1
           JOIN event_counts_daily ec2
             ON ec2.series_key = ? AND ec2.day = date(ec1.day, '+' || ? || ' days')
-          WHERE ec1.series_key = ?
+          WHERE ec1.series_key = ?${wsAnd}
           ORDER BY ec1.day ASC`,
-    args: [effectSeries, lagDays, causeSeries],
+    args: workspaceId
+      ? [effectSeries, lagDays, causeSeries, workspaceId]
+      : [effectSeries, lagDays, causeSeries],
   });
 
   if (result.rows.length < 10) {
@@ -273,10 +287,10 @@ function inferMutationDirection(mutation: string): number {
   return -1;
 }
 
-export async function runCounterfactual(scenario: CounterfactualScenario): Promise<CounterfactualResult> {
+export async function runCounterfactual(scenario: CounterfactualScenario, workspaceId: string = ''): Promise<CounterfactualResult> {
   const [edges, matchedSeries] = await Promise.all([
-    loadCausalGraph(),
-    resolveEntitySeries(scenario.entity),
+    loadCausalGraph(workspaceId),
+    resolveEntitySeries(scenario.entity, workspaceId),
   ]);
 
   if (edges.length === 0) {
@@ -335,7 +349,7 @@ export async function runCounterfactual(scenario: CounterfactualScenario): Promi
   const relevantEdgeList = edges.filter((e) => relevantEdges.has(`${e.causeSeries}→${e.effectSeries}`));
 
   const coeffPromises = relevantEdgeList.map(async (edge) => {
-    const coef = await estimateCoefficient(edge.causeSeries, edge.effectSeries, edge.lagDays);
+    const coef = await estimateCoefficient(edge.causeSeries, edge.effectSeries, edge.lagDays, workspaceId);
     coefficients.set(`${edge.causeSeries}→${edge.effectSeries}`, coef);
   });
   await Promise.all(coeffPromises);

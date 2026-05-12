@@ -5,7 +5,7 @@ import type { QueryPlan } from '../planner';
 import type { ScoredEvent } from './types';
 import { EVENT_LIST_ORDER_BY } from '../../events/order';
 
-export async function conceptLane(plan: QueryPlan): Promise<Array<ScoredEvent<'concept'> & { concepts: string[] }>> {
+export async function conceptLane(plan: QueryPlan, workspaceId: string = ''): Promise<Array<ScoredEvent<'concept'> & { concepts: string[] }>> {
   const conditions: string[] = [];
   const args: InValue[] = [];
 
@@ -25,6 +25,9 @@ export async function conceptLane(plan: QueryPlan): Promise<Array<ScoredEvent<'c
 
   if (conditions.length === 0) return [];
 
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+  if (workspaceId) args.push(workspaceId);
+
   try {
     const result = await db.execute({
       sql: `SELECT e.*, group_concat(DISTINCT oc.label) AS matched_concepts, max(ec.confidence + oc.confidence) AS match_score
@@ -32,7 +35,7 @@ export async function conceptLane(plan: QueryPlan): Promise<Array<ScoredEvent<'c
         JOIN ontology_concepts oc ON oc.id = ec.concept_id
         LEFT JOIN ontology_concept_aliases oca ON oca.concept_id = oc.id
         JOIN events e ON e.id = ec.event_id
-        WHERE (${conditions.join(' OR ')}) AND oc.state != 'rejected'
+        WHERE (${conditions.join(' OR ')}) AND oc.state != 'rejected'${wsFilter}
         GROUP BY e.id
         ORDER BY match_score DESC, ${EVENT_LIST_ORDER_BY}
         LIMIT 30`,

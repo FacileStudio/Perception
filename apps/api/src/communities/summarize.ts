@@ -9,16 +9,26 @@ type CommunityInput = {
   recentEventTitles: string[];
 };
 
-async function loadCommunityInput(memberEntityIds: string[]): Promise<CommunityInput> {
+async function loadCommunityInput(memberEntityIds: string[], workspaceId: string = ''): Promise<CommunityInput> {
   const placeholders = memberEntityIds.map(() => '?').join(',');
+  const wsEntFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+  const wsRelFilter = workspaceId ? ' AND er.workspace_id = ?' : '';
+  const wsEvFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+
+  const entArgs: (string | number | null)[] = [...memberEntityIds];
+  if (workspaceId) entArgs.push(workspaceId);
+  const relArgs: (string | number | null)[] = [...memberEntityIds, ...memberEntityIds];
+  if (workspaceId) relArgs.push(workspaceId);
+  const evArgs: (string | number | null)[] = [...memberEntityIds];
+  if (workspaceId) evArgs.push(workspaceId);
 
   const [entityRows, relationRows, eventRows] = await Promise.all([
     db.execute({
       sql: `SELECT e.id, e.canonical_name AS name, oc.label AS type, e.description
             FROM entities e
             JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-            WHERE e.id IN (${placeholders})`,
-      args: memberEntityIds,
+            WHERE e.id IN (${placeholders})${wsEntFilter}`,
+      args: entArgs,
     }),
     db.execute({
       sql: `SELECT ef.canonical_name AS from_name, et.canonical_name AS to_name, oc.label AS relation
@@ -26,16 +36,16 @@ async function loadCommunityInput(memberEntityIds: string[]): Promise<CommunityI
             JOIN entities ef ON ef.id = er.from_entity_id
             JOIN entities et ON et.id = er.to_entity_id
             JOIN ontology_concepts oc ON oc.id = er.relation_concept_id
-            WHERE er.from_entity_id IN (${placeholders}) AND er.to_entity_id IN (${placeholders})`,
-      args: [...memberEntityIds, ...memberEntityIds],
+            WHERE er.from_entity_id IN (${placeholders}) AND er.to_entity_id IN (${placeholders})${wsRelFilter}`,
+      args: relArgs,
     }),
     db.execute({
       sql: `SELECT DISTINCT e.title
             FROM events e
             JOIN event_entities ee ON ee.event_id = e.id
-            WHERE ee.entity_id IN (${placeholders})
+            WHERE ee.entity_id IN (${placeholders})${wsEvFilter}
             ORDER BY e.occurred_at DESC LIMIT 15`,
-      args: memberEntityIds,
+      args: evArgs,
     }),
   ]);
 
@@ -112,9 +122,10 @@ function trimInput(input: CommunityInput): CommunityInput {
 
 export async function generateCommunitySummary(
   memberEntityIds: string[],
+  workspaceId: string = '',
 ): Promise<{ title: string; summary: string; importance: number }> {
   const cappedIds = memberEntityIds.slice(0, MAX_MEMBERS);
-  const raw = await loadCommunityInput(cappedIds);
+  const raw = await loadCommunityInput(cappedIds, workspaceId);
   const input = trimInput(raw);
 
   if (input.entities.length === 0) {

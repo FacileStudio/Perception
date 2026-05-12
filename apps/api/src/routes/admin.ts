@@ -93,21 +93,22 @@ adminRoutes.get('/graph-health', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const [snapshotRow, isolatedRows] = await Promise.all([
-    db.execute(`SELECT * FROM graph_health_snapshots ORDER BY computed_at DESC LIMIT 1`).catch(() => ({ rows: [] })),
-    db.execute(
-      `SELECT e.id, e.canonical_name, oc.label AS type_label,
-              (SELECT COUNT(*) FROM event_entities ee WHERE ee.entity_id = e.id) AS event_count
+    db.execute({ sql: `SELECT * FROM graph_health_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`, args: [ws.workspaceId] }).catch(() => ({ rows: [] })),
+    db.execute({
+      sql: `SELECT e.id, e.canonical_name, oc.label AS type_label,
+              (SELECT COUNT(*) FROM event_entities ee WHERE ee.entity_id = e.id AND ee.workspace_id = ?) AS event_count
        FROM entities e
        JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-       WHERE e.id NOT IN (
-         SELECT from_entity_id FROM entity_relations
+       WHERE e.workspace_id = ? AND e.id NOT IN (
+         SELECT from_entity_id FROM entity_relations WHERE workspace_id = ?
          UNION
-         SELECT to_entity_id FROM entity_relations
+         SELECT to_entity_id FROM entity_relations WHERE workspace_id = ?
        )
-       AND e.id IN (SELECT DISTINCT entity_id FROM event_entities)
+       AND e.id IN (SELECT DISTINCT entity_id FROM event_entities WHERE workspace_id = ?)
        ORDER BY event_count DESC
        LIMIT 50`,
-    ).catch(() => ({ rows: [] })),
+      args: [ws.workspaceId, ws.workspaceId, ws.workspaceId, ws.workspaceId, ws.workspaceId],
+    }).catch(() => ({ rows: [] })),
   ]);
 
   const snapshot = snapshotRow.rows.length > 0 ? snapshotRow.rows[0] : null;
@@ -125,9 +126,10 @@ adminRoutes.get('/topology', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const snapshotResult = await db.execute(
-    `SELECT * FROM topology_snapshots ORDER BY computed_at DESC LIMIT 1`,
-  ).catch(() => ({ rows: [] }));
+  const snapshotResult = await db.execute({
+    sql: `SELECT * FROM topology_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`,
+    args: [ws.workspaceId],
+  }).catch(() => ({ rows: [] }));
 
   if (snapshotResult.rows.length === 0) {
     return c.json({ snapshot: null, gaps: [] });
@@ -143,8 +145,8 @@ adminRoutes.get('/topology', async (c) => {
       sql: `SELECT e.id, e.canonical_name, oc.label AS type_label
             FROM entities e
             JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-            WHERE e.id IN (${placeholders})`,
-      args: gapIds,
+            WHERE e.workspace_id = ? AND e.id IN (${placeholders})`,
+      args: [ws.workspaceId, ...gapIds],
     });
     gaps = gapRows.rows.map((r) => ({
       id: r.id as string,
@@ -170,12 +172,14 @@ adminRoutes.get('/drift-alerts', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT id, provider_type, field_name, detected_at, old_distribution, new_distribution, drift_score
+  const result = await db.execute({
+    sql: `SELECT id, provider_type, field_name, detected_at, old_distribution, new_distribution, drift_score
      FROM concept_drift_alerts
+     WHERE workspace_id = ?
      ORDER BY detected_at DESC
      LIMIT 20`,
-  ).catch(() => ({ rows: [] }));
+    args: [ws.workspaceId],
+  }).catch(() => ({ rows: [] }));
 
   const alerts = result.rows.map((r) => ({
     id: r.id as string,
@@ -207,10 +211,11 @@ adminRoutes.get('/eval/runs', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected
-     FROM eval_runs ORDER BY ran_at DESC LIMIT 20`,
-  );
+  const result = await db.execute({
+    sql: `SELECT id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected
+     FROM eval_runs WHERE workspace_id = ? ORDER BY ran_at DESC LIMIT 20`,
+    args: [ws.workspaceId],
+  });
 
   return c.json({
     runs: result.rows.map((r) => ({
@@ -233,10 +238,10 @@ adminRoutes.get('/eval/runs/:runId', async (c) => {
 
   const runId = c.req.param('runId');
   const [run, results] = await Promise.all([
-    db.execute({ sql: `SELECT * FROM eval_runs WHERE id = ?`, args: [runId] }),
+    db.execute({ sql: `SELECT * FROM eval_runs WHERE id = ? AND workspace_id = ?`, args: [runId, ws.workspaceId] }),
     db.execute({
-      sql: `SELECT er.*, ef.question, ef.intent FROM eval_results er JOIN eval_fixtures ef ON ef.id = er.fixture_id WHERE er.run_id = ? ORDER BY er.score ASC`,
-      args: [runId],
+      sql: `SELECT er.*, ef.question, ef.intent FROM eval_results er JOIN eval_fixtures ef ON ef.id = er.fixture_id WHERE er.run_id = ? AND er.workspace_id = ? ORDER BY er.score ASC`,
+      args: [runId, ws.workspaceId],
     }),
   ]);
 
@@ -272,10 +277,11 @@ adminRoutes.get('/eval/fixtures', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT id, question, expected_event_ids, expected_lanes, intent, notes, source_message_id, created_at
-     FROM eval_fixtures ORDER BY created_at DESC`,
-  );
+  const result = await db.execute({
+    sql: `SELECT id, question, expected_event_ids, expected_lanes, intent, notes, source_message_id, created_at
+     FROM eval_fixtures WHERE workspace_id = ? ORDER BY created_at DESC`,
+    args: [ws.workspaceId],
+  });
 
   return c.json({
     fixtures: result.rows.map((r) => ({
@@ -309,8 +315,8 @@ adminRoutes.post('/eval/fixtures', async (c) => {
 
   const id = randomUUID();
   await db.execute({
-    sql: `INSERT INTO eval_fixtures (id, question, expected_event_ids, expected_lanes, intent, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, body.question, JSON.stringify(body.expected_event_ids ?? []), JSON.stringify(body.expected_lanes ?? []), body.intent, body.notes ?? '', new Date().toISOString()],
+    sql: `INSERT INTO eval_fixtures (id, workspace_id, question, expected_event_ids, expected_lanes, intent, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, ws.workspaceId, body.question, JSON.stringify(body.expected_event_ids ?? []), JSON.stringify(body.expected_lanes ?? []), body.intent, body.notes ?? '', new Date().toISOString()],
   });
 
   return c.json({ id }, 201);
@@ -321,8 +327,8 @@ adminRoutes.delete('/eval/fixtures/:id', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  await db.execute({ sql: `DELETE FROM eval_results WHERE fixture_id = ?`, args: [id] });
-  await db.execute({ sql: `DELETE FROM eval_fixtures WHERE id = ?`, args: [id] });
+  await db.execute({ sql: `DELETE FROM eval_results WHERE fixture_id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
+  await db.execute({ sql: `DELETE FROM eval_fixtures WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   return c.json({ ok: true });
 });
 

@@ -5,32 +5,38 @@ function daysFromNow(days: number): string {
   return new Date(Date.now() + days * 86_400_000).toISOString();
 }
 
-async function isDuplicate(entityId: string | null, sourceSignal: string, questionType: string): Promise<boolean> {
+async function isDuplicate(entityId: string | null, sourceSignal: string, questionType: string, workspaceId: string = ''): Promise<boolean> {
   if (!entityId) return false;
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const args: (string | number | null)[] = [entityId, sourceSignal, questionType];
+  if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
     sql: `SELECT id FROM forecasts
-          WHERE entity_id = ? AND source_signal = ? AND question_type = ? AND status = 'open'
+          WHERE entity_id = ? AND source_signal = ? AND question_type = ? AND status = 'open'${wsFilter}
           LIMIT 1`,
-    args: [entityId, sourceSignal, questionType],
+    args,
   });
   return result.rows.length > 0;
 }
 
-async function fromChangePoints(): Promise<CandidateQuestion[]> {
+async function fromChangePoints(workspaceId: string = ''): Promise<CandidateQuestion[]> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const wsFilter = workspaceId ? ' AND cp.workspace_id = ?' : '';
+  const cpArgs: (string | number | null)[] = [sevenDaysAgo];
+  if (workspaceId) cpArgs.push(workspaceId);
   const rows = await db.execute({
     sql: `SELECT cp.entity_id, e.canonical_name, cp.provider_type
           FROM change_points cp
           LEFT JOIN entities e ON e.id = cp.entity_id
-          WHERE cp.detected_at > ?`,
-    args: [sevenDaysAgo],
+          WHERE cp.detected_at > ?${wsFilter}`,
+    args: cpArgs,
   });
 
   const candidates: CandidateQuestion[] = [];
   for (const r of rows.rows) {
     const entityId = r.entity_id as string;
     const entityName = (r.canonical_name as string) ?? entityId;
-    if (await isDuplicate(entityId, 'change_point', 'binary')) continue;
+    if (await isDuplicate(entityId, 'change_point', 'binary', workspaceId)) continue;
     candidates.push({
       question: `Will ${entityName} return to pre-change activity levels within 14 days?`,
       question_type: 'binary',
@@ -46,17 +52,21 @@ async function fromChangePoints(): Promise<CandidateQuestion[]> {
   return candidates;
 }
 
-async function fromCausalLinks(): Promise<CandidateQuestion[]> {
-  const rows = await db.execute(
-    `SELECT cl.effect_series, cl.cause_series, cl.p_value
+async function fromCausalLinks(workspaceId: string = ''): Promise<CandidateQuestion[]> {
+  const wsFilter = workspaceId ? ' AND cl.workspace_id = ?' : '';
+  const clArgs: (string | number | null)[] = [];
+  if (workspaceId) clArgs.push(workspaceId);
+  const rows = await db.execute({
+    sql: `SELECT cl.effect_series, cl.cause_series, cl.p_value
      FROM causal_links cl
-     WHERE cl.p_value < 0.01 AND cl.superseded_at IS NULL`,
-  );
+     WHERE cl.p_value < 0.01 AND cl.superseded_at IS NULL${wsFilter}`,
+    args: clArgs,
+  });
 
   const candidates: CandidateQuestion[] = [];
   for (const r of rows.rows) {
     const effectSeries = r.effect_series as string;
-    if (await isDuplicate(effectSeries, 'causal_link', 'numeric')) continue;
+    if (await isDuplicate(effectSeries, 'causal_link', 'numeric', workspaceId)) continue;
     candidates.push({
       question: `How many events will ${effectSeries} generate in the next 7 days?`,
       question_type: 'numeric',
@@ -72,20 +82,23 @@ async function fromCausalLinks(): Promise<CandidateQuestion[]> {
   return candidates;
 }
 
-async function fromAnomalyNotifications(): Promise<CandidateQuestion[]> {
+async function fromAnomalyNotifications(workspaceId: string = ''): Promise<CandidateQuestion[]> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const wsFilter = workspaceId ? ' AND n.workspace_id = ?' : '';
+  const nArgs: (string | number | null)[] = [sevenDaysAgo];
+  if (workspaceId) nArgs.push(workspaceId);
   const rows = await db.execute({
     sql: `SELECT n.entity_id, n.entity_name, n.type
           FROM notifications n
-          WHERE n.created_at > ? AND (n.type LIKE '%spike%' OR n.type LIKE '%absence%')`,
-    args: [sevenDaysAgo],
+          WHERE n.created_at > ? AND (n.type LIKE '%spike%' OR n.type LIKE '%absence%')${wsFilter}`,
+    args: nArgs,
   });
 
   const candidates: CandidateQuestion[] = [];
   for (const r of rows.rows) {
     const entityId = r.entity_id as string | null;
     const entityName = (r.entity_name as string) ?? entityId ?? 'unknown entity';
-    if (await isDuplicate(entityId, 'anomaly_notification', 'binary')) continue;
+    if (await isDuplicate(entityId, 'anomaly_notification', 'binary', workspaceId)) continue;
     candidates.push({
       question: `Will ${entityName} generate activity in the next 14 days?`,
       question_type: 'binary',
@@ -101,19 +114,22 @@ async function fromAnomalyNotifications(): Promise<CandidateQuestion[]> {
   return candidates;
 }
 
-async function fromConceptDriftAlerts(): Promise<CandidateQuestion[]> {
+async function fromConceptDriftAlerts(workspaceId: string = ''): Promise<CandidateQuestion[]> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const wsFilter = workspaceId ? ' AND cda.workspace_id = ?' : '';
+  const cdaArgs: (string | number | null)[] = [sevenDaysAgo];
+  if (workspaceId) cdaArgs.push(workspaceId);
   const rows = await db.execute({
     sql: `SELECT cda.provider_type, cda.field_name
           FROM concept_drift_alerts cda
-          WHERE cda.detected_at > ?`,
-    args: [sevenDaysAgo],
+          WHERE cda.detected_at > ?${wsFilter}`,
+    args: cdaArgs,
   });
 
   const candidates: CandidateQuestion[] = [];
   for (const r of rows.rows) {
     const providerType = r.provider_type as string;
-    if (await isDuplicate(providerType, 'concept_drift', 'date')) continue;
+    if (await isDuplicate(providerType, 'concept_drift', 'date', workspaceId)) continue;
     candidates.push({
       question: `When will the next schema confirmation occur for ${providerType}?`,
       question_type: 'date',
@@ -129,12 +145,12 @@ async function fromConceptDriftAlerts(): Promise<CandidateQuestion[]> {
   return candidates;
 }
 
-export async function generateCandidateQuestions(): Promise<CandidateQuestion[]> {
+export async function generateCandidateQuestions(workspaceId: string = ''): Promise<CandidateQuestion[]> {
   const [changePoints, causalLinks, anomalies, drifts] = await Promise.all([
-    fromChangePoints(),
-    fromCausalLinks(),
-    fromAnomalyNotifications(),
-    fromConceptDriftAlerts(),
+    fromChangePoints(workspaceId),
+    fromCausalLinks(workspaceId),
+    fromAnomalyNotifications(workspaceId),
+    fromConceptDriftAlerts(workspaceId),
   ]);
   return [...changePoints, ...causalLinks, ...anomalies, ...drifts];
 }

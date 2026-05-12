@@ -4,10 +4,16 @@ import { db } from '../db/client';
 import type { StatsSnapshot } from '../types';
 import { nowIso, daysAgoIso } from '../lib/time';
 
-async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot> {
+async function computeEntityVelocity(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);
   const windowEnd = nowIso();
   const prevStart = daysAgoIso(windowDays * 2);
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+
+  const currArgs: (string | number | null)[] = [windowStart];
+  if (workspaceId) currArgs.push(workspaceId);
+  const prevArgs: (string | number | null)[] = [prevStart, windowStart];
+  if (workspaceId) prevArgs.push(workspaceId);
 
   const [currResult, prevResult] = await Promise.all([
     db.execute({
@@ -18,9 +24,9 @@ async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot>
               FROM event_concepts ec
               JOIN ontology_concepts oc ON oc.id = ec.concept_id AND oc.kind = 'entity_type'
             ) labeled ON labeled.event_id = e.id
-            WHERE e.occurred_at >= ?
+            WHERE e.occurred_at >= ?${wsFilter}
             GROUP BY COALESCE(labeled.label, e.entity_type)`,
-      args: [windowStart],
+      args: currArgs,
     }),
     db.execute({
       sql: `SELECT COALESCE(labeled.label, e.entity_type) AS entity_type, COUNT(*) as cnt
@@ -30,9 +36,9 @@ async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot>
               FROM event_concepts ec
               JOIN ontology_concepts oc ON oc.id = ec.concept_id AND oc.kind = 'entity_type'
             ) labeled ON labeled.event_id = e.id
-            WHERE e.occurred_at >= ? AND e.occurred_at < ?
+            WHERE e.occurred_at >= ? AND e.occurred_at < ?${wsFilter}
             GROUP BY COALESCE(labeled.label, e.entity_type)`,
-      args: [prevStart, windowStart],
+      args: prevArgs,
     }),
   ]);
 
@@ -66,12 +72,15 @@ async function computeEntityVelocity(windowDays: number): Promise<StatsSnapshot>
   };
 }
 
-async function computeStatusHealth(windowDays: number): Promise<StatsSnapshot> {
+async function computeStatusHealth(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);
   const windowEnd = nowIso();
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
 
   let rows: Array<{ status_value: string; cnt: number }> = [];
   try {
+    const shArgs: (string | number | null)[] = [windowStart];
+    if (workspaceId) shArgs.push(workspaceId);
     const result = await db.execute({
       sql: `
         SELECT json_extract(df.facts_json, '$.' || json_extract(fm.value, '$.target_key')) AS status_value, COUNT(*) AS cnt
@@ -80,10 +89,10 @@ async function computeStatusHealth(windowDays: number): Promise<StatsSnapshot> {
         JOIN provider_schemas ps ON ps.provider_type = df.provider_type,
           json_each(ps.field_mappings_json) AS fm
         WHERE json_extract(fm.value, '$.role') = 'status'
-          AND e.occurred_at >= ?
+          AND e.occurred_at >= ?${wsFilter}
         GROUP BY status_value
       `,
-      args: [windowStart],
+      args: shArgs,
     });
     rows = result.rows.map((r) => ({
       status_value: (r.status_value ?? 'unknown') as string,
@@ -108,13 +117,16 @@ async function computeStatusHealth(windowDays: number): Promise<StatsSnapshot> {
   };
 }
 
-async function computeActorActivity(windowDays: number): Promise<StatsSnapshot> {
+async function computeActorActivity(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);
   const windowEnd = nowIso();
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const aaArgs: (string | number | null)[] = [windowStart];
+  if (workspaceId) aaArgs.push(workspaceId);
 
   const result = await db.execute({
-    sql: `SELECT actor_name, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND actor_name IS NOT NULL GROUP BY actor_name ORDER BY cnt DESC LIMIT 20`,
-    args: [windowStart],
+    sql: `SELECT actor_name, COUNT(*) as cnt FROM events WHERE occurred_at >= ? AND actor_name IS NOT NULL${wsFilter} GROUP BY actor_name ORDER BY cnt DESC LIMIT 20`,
+    args: aaArgs,
   });
 
   const actors: Record<string, number> = {};
@@ -135,26 +147,29 @@ async function computeActorActivity(windowDays: number): Promise<StatsSnapshot> 
   };
 }
 
-async function computeEntityCoverage(windowDays: number): Promise<StatsSnapshot> {
+async function computeEntityCoverage(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);
   const windowEnd = nowIso();
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const ecArgs: (string | number | null)[] = [windowStart];
+  if (workspaceId) ecArgs.push(workspaceId);
 
   const [totalResult, withEntityResult, labeledResult, uniqueEntitiesResult] = await Promise.all([
     db.execute({
-      sql: `SELECT COUNT(*) as cnt FROM events WHERE occurred_at >= ?`,
-      args: [windowStart],
+      sql: `SELECT COUNT(*) as cnt FROM events WHERE occurred_at >= ?${wsFilter}`,
+      args: [...ecArgs],
     }),
     db.execute({
-      sql: `SELECT COUNT(DISTINCT event_id) as cnt FROM event_entities WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?)`,
-      args: [windowStart],
+      sql: `SELECT COUNT(DISTINCT event_id) as cnt FROM event_entities WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?${wsFilter})`,
+      args: [...ecArgs],
     }),
     db.execute({
-      sql: `SELECT COUNT(DISTINCT event_id) as cnt FROM event_concepts WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?)`,
-      args: [windowStart],
+      sql: `SELECT COUNT(DISTINCT event_id) as cnt FROM event_concepts WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?${wsFilter})`,
+      args: [...ecArgs],
     }),
     db.execute({
-      sql: `SELECT COUNT(DISTINCT entity_id) as cnt FROM event_entities WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?)`,
-      args: [windowStart],
+      sql: `SELECT COUNT(DISTINCT entity_id) as cnt FROM event_entities WHERE event_id IN (SELECT id FROM events WHERE occurred_at >= ?${wsFilter})`,
+      args: [...ecArgs],
     }),
   ]);
 
@@ -182,9 +197,12 @@ async function computeEntityCoverage(windowDays: number): Promise<StatsSnapshot>
   };
 }
 
-async function computeTopEntities(windowDays: number): Promise<StatsSnapshot> {
+async function computeTopEntities(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(windowDays);
   const windowEnd = nowIso();
+  const wsFilter = workspaceId ? ' AND ev.workspace_id = ?' : '';
+  const teArgs: (string | number | null)[] = [windowStart];
+  if (workspaceId) teArgs.push(workspaceId);
 
   const result = await db.execute({
     sql: `SELECT en.canonical_name, oc.label AS entity_type, COUNT(DISTINCT ee.event_id) AS cnt
@@ -192,11 +210,11 @@ async function computeTopEntities(windowDays: number): Promise<StatsSnapshot> {
           JOIN events ev ON ev.id = ee.event_id
           JOIN entities en ON en.id = ee.entity_id
           JOIN ontology_concepts oc ON oc.id = en.type_concept_id
-          WHERE ev.occurred_at >= ?
+          WHERE ev.occurred_at >= ?${wsFilter}
           GROUP BY en.id, en.canonical_name, oc.label
           ORDER BY cnt DESC
           LIMIT 10`,
-    args: [windowStart],
+    args: teArgs,
   });
 
   const entities = result.rows.map((r) => ({
@@ -217,16 +235,19 @@ async function computeTopEntities(windowDays: number): Promise<StatsSnapshot> {
   };
 }
 
-export async function computeEventVolume(): Promise<StatsSnapshot> {
+export async function computeEventVolume(workspaceId: string = ''): Promise<StatsSnapshot> {
   const windowStart = daysAgoIso(30);
   const windowEnd = nowIso();
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const evArgs: (string | number | null)[] = [windowStart];
+  if (workspaceId) evArgs.push(workspaceId);
 
   const result = await db.execute({
     sql: `SELECT date(occurred_at) AS day, COUNT(*) AS cnt
           FROM events
-          WHERE occurred_at >= ?
+          WHERE occurred_at >= ?${wsFilter}
           GROUP BY day`,
-    args: [windowStart],
+    args: evArgs,
   });
 
   const counts: Record<string, number> = {};
@@ -252,13 +273,13 @@ export async function computeEventVolume(): Promise<StatsSnapshot> {
   };
 }
 
-export async function computeAllStats(windowDays: number): Promise<StatsSnapshot[]> {
+export async function computeAllStats(windowDays: number, workspaceId: string = ''): Promise<StatsSnapshot[]> {
   const [entityVelocity, statusHealth, actorActivity, entityCoverage, topEntities] = await Promise.all([
-    computeEntityVelocity(windowDays).catch(() => null),
-    computeStatusHealth(windowDays).catch(() => null),
-    computeActorActivity(windowDays).catch(() => null),
-    computeEntityCoverage(windowDays).catch(() => null),
-    computeTopEntities(windowDays).catch(() => null),
+    computeEntityVelocity(windowDays, workspaceId).catch(() => null),
+    computeStatusHealth(windowDays, workspaceId).catch(() => null),
+    computeActorActivity(windowDays, workspaceId).catch(() => null),
+    computeEntityCoverage(windowDays, workspaceId).catch(() => null),
+    computeTopEntities(windowDays, workspaceId).catch(() => null),
   ]);
 
   return [entityVelocity, statusHealth, actorActivity, entityCoverage, topEntities].filter((s): s is StatsSnapshot => s !== null);

@@ -1,17 +1,20 @@
 import { db } from '../db/client';
 import type { MemoryEpisode } from './types';
 
-export async function fetchMemoryEpisodes(queryEmbedding: number[]): Promise<MemoryEpisode[]> {
+export async function fetchMemoryEpisodes(queryEmbedding: number[], workspaceId: string = ''): Promise<MemoryEpisode[]> {
   try {
     const buf = Buffer.from(new Float32Array(queryEmbedding).buffer);
+    const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+    const args: (string | number | null | Uint8Array)[] = [buf];
+    if (workspaceId) args.push(workspaceId);
 
     const result = await db.execute({
       sql: `SELECT id, session_id, summary, entity_refs, occurred_at, retrieval_hits
             FROM memory_episodes
-            WHERE embedding_status = 'ready'
+            WHERE embedding_status = 'ready'${wsFilter}
             ORDER BY vector_distance_cos(embedding, ?) ASC
             LIMIT 3`,
-      args: [buf],
+      args,
     });
 
     if (result.rows.length === 0) return [];

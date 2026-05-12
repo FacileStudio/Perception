@@ -6,13 +6,17 @@ import { getEffectiveSetting } from '../db/settings';
 const CATALOG_TTL = 5 * 60 * 1000;
 let catalogCache: { providers: string[]; entityTypes: string[]; capabilities: string[]; fetchedAt: number } | null = null;
 
-async function getCatalog(): Promise<{ providers: string[]; entityTypes: string[]; capabilities: string[] }> {
+async function getCatalog(workspaceId: string = ''): Promise<{ providers: string[]; entityTypes: string[]; capabilities: string[] }> {
   if (catalogCache && Date.now() - catalogCache.fetchedAt < CATALOG_TTL) return catalogCache;
 
+  const wsEventsWhere = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const wsConceptsAnd = workspaceId ? ' AND workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
+
   const [provRows, entityRows, capRows] = await Promise.all([
-    db.execute(`SELECT DISTINCT provider_type FROM events ORDER BY provider_type`),
-    db.execute(`SELECT DISTINCT label FROM ontology_concepts WHERE kind = 'entity_type' AND state != 'rejected' ORDER BY label`),
-    db.execute(`SELECT DISTINCT json_each.value AS cap FROM ontology_concepts, json_each(capabilities_json) WHERE kind = 'entity_type' AND state != 'rejected' ORDER BY cap`),
+    db.execute({ sql: `SELECT DISTINCT provider_type FROM events${wsEventsWhere} ORDER BY provider_type`, args: wsArgs }),
+    db.execute({ sql: `SELECT DISTINCT label FROM ontology_concepts WHERE kind = 'entity_type' AND state != 'rejected'${wsConceptsAnd} ORDER BY label`, args: wsArgs }),
+    db.execute({ sql: `SELECT DISTINCT json_each.value AS cap FROM ontology_concepts, json_each(capabilities_json) WHERE kind = 'entity_type' AND state != 'rejected'${wsConceptsAnd} ORDER BY cap`, args: wsArgs }),
   ]);
 
   catalogCache = {
@@ -135,11 +139,11 @@ function fallbackPlan(message: string): QueryPlan {
   };
 }
 
-export async function buildQueryPlan(message: string): Promise<QueryPlan> {
+export async function buildQueryPlan(message: string, workspaceId: string = ''): Promise<QueryPlan> {
   try {
     const [apiKey, catalog] = await Promise.all([
       getEffectiveSetting('anthropic_api_key'),
-      getCatalog(),
+      getCatalog(workspaceId),
     ]);
     const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
     const now = new Date().toISOString();

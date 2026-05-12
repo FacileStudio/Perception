@@ -9,16 +9,22 @@ export type CommunitySummary = {
   matchedEntityNames: string[];
 };
 
-export async function communityLane(seedEntityIds: string[]): Promise<CommunitySummary[]> {
+export async function communityLane(seedEntityIds: string[], workspaceId: string = ''): Promise<CommunitySummary[]> {
   if (seedEntityIds.length === 0) return [];
 
   try {
-    const result = await db.execute(
-      `SELECT id, title, summary, importance, member_count, member_entity_ids
-       FROM entity_communities
-       WHERE stale = 0
-       ORDER BY importance DESC`,
-    );
+    const result = await db.execute({
+      sql: workspaceId
+        ? `SELECT id, title, summary, importance, member_count, member_entity_ids
+           FROM entity_communities
+           WHERE stale = 0 AND workspace_id = ?
+           ORDER BY importance DESC`
+        : `SELECT id, title, summary, importance, member_count, member_entity_ids
+           FROM entity_communities
+           WHERE stale = 0
+           ORDER BY importance DESC`,
+      args: workspaceId ? [workspaceId] : [],
+    });
 
     const seedSet = new Set(seedEntityIds);
     const matched: CommunitySummary[] = [];
@@ -35,9 +41,11 @@ export async function communityLane(seedEntityIds: string[]): Promise<CommunityS
       const overlap = members.filter((m) => seedSet.has(m));
       if (overlap.length === 0) continue;
 
+      const wsEntFilter = workspaceId ? ` AND workspace_id = ?` : '';
+      const entArgs = workspaceId ? [...overlap, workspaceId] : overlap;
       const entityNames = await db.execute({
-        sql: `SELECT canonical_name FROM entities WHERE id IN (${overlap.map(() => '?').join(',')})`,
-        args: overlap,
+        sql: `SELECT canonical_name FROM entities WHERE id IN (${overlap.map(() => '?').join(',')})${wsEntFilter}`,
+        args: entArgs,
       });
 
       matched.push({

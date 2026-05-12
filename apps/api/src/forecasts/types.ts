@@ -17,6 +17,7 @@ export type Forecast = {
   resolved_at: string | null;
   resolution_value: number | null;
   status: ForecastStatus;
+  workspace_id?: string;
 };
 
 export type CandidateQuestion = {

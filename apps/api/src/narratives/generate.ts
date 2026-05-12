@@ -14,14 +14,17 @@ type EntityContext = {
   communityTitle: string | null;
 };
 
-export async function loadEntityContext(entityId: string): Promise<EntityContext | null> {
+export async function loadEntityContext(entityId: string, workspaceId: string = ''): Promise<EntityContext | null> {
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+  const ecArgs: (string | number | null)[] = [entityId];
+  if (workspaceId) ecArgs.push(workspaceId);
   const entityRow = await db.execute({
     sql: `SELECT e.id, e.canonical_name AS name, oc.label AS type, e.description,
             (SELECT COUNT(*) FROM event_entities ee WHERE ee.entity_id = e.id) AS event_count
           FROM entities e
           JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-          WHERE e.id = ?`,
-    args: [entityId],
+          WHERE e.id = ?${wsFilter}`,
+    args: ecArgs,
   });
 
   if (entityRow.rows.length === 0) return null;
@@ -158,8 +161,8 @@ async function callLLMWithRetry(
   throw new Error('unreachable');
 }
 
-export async function generateNarrative(entityId: string): Promise<{ text: string; sourceEventCount: number } | null> {
-  const ctx = await loadEntityContext(entityId);
+export async function generateNarrative(entityId: string, workspaceId: string = ''): Promise<{ text: string; sourceEventCount: number } | null> {
+  const ctx = await loadEntityContext(entityId, workspaceId);
   if (!ctx || ctx.eventCount === 0) return null;
 
   const apiKey = await getEffectiveSetting('anthropic_api_key');

@@ -108,9 +108,10 @@ export type RetrievalMeta = {
 export async function retrieveWithCorrection(
   plan: QueryPlan,
   queryEmbedding: number[],
+  workspaceId: string = '',
 ): Promise<RetrievalResult & { corrected: boolean; confidence: ContextConfidence; meta: RetrievalMeta }> {
   const { weights, exploring } = await getActiveWeights();
-  const initial = await retrieveContext(plan, queryEmbedding, weights);
+  const initial = await retrieveContext(plan, queryEmbedding, weights, workspaceId);
   const confidence = scoreContextQuality(initial, plan);
 
   const activeLanes = [...new Set(initial.events.flatMap((e) => e.lanes))];
@@ -125,7 +126,7 @@ export async function retrieveWithCorrection(
   }
 
   const relaxed = relaxPlan(plan);
-  const retry = await retrieveContext(relaxed, queryEmbedding, weights);
+  const retry = await retrieveContext(relaxed, queryEmbedding, weights, workspaceId);
   const retryConfidence = scoreContextQuality(retry, relaxed);
 
   if (retryConfidence.score > confidence.score) {
@@ -136,13 +137,18 @@ export async function retrieveWithCorrection(
   return { ...initial, corrected: false, confidence, meta };
 }
 
-export async function fetchSystemSummary(): Promise<string> {
+export async function fetchSystemSummary(workspaceId: string = ''): Promise<string> {
+  const wsEventsWhere = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const wsEventsAnd = workspaceId ? ' AND e.workspace_id = ?' : '';
+  const wsEntitiesWhere = workspaceId ? ' WHERE workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
+
   const [eventsRow, entitiesRow, providers, entityTypes, eventCats] = await Promise.all([
-    db.execute(`SELECT COUNT(*) AS total, MIN(occurred_at) AS oldest, MAX(occurred_at) AS newest FROM events`),
-    db.execute(`SELECT COUNT(*) AS total FROM entities`),
-    db.execute(`SELECT provider_name, COUNT(*) AS cnt FROM events GROUP BY provider_name ORDER BY cnt DESC LIMIT 10`),
-    db.execute(`SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id WHERE oc.kind = 'entity_type' GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`),
-    db.execute(`SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id WHERE oc.kind = 'event_category' GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`),
+    db.execute({ sql: `SELECT COUNT(*) AS total, MIN(occurred_at) AS oldest, MAX(occurred_at) AS newest FROM events${wsEventsWhere}`, args: wsArgs }),
+    db.execute({ sql: `SELECT COUNT(*) AS total FROM entities${wsEntitiesWhere}`, args: wsArgs }),
+    db.execute({ sql: `SELECT provider_name, COUNT(*) AS cnt FROM events${wsEventsWhere} GROUP BY provider_name ORDER BY cnt DESC LIMIT 10`, args: wsArgs }),
+    db.execute({ sql: `SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id JOIN events e ON e.id = ec.event_id WHERE oc.kind = 'entity_type'${wsEventsAnd} GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`, args: wsArgs }),
+    db.execute({ sql: `SELECT oc.label, COUNT(DISTINCT ec.event_id) AS cnt FROM ontology_concepts oc JOIN event_concepts ec ON ec.concept_id = oc.id JOIN events e ON e.id = ec.event_id WHERE oc.kind = 'event_category'${wsEventsAnd} GROUP BY oc.label ORDER BY cnt DESC LIMIT 8`, args: wsArgs }),
   ]);
 
   const total = eventsRow.rows[0]?.total ?? 0;
@@ -163,11 +169,11 @@ export async function fetchSystemSummary(): Promise<string> {
   ].join('\n');
 }
 
-async function buildTemporalComparisons(plan: QueryPlan): Promise<TemporalComparison[]> {
+async function buildTemporalComparisons(plan: QueryPlan, workspaceId: string = ''): Promise<TemporalComparison[]> {
   if (!plan.timeWindow || !plan.compareWindow) return [];
 
-  const { where: curWhere, args: curArgs } = buildSqlConditions(plan, plan.timeWindow);
-  const { where: prevWhere, args: prevArgs } = buildSqlConditions(plan, plan.compareWindow);
+  const { where: curWhere, args: curArgs } = buildSqlConditions(plan, plan.timeWindow, workspaceId);
+  const { where: prevWhere, args: prevArgs } = buildSqlConditions(plan, plan.compareWindow, workspaceId);
 
   const [curTotal, prevTotal, curByDim, prevByDim] = await Promise.all([
     db.execute({ sql: `SELECT COUNT(*) AS cnt FROM events WHERE ${curWhere}`, args: curArgs }),
@@ -227,7 +233,7 @@ async function buildTemporalComparisons(plan: QueryPlan): Promise<TemporalCompar
   return comparisons;
 }
 
-export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[], intentWeights?: Record<QueryPlan['intent'], Record<RetrievalSource, number>>): Promise<RetrievalResult> {
+export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[], intentWeights?: Record<QueryPlan['intent'], Record<RetrievalSource, number>>, workspaceId: string = ''): Promise<RetrievalResult> {
   const intent = plan.intent;
   const prefersRecency = plan.prefersRecency || intent === 'status_check';
   const shouldRunRecentLane =
@@ -245,14 +251,14 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     skipVector ? Promise.resolve([]) : vectorLane(queryEmbedding),
     ftsLane(plan.queryTerms),
-    (plan.requiresSqlFacts || alwaysSql || isComparison) ? sqlLane(plan) : Promise.resolve([]),
-    shouldRunRecentLane ? recentLane(plan) : Promise.resolve([]),
-    (alwaysEntity || plan.queryTerms.length > 0) ? entityLane(plan) : Promise.resolve([]),
-    skipConcept ? Promise.resolve([]) : conceptLane(plan),
-    (plan.requiresStats || forceStats) ? statsLane(plan) : Promise.resolve([] as StatsSnapshot[]),
+    (plan.requiresSqlFacts || alwaysSql || isComparison) ? sqlLane(plan, workspaceId) : Promise.resolve([]),
+    shouldRunRecentLane ? recentLane(plan, workspaceId) : Promise.resolve([]),
+    (alwaysEntity || plan.queryTerms.length > 0) ? entityLane(plan, workspaceId) : Promise.resolve([]),
+    skipConcept ? Promise.resolve([]) : conceptLane(plan, workspaceId),
+    (plan.requiresStats || forceStats) ? statsLane(plan, workspaceId) : Promise.resolve([] as StatsSnapshot[]),
   ]);
 
-  const seedEntityIds = await extractSeedEntityIds(entityEvents);
+  const seedEntityIds = await extractSeedEntityIds(entityEvents, workspaceId);
   const shouldCommunity = intent === 'narrative' || intent === 'lookup';
   const shouldNarrative = intent === 'narrative' || intent === 'lookup';
   const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
@@ -262,22 +268,22 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const shouldResources = plan.retrievalMode === 'full';
 
   const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes, causalLinks, resourceChunks] = await Promise.all([
-    shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds) : Promise.resolve([]),
-    shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds) : Promise.resolve([]),
+    shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds, workspaceId) : Promise.resolve([]),
+    shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds, workspaceId) : Promise.resolve([]),
     shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds) : Promise.resolve([]),
-    shouldTextToSql ? textToSqlLane(plan) : Promise.resolve(null),
+    shouldTextToSql ? textToSqlLane(plan, workspaceId) : Promise.resolve(null),
     shouldMemory ? fetchMemoryEpisodes(queryEmbedding) : Promise.resolve([]),
-    shouldCausal ? fetchCausalLinks() : Promise.resolve([] as CausalLink[]),
+    shouldCausal ? fetchCausalLinks(workspaceId) : Promise.resolve([] as CausalLink[]),
     shouldResources ? fetchResourceChunks(queryEmbedding) : Promise.resolve([]),
   ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan, intentWeights);
   if (events.length === 0) {
-    events = (await recentLane(plan)).map((event) => ({ ...event, lanes: ['sql' as const] }));
+    events = (await recentLane(plan, workspaceId)).map((event) => ({ ...event, lanes: ['sql' as const] }));
   }
 
   const comparisons = isComparison
-    ? await buildTemporalComparisons(plan)
+    ? await buildTemporalComparisons(plan, workspaceId)
     : [];
 
   return {
@@ -293,14 +299,16 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   };
 }
 
-async function fetchCausalLinks(): Promise<CausalLink[]> {
-  const result = await db.execute(
-    `SELECT cause_series, effect_series, lag_days, p_value
+async function fetchCausalLinks(workspaceId: string = ''): Promise<CausalLink[]> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
+  const result = await db.execute({
+    sql: `SELECT cause_series, effect_series, lag_days, p_value
      FROM causal_links
-     WHERE superseded_at IS NULL AND p_value < 0.01
+     WHERE superseded_at IS NULL AND p_value < 0.01${wsAnd}
      ORDER BY p_value ASC
      LIMIT 5`,
-  );
+    args: workspaceId ? [workspaceId] : [],
+  });
 
   return result.rows.map((r) => ({
     causeSeries: r.cause_series as string,

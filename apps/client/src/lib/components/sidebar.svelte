@@ -5,6 +5,7 @@
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
   import { auth, notifications } from '$lib/stores';
+  import { switchWorkspace } from '$lib/stores/auth.svelte';
   import { onMount } from 'svelte';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
@@ -21,7 +22,9 @@
   const label = $derived(auth.user?.name?.trim() || auth.user?.email || '');
 
   let userMenuOpen = $state(false);
+  let wsMenuOpen = $state(false);
   let menuContainer: HTMLDivElement | undefined;
+  let wsContainer: HTMLDivElement | undefined;
 
   onMount(() => {
     notifications.refresh();
@@ -31,6 +34,9 @@
       if (menuContainer && !menuContainer.contains(e.target as Node)) {
         userMenuOpen = false;
       }
+      if (wsContainer && !wsContainer.contains(e.target as Node)) {
+        wsMenuOpen = false;
+      }
     }
     document.addEventListener('click', handleClickOutside);
 
@@ -39,6 +45,12 @@
       document.removeEventListener('click', handleClickOutside);
     };
   });
+
+  async function handleSwitchWorkspace(id: string) {
+    wsMenuOpen = false;
+    await switchWorkspace(id);
+    window.location.reload();
+  }
 
   const navLinks = [
     { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat') },
@@ -52,12 +64,13 @@
 
   const menuItems = [
     { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone' },
+    { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-bold-duotone' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone' },
   ];
 </script>
 
 <aside class="flex w-full shrink-0 flex-col border-b border-zinc-200/80 bg-white/95 backdrop-blur md:sticky md:top-0 md:h-screen md:w-60 md:border-b-0 md:border-r">
-  <div class="px-5 pb-6 pt-8">
+  <div class="px-5 pb-4 pt-8">
     <PerceptionLogo
       class="gap-2"
       subtitle=""
@@ -66,6 +79,43 @@
       titleClass="text-2xl font-bold"
     />
   </div>
+
+  {#if auth.workspaces.length > 0}
+    <div class="relative px-3 pb-4" bind:this={wsContainer}>
+      <button
+        onclick={() => (wsMenuOpen = !wsMenuOpen)}
+        class="flex w-full items-center gap-2 rounded-lg border border-zinc-200/70 bg-zinc-50/60 px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-100"
+      >
+        <Icon icon="solar:buildings-bold-duotone" class="size-4 shrink-0 text-zinc-400" />
+        <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">
+          {auth.workspace?.name ?? 'Select workspace'}
+        </span>
+        <Icon
+          icon="solar:alt-arrow-down-bold"
+          class="size-3 shrink-0 text-zinc-400 transition-transform {wsMenuOpen ? 'rotate-180' : ''}"
+        />
+      </button>
+
+      {#if wsMenuOpen}
+        <div class="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+          {#each auth.workspaces as ws}
+            {@const active = ws.id === auth.workspace?.id}
+            <button
+              onclick={() => handleSwitchWorkspace(ws.id)}
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors {active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50'}"
+            >
+              <Icon
+                icon={active ? 'solar:check-circle-bold' : 'solar:buildings-linear'}
+                class="size-4 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}"
+              />
+              <span class="min-w-0 flex-1 truncate">{ws.name}</span>
+              <span class="text-xs text-zinc-400">{ws.role}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <nav class="flex flex-1 flex-col gap-1 px-3">
     {#each navLinks as link}

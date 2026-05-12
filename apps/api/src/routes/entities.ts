@@ -10,8 +10,8 @@ entitiesRoutes.get('/graph', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const [entitiesResult, relationsResult] = await Promise.all([
-    db.execute(`
-      SELECT
+    db.execute({
+      sql: `SELECT
         e.id,
         e.canonical_name,
         e.confidence,
@@ -20,19 +20,23 @@ entitiesRoutes.get('/graph', async (c) => {
       FROM entities e
       JOIN ontology_concepts oc ON oc.id = e.type_concept_id
       LEFT JOIN event_entities ee ON ee.entity_id = e.id
+      WHERE e.workspace_id = ?
       GROUP BY e.id
       ORDER BY event_count DESC
-      LIMIT 200
-    `),
-    db.execute(`
-      SELECT
+      LIMIT 200`,
+      args: [ws.workspaceId],
+    }),
+    db.execute({
+      sql: `SELECT
         er.from_entity_id AS from_id,
         er.to_entity_id AS to_id,
         oc.label,
         er.confidence
       FROM entity_relations er
       JOIN ontology_concepts oc ON oc.id = er.relation_concept_id
-    `),
+      WHERE er.workspace_id = ?`,
+      args: [ws.workspaceId],
+    }),
   ]);
 
   return c.json({
@@ -56,10 +60,11 @@ entitiesRoutes.get('/communities', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT id, title, summary, importance, member_count, member_entity_ids, generated_at, stale
-     FROM entity_communities ORDER BY importance DESC`,
-  );
+  const result = await db.execute({
+    sql: `SELECT id, title, summary, importance, member_count, member_entity_ids, generated_at, stale
+     FROM entity_communities WHERE workspace_id = ? ORDER BY importance DESC`,
+    args: [ws.workspaceId],
+  });
 
   const communities = await Promise.all(
     result.rows.map(async (row) => {
@@ -71,8 +76,8 @@ entitiesRoutes.get('/communities', async (c) => {
             sql: `SELECT e.id, e.canonical_name, oc.label AS type_label
                   FROM entities e
                   JOIN ontology_concepts oc ON oc.id = e.type_concept_id
-                  WHERE e.id IN (${memberIds.map(() => '?').join(',')})`,
-            args: memberIds,
+                  WHERE e.workspace_id = ? AND e.id IN (${memberIds.map(() => '?').join(',')})`,
+            args: [ws.workspaceId, ...memberIds],
           })
         : { rows: [] };
 
@@ -100,13 +105,15 @@ entitiesRoutes.get('/narratives', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT en.entity_id, e.canonical_name AS entity_name,
+  const result = await db.execute({
+    sql: `SELECT en.entity_id, e.canonical_name AS entity_name,
             en.narrative_text, en.source_event_count, en.generated_at, en.staleness_score
      FROM entity_narratives en
      JOIN entities e ON e.id = en.entity_id
+     WHERE en.workspace_id = ?
      ORDER BY en.source_event_count DESC`,
-  );
+    args: [ws.workspaceId],
+  });
 
   return c.json({
     narratives: result.rows.map((r) => ({
@@ -130,8 +137,8 @@ entitiesRoutes.get('/:id/narrative', async (c) => {
             e.canonical_name
           FROM entity_narratives en
           JOIN entities e ON e.id = en.entity_id
-          WHERE en.entity_id = ?`,
-    args: [entityId],
+          WHERE en.entity_id = ? AND en.workspace_id = ?`,
+    args: [entityId, ws.workspaceId],
   });
 
   if (result.rows.length === 0) return c.json({ narrative: null });
@@ -153,10 +160,11 @@ entitiesRoutes.get('/:id/community', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const entityId = c.req.param('id');
-  const result = await db.execute(
-    `SELECT id, title, summary, importance, member_count, member_entity_ids
-     FROM entity_communities WHERE stale = 0 ORDER BY importance DESC`,
-  );
+  const result = await db.execute({
+    sql: `SELECT id, title, summary, importance, member_count, member_entity_ids
+     FROM entity_communities WHERE workspace_id = ? AND stale = 0 ORDER BY importance DESC`,
+    args: [ws.workspaceId],
+  });
 
   for (const row of result.rows) {
     let members: string[];
@@ -164,8 +172,8 @@ entitiesRoutes.get('/:id/community', async (c) => {
     if (!members.includes(entityId)) continue;
 
     const entityNames = await db.execute({
-      sql: `SELECT canonical_name FROM entities WHERE id IN (${members.map(() => '?').join(',')})`,
-      args: members,
+      sql: `SELECT canonical_name FROM entities WHERE workspace_id = ? AND id IN (${members.map(() => '?').join(',')})`,
+      args: [ws.workspaceId, ...members],
     });
 
     return c.json({

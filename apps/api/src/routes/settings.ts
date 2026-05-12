@@ -86,12 +86,14 @@ settingsRoutes.get('/usage', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(`
-    SELECT kind, model, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, COUNT(*) as calls
+  const result = await db.execute({
+    sql: `SELECT kind, model, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, COUNT(*) as calls
     FROM token_usage
+    WHERE workspace_id = ?
     GROUP BY kind, model
-    ORDER BY kind, model
-  `);
+    ORDER BY kind, model`,
+    args: [ws.workspaceId],
+  });
 
   const rows = result.rows.map((r) => {
     const kind = r.kind as string;

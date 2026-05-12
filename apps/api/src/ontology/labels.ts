@@ -144,7 +144,7 @@ function conceptId(kind: OntologyConceptKind, label: string): string {
   return `concept_${kind}_${normalizeLabel(label)}`;
 }
 
-async function ensureConcept(seed: ConceptSeed): Promise<string> {
+async function ensureConcept(seed: ConceptSeed, workspaceId: string = ''): Promise<string> {
   const id = conceptId(seed.kind, seed.label);
   const now = new Date().toISOString();
   const state = stateForConfidence(seed.confidence);
@@ -152,8 +152,8 @@ async function ensureConcept(seed: ConceptSeed): Promise<string> {
   await db.execute({
     sql: `INSERT INTO ontology_concepts (
       id, kind, label, description, capabilities_json, examples_json, confidence,
-      state, source, created_at, updated_at, confirmed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      state, source, created_at, updated_at, confirmed_at, workspace_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
       description = excluded.description,
       capabilities_json = excluded.capabilities_json,
@@ -178,6 +178,7 @@ async function ensureConcept(seed: ConceptSeed): Promise<string> {
       now,
       now,
       state === 'confirmed' ? now : null,
+      workspaceId,
     ],
   });
 
@@ -186,9 +187,9 @@ async function ensureConcept(seed: ConceptSeed): Promise<string> {
     if (!alias || alias === normalizeLabel(seed.label)) continue;
     await db.execute({
       sql: `INSERT OR IGNORE INTO ontology_concept_aliases (
-        id, concept_id, alias, source, confidence, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [randomUUID(), id, alias, seed.source, seed.confidence, now],
+        id, concept_id, alias, source, confidence, created_at, workspace_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [randomUUID(), id, alias, seed.source, seed.confidence, now, workspaceId],
     });
   }
 
@@ -274,19 +275,20 @@ export async function labelEvent(
   envelope: NookEventEnvelope,
   extracted: Omit<ExtractedEvent, 'facts' | 'quality'>,
   schema: ProviderSchema | null,
+  workspaceId: string = '',
 ): Promise<EventLabeling> {
   const entity = entitySeed(envelope, extracted);
   const event = eventSeed(envelope, extracted);
-  const entityConceptId = await ensureConcept(entity);
-  const eventConceptId = await ensureConcept(event);
+  const entityConceptId = await ensureConcept(entity, workspaceId);
+  const eventConceptId = await ensureConcept(event, workspaceId);
 
   const fieldConceptIds: string[] = [];
   for (const seed of fieldSeeds(schema)) {
-    fieldConceptIds.push(await ensureConcept(seed));
+    fieldConceptIds.push(await ensureConcept(seed, workspaceId));
   }
 
   const relation = relationSeed(entity.capabilities, event.capabilities);
-  const relationConceptId = await ensureConcept(relation);
+  const relationConceptId = await ensureConcept(relation, workspaceId);
 
   return {
     entityConceptId,

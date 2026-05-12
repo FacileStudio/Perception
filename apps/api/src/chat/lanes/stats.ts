@@ -3,7 +3,7 @@ import type { StatsSnapshot } from '../../stats/types';
 import type { QueryPlan } from '../planner';
 import type { AnnotatedStatsSnapshot, TemporalPeriod } from './types';
 
-export async function statsLane(plan: QueryPlan): Promise<AnnotatedStatsSnapshot[]> {
+export async function statsLane(plan: QueryPlan, workspaceId: string = ''): Promise<AnnotatedStatsSnapshot[]> {
   const mapRow = (r: Record<string, unknown>): StatsSnapshot => ({
     id: r.id as string,
     kind: r.kind as string,
@@ -15,15 +15,18 @@ export async function statsLane(plan: QueryPlan): Promise<AnnotatedStatsSnapshot
     data: JSON.parse(r.data_json as string) as Record<string, unknown>,
   });
 
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
+  const wsWhere = workspaceId ? ' WHERE workspace_id = ?' : '';
+
   if (plan.compareWindow && plan.timeWindow) {
     const [currentResult, previousResult] = await Promise.all([
       db.execute({
-        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ? ORDER BY generated_at DESC LIMIT 5`,
-        args: [plan.timeWindow.from, plan.timeWindow.to],
+        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ?${wsAnd} ORDER BY generated_at DESC LIMIT 5`,
+        args: workspaceId ? [plan.timeWindow.from, plan.timeWindow.to, workspaceId] : [plan.timeWindow.from, plan.timeWindow.to],
       }),
       db.execute({
-        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ? ORDER BY generated_at DESC LIMIT 5`,
-        args: [plan.compareWindow.from, plan.compareWindow.to],
+        sql: `SELECT * FROM stats_snapshots WHERE window_end >= ? AND window_start <= ?${wsAnd} ORDER BY generated_at DESC LIMIT 5`,
+        args: workspaceId ? [plan.compareWindow.from, plan.compareWindow.to, workspaceId] : [plan.compareWindow.from, plan.compareWindow.to],
       }),
     ]);
 
@@ -34,8 +37,8 @@ export async function statsLane(plan: QueryPlan): Promise<AnnotatedStatsSnapshot
   }
 
   const result = await db.execute({
-    sql: `SELECT * FROM stats_snapshots ORDER BY generated_at DESC LIMIT 5`,
-    args: [],
+    sql: `SELECT * FROM stats_snapshots${wsWhere} ORDER BY generated_at DESC LIMIT 5`,
+    args: workspaceId ? [workspaceId] : [],
   });
   return result.rows.map((r) => mapRow(r as unknown as Record<string, unknown>));
 }

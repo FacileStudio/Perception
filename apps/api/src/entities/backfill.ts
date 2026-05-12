@@ -2,26 +2,27 @@ import { createHash, randomUUID } from 'node:crypto';
 import { db } from '../db/client';
 import { extractAllMissingRelations, extractEntityRelations } from './link';
 
-export async function reprocessActorEntities(): Promise<{ actors_created: number; events_linked: number; relations_added: number }> {
+export async function reprocessActorEntities(workspaceId: string = ''): Promise<{ actors_created: number; events_linked: number; relations_added: number }> {
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO ontology_concepts (id, kind, label, description, capabilities_json, examples_json, confidence, state, source, created_at, updated_at, confirmed_at)
-          VALUES ('concept_entity_type_person', 'entity_type', 'person', 'A person or actor extracted from events', '["identity","person"]', '[]', 0.86, 'confirmed', 'admin:backfill', ?, ?, ?)
+    sql: `INSERT INTO ontology_concepts (id, kind, label, description, capabilities_json, examples_json, confidence, state, source, created_at, updated_at, confirmed_at, workspace_id)
+          VALUES ('concept_entity_type_person', 'entity_type', 'person', 'A person or actor extracted from events', '["identity","person"]', '[]', 0.86, 'confirmed', 'admin:backfill', ?, ?, ?, ?)
           ON CONFLICT(id) DO NOTHING`,
-    args: [now, now, now],
+    args: [now, now, now, workspaceId],
   });
 
   await db.execute({
-    sql: `INSERT INTO ontology_concepts (id, kind, label, description, capabilities_json, examples_json, confidence, state, source, created_at, updated_at, confirmed_at)
-          VALUES ('concept_relation_type_about_entity', 'relation_type', 'about_entity', 'Relation between event and actor entity', '[]', '[]', 0.72, 'confirmed', 'admin:backfill', ?, ?, ?)
+    sql: `INSERT INTO ontology_concepts (id, kind, label, description, capabilities_json, examples_json, confidence, state, source, created_at, updated_at, confirmed_at, workspace_id)
+          VALUES ('concept_relation_type_about_entity', 'relation_type', 'about_entity', 'Relation between event and actor entity', '[]', '[]', 0.72, 'confirmed', 'admin:backfill', ?, ?, ?, ?)
           ON CONFLICT(id) DO NOTHING`,
-    args: [now, now, now],
+    args: [now, now, now, workspaceId],
   });
 
+  const wsEventsClause = workspaceId ? ' AND workspace_id = ?' : '';
   const eventsWithActors = await db.execute({
-    sql: `SELECT id, actor_name, provider_type FROM events WHERE actor_name IS NOT NULL AND actor_name != '' ORDER BY occurred_at ASC`,
-    args: [],
+    sql: `SELECT id, actor_name, provider_type FROM events WHERE actor_name IS NOT NULL AND actor_name != ''${wsEventsClause} ORDER BY occurred_at ASC`,
+    args: workspaceId ? [workspaceId] : [],
   });
 
   function normalizeActorName(name: string): string {
@@ -40,9 +41,10 @@ export async function reprocessActorEntities(): Promise<{ actors_created: number
 
     let entityId = actorEntityMap.get(normalized);
     if (!entityId) {
+      const wsAliasClause = workspaceId ? ' AND workspace_id = ?' : '';
       const existing = await db.execute({
-        sql: `SELECT entity_id FROM entity_aliases WHERE alias_type = 'name' AND alias_value = ? LIMIT 1`,
-        args: [normalized],
+        sql: `SELECT entity_id FROM entity_aliases WHERE alias_type = 'name' AND alias_value = ?${wsAliasClause} LIMIT 1`,
+        args: workspaceId ? [normalized, workspaceId] : [normalized],
       });
       if (existing.rows.length > 0) {
         entityId = existing.rows[0].entity_id as string;
@@ -50,15 +52,15 @@ export async function reprocessActorEntities(): Promise<{ actors_created: number
         const hash = createHash('sha256').update(`${providerType}:person:${normalized}`).digest('hex').slice(0, 24);
         entityId = `entity_${hash}`;
         await db.execute({
-          sql: `INSERT INTO entities (id, type_concept_id, canonical_name, description, status, confidence, created_at, updated_at)
-                VALUES (?, 'concept_entity_type_person', ?, ?, NULL, 0.72, ?, ?)
+          sql: `INSERT INTO entities (id, type_concept_id, canonical_name, description, status, confidence, created_at, updated_at, workspace_id)
+                VALUES (?, 'concept_entity_type_person', ?, ?, NULL, 0.72, ?, ?, ?)
                 ON CONFLICT(id) DO NOTHING`,
-          args: [entityId, actorName, `${providerType} actor`, now, now],
+          args: [entityId, actorName, `${providerType} actor`, now, now, workspaceId],
         });
         await db.execute({
-          sql: `INSERT OR IGNORE INTO entity_aliases (id, entity_id, alias_type, alias_value, provider_type, confidence, first_seen_at, last_seen_at)
-                VALUES (?, ?, 'name', ?, ?, 0.76, ?, ?)`,
-          args: [randomUUID(), entityId, normalized, providerType, now, now],
+          sql: `INSERT OR IGNORE INTO entity_aliases (id, entity_id, alias_type, alias_value, provider_type, confidence, first_seen_at, last_seen_at, workspace_id)
+                VALUES (?, ?, 'name', ?, ?, 0.76, ?, ?, ?)`,
+          args: [randomUUID(), entityId, normalized, providerType, now, now, workspaceId],
         });
         actorsCreated++;
       }
@@ -66,18 +68,18 @@ export async function reprocessActorEntities(): Promise<{ actors_created: number
     }
 
     const linked = await db.execute({
-      sql: `INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source)
-            VALUES (?, ?, 'concept_relation_type_about_entity', 0.80, 'admin:backfill')`,
-      args: [eventId, entityId],
+      sql: `INSERT OR IGNORE INTO event_entities (event_id, entity_id, relation_concept_id, confidence, source, workspace_id)
+            VALUES (?, ?, 'concept_relation_type_about_entity', 0.80, 'admin:backfill', ?)`,
+      args: [eventId, entityId, workspaceId],
     });
     if (linked.rowsAffected > 0) eventsLinked++;
   }
 
   for (const [normalized, entityId] of actorEntityMap) {
-    await extractEntityRelations({ id: entityId, canonicalName: normalized, capabilities: ['person'] });
+    await extractEntityRelations({ id: entityId, canonicalName: normalized, capabilities: ['person'] }, workspaceId);
   }
 
-  const relationsAdded = await extractAllMissingRelations();
+  const relationsAdded = await extractAllMissingRelations(workspaceId);
 
   return { actors_created: actorsCreated, events_linked: eventsLinked, relations_added: relationsAdded };
 }

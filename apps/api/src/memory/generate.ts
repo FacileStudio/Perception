@@ -9,11 +9,14 @@ type SessionContext = {
   entityNames: string[];
 };
 
-async function loadSessionContext(sessionId: string): Promise<SessionContext | null> {
+async function loadSessionContext(sessionId: string, workspaceId: string = ''): Promise<SessionContext | null> {
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const msgArgs: (string | number | null)[] = [sessionId];
+  if (workspaceId) msgArgs.push(workspaceId);
   const messages = await db.execute({
     sql: `SELECT role, content, created_at FROM chat_messages
-          WHERE session_id = ? ORDER BY created_at ASC`,
-    args: [sessionId],
+          WHERE session_id = ?${wsFilter} ORDER BY created_at ASC`,
+    args: msgArgs,
   });
 
   if (messages.rows.length < 2) return null;
@@ -67,8 +70,8 @@ export type ExtractedMemory = {
   entityRefs: string[];
 };
 
-export async function extractMemoryEpisodes(sessionId: string): Promise<ExtractedMemory[]> {
-  const ctx = await loadSessionContext(sessionId);
+export async function extractMemoryEpisodes(sessionId: string, workspaceId: string = ''): Promise<ExtractedMemory[]> {
+  const ctx = await loadSessionContext(sessionId, workspaceId);
   if (!ctx) return [];
 
   const apiKey = await getEffectiveSetting('anthropic_api_key');

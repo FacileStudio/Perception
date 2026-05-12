@@ -20,16 +20,18 @@ function parseSchema(row: Record<string, unknown>): ProviderSchema {
 export async function lookupSchema(
   providerType: string,
   eventType: string,
+  workspaceId: string = '',
 ): Promise<ProviderSchema | null> {
+  const wsClause = workspaceId ? ' AND workspace_id = ?' : '';
   const exact = await db.execute({
-    sql: 'SELECT * FROM provider_schemas WHERE provider_type = ? AND event_type_pattern = ? LIMIT 1',
-    args: [providerType, eventType],
+    sql: `SELECT * FROM provider_schemas WHERE provider_type = ? AND event_type_pattern = ?${wsClause} LIMIT 1`,
+    args: workspaceId ? [providerType, eventType, workspaceId] : [providerType, eventType],
   });
   if (exact.rows.length > 0) return parseSchema(exact.rows[0] as unknown as Record<string, unknown>);
 
   const wildcard = await db.execute({
-    sql: 'SELECT * FROM provider_schemas WHERE provider_type = ? AND event_type_pattern IS NULL LIMIT 1',
-    args: [providerType],
+    sql: `SELECT * FROM provider_schemas WHERE provider_type = ? AND event_type_pattern IS NULL${wsClause} LIMIT 1`,
+    args: workspaceId ? [providerType, workspaceId] : [providerType],
   });
   if (wildcard.rows.length > 0) return parseSchema(wildcard.rows[0] as unknown as Record<string, unknown>);
 
@@ -41,9 +43,10 @@ export function computeKeysHash(normalized: Record<string, unknown>): string {
   return createHash('sha256').update(keys).digest('hex');
 }
 
-export async function markNeedsReview(schemaId: string): Promise<void> {
+export async function markNeedsReview(schemaId: string, workspaceId: string = ''): Promise<void> {
+  const wsClause = workspaceId ? ' AND workspace_id = ?' : '';
   await db.execute({
-    sql: 'UPDATE provider_schemas SET needs_review = 1 WHERE id = ?',
-    args: [schemaId],
+    sql: `UPDATE provider_schemas SET needs_review = 1 WHERE id = ?${wsClause}`,
+    args: workspaceId ? [schemaId, workspaceId] : [schemaId],
   });
 }

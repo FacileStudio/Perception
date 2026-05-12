@@ -9,19 +9,22 @@ export type ResourceChunk = {
   score: number;
 };
 
-export async function fetchResourceChunks(queryEmbedding: number[]): Promise<ResourceChunk[]> {
+export async function fetchResourceChunks(queryEmbedding: number[], workspaceId: string = ''): Promise<ResourceChunk[]> {
   try {
     const buf = Buffer.from(new Float32Array(queryEmbedding).buffer);
+    const wsFilter = workspaceId ? ' AND rc.workspace_id = ?' : '';
+    const args: (string | number | null | Uint8Array)[] = [buf];
+    if (workspaceId) args.push(workspaceId);
 
     const result = await db.execute({
       sql: `SELECT rc.id, rc.resource_id, rc.chunk_index, rc.content, r.title AS resource_title,
                    vector_distance_cos(rc.embedding, ?) AS distance
             FROM resource_chunks rc
             JOIN resources r ON r.id = rc.resource_id
-            WHERE rc.embedding_status = 'ready' AND r.status = 'ready'
+            WHERE rc.embedding_status = 'ready' AND r.status = 'ready'${wsFilter}
             ORDER BY distance ASC
             LIMIT 5`,
-      args: [buf],
+      args,
     });
 
     return result.rows.map((r) => ({

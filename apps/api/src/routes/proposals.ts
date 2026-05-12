@@ -42,11 +42,11 @@ proposalRoutes.get('/', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const status = c.req.query('status');
-  const args: InValue[] = [];
-  let where = '';
+  const args: InValue[] = [ws.workspaceId];
+  let where = 'WHERE workspace_id = ?';
 
   if (status) {
-    where = 'WHERE status = ?';
+    where += ' AND status = ?';
     args.push(status);
   }
 
@@ -67,20 +67,20 @@ proposalRoutes.patch('/:id/approve', async (c) => {
 
   const id = c.req.param('id');
   const updateResult = await db.execute({
-    sql: `UPDATE action_proposals SET status = 'approved' WHERE id = ? AND status = 'proposed'`,
-    args: [id],
+    sql: `UPDATE action_proposals SET status = 'approved' WHERE id = ? AND workspace_id = ? AND status = 'proposed'`,
+    args: [id, ws.workspaceId],
   });
 
   if (updateResult.rowsAffected === 0) {
     return c.json({ error: 'proposal_not_found_or_not_proposed' }, 404);
   }
 
-  const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ?`, args: [id] });
+  const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   const proposal = rowToProposal(result.rows[0] as Record<string, unknown>);
 
   await executeProposal(proposal);
 
-  const updated = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ?`, args: [id] });
+  const updated = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   const final = rowToProposal(updated.rows[0] as Record<string, unknown>);
 
   return c.json({ proposal: final });
@@ -94,8 +94,8 @@ proposalRoutes.patch('/:id/dismiss', async (c) => {
   const now = new Date().toISOString();
 
   const result = await db.execute({
-    sql: `UPDATE action_proposals SET status = 'dismissed', resolved_at = ? WHERE id = ? AND status = 'proposed'`,
-    args: [now, id],
+    sql: `UPDATE action_proposals SET status = 'dismissed', resolved_at = ? WHERE id = ? AND workspace_id = ? AND status = 'proposed'`,
+    args: [now, id, ws.workspaceId],
   });
 
   if (result.rowsAffected === 0) {
@@ -132,10 +132,11 @@ proposalRoutes.post('/', async (c) => {
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO action_proposals (id, action_type, target_provider, target_entity_id, target_entity_name, title, description, payload, confidence, status, proposed_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'proposed', ?)`,
+    sql: `INSERT INTO action_proposals (id, workspace_id, action_type, target_provider, target_entity_id, target_entity_name, title, description, payload, confidence, status, proposed_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'proposed', ?)`,
     args: [
       id,
+      ws.workspaceId,
       body.action_type,
       body.target_provider,
       body.target_entity_id ?? null,
@@ -148,7 +149,7 @@ proposalRoutes.post('/', async (c) => {
     ],
   });
 
-  const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ?`, args: [id] });
+  const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   const proposal = rowToProposal(result.rows[0] as Record<string, unknown>);
 
   return c.json({ proposal }, 201);

@@ -11,9 +11,13 @@ type ResolvedForecast = {
   entity_type: string | null;
 };
 
-async function fetchResolvedForecasts(): Promise<ResolvedForecast[]> {
-  const result = await db.execute(`
-    SELECT
+async function fetchResolvedForecasts(workspaceId: string = ''): Promise<ResolvedForecast[]> {
+  const wsFilter = workspaceId ? ' AND f.workspace_id = ?' : '';
+  const args: (string | number | null)[] = [];
+  if (workspaceId) args.push(workspaceId);
+
+  const result = await db.execute({
+    sql: `SELECT
       f.id AS forecast_id,
       fb.probability,
       f.resolution_value AS outcome,
@@ -29,8 +33,9 @@ async function fetchResolvedForecasts(): Promise<ResolvedForecast[]> {
       AND f.resolution_value IS NOT NULL
       AND fb.step = (
         SELECT MAX(fb2.step) FROM forecast_beliefs fb2 WHERE fb2.forecast_id = f.id
-      )
-  `);
+      )${wsFilter}`,
+    args,
+  });
 
   return result.rows.map((r) => ({
     forecast_id: r.forecast_id as string,
@@ -199,8 +204,8 @@ function applyPav(pavMap: PavPoint[], rawProbability: number): number {
   return rawProbability;
 }
 
-export async function computeCalibration(): Promise<CalibrationSnapshot> {
-  const forecasts = await fetchResolvedForecasts();
+export async function computeCalibration(workspaceId: string = ''): Promise<CalibrationSnapshot> {
+  const forecasts = await fetchResolvedForecasts(workspaceId);
   const brier = computeBrier(forecasts);
   const logScore = computeLogScore(forecasts);
   const sharpness = computeSharpness(forecasts);
@@ -232,7 +237,7 @@ export async function computeCalibration(): Promise<CalibrationSnapshot> {
   };
 }
 
-export async function getRecalibrated(rawProbability: number): Promise<number> {
+export async function getRecalibrated(rawProbability: number, _workspaceId: string = ''): Promise<number> {
   const result = await db.execute({
     sql: `SELECT value FROM app_settings WHERE key = 'recalibration_map'`,
     args: [],

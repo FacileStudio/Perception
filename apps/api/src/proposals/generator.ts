@@ -13,30 +13,35 @@ type RawProposal = {
   confidence: number;
 };
 
-async function hasOpenProposal(actionType: ActionType, entityId: string | null): Promise<boolean> {
+async function hasOpenProposal(actionType: ActionType, entityId: string | null, workspaceId: string = ''): Promise<boolean> {
   if (!entityId) return false;
+  const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
   const result = await db.execute({
     sql: `SELECT id FROM action_proposals
-          WHERE action_type = ? AND target_entity_id = ? AND status IN ('proposed', 'approved')
+          WHERE action_type = ? AND target_entity_id = ? AND status IN ('proposed', 'approved')${wsFilter}
           LIMIT 1`,
-    args: [actionType, entityId],
+    args: [actionType, entityId, ...wsArgs],
   });
   return result.rows.length > 0;
 }
 
-async function detectSilentClients(): Promise<RawProposal[]> {
+async function detectSilentClients(workspaceId: string = ''): Promise<RawProposal[]> {
   const cutoff = new Date(Date.now() - 45 * 86400000).toISOString();
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+  const wsFilterEv = workspaceId ? ' AND ev.workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
   const rows = await db.execute({
     sql: `SELECT e.id, e.canonical_name, oc.label as type_label
           FROM entities e
           JOIN ontology_concepts oc ON e.type_concept_id = oc.id
-          WHERE LOWER(oc.label) LIKE '%client%'
+          WHERE LOWER(oc.label) LIKE '%client%'${wsFilter}
             AND e.id NOT IN (
               SELECT DISTINCT ee.entity_id FROM event_entities ee
               JOIN events ev ON ee.event_id = ev.id
-              WHERE ev.occurred_at > ?
+              WHERE ev.occurred_at > ?${wsFilterEv}
             )`,
-    args: [cutoff],
+    args: [...wsArgs, cutoff, ...wsArgs],
   });
 
   return rows.rows.map(r => ({
@@ -51,10 +56,13 @@ async function detectSilentClients(): Promise<RawProposal[]> {
   }));
 }
 
-async function detectAtRiskClients(): Promise<RawProposal[]> {
+async function detectAtRiskClients(workspaceId: string = ''): Promise<RawProposal[]> {
   const now = Date.now();
   const thirtyDaysAgo = new Date(now - 30 * 86400000).toISOString();
   const sixtyDaysAgo = new Date(now - 60 * 86400000).toISOString();
+
+  const wsFilter = workspaceId ? ' AND ev.workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
 
   const rows = await db.execute({
     sql: `SELECT
@@ -66,10 +74,10 @@ async function detectAtRiskClients(): Promise<RawProposal[]> {
           JOIN event_entities ee ON ee.entity_id = e.id
           JOIN events ev ON ee.event_id = ev.id
           WHERE LOWER(oc.label) LIKE '%client%'
-            AND ev.occurred_at > ?
+            AND ev.occurred_at > ?${wsFilter}
           GROUP BY e.id
           HAVING previous_count > 0`,
-    args: [thirtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, sixtyDaysAgo],
+    args: [thirtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, sixtyDaysAgo, ...wsArgs],
   });
 
   const proposals: RawProposal[] = [];
@@ -92,23 +100,27 @@ async function detectAtRiskClients(): Promise<RawProposal[]> {
   return proposals;
 }
 
-async function detectUnsignedContracts(): Promise<RawProposal[]> {
+async function detectUnsignedContracts(workspaceId: string = ''): Promise<RawProposal[]> {
   const fourteenDaysAgo = new Date(Date.now() - 14 * 86400000).toISOString();
+
+  const wsFilter = workspaceId ? ' AND e.workspace_id = ?' : '';
+  const wsFilterE2 = workspaceId ? ' AND e2.workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
 
   const rows = await db.execute({
     sql: `SELECT e.id, e.event_type, e.entity_id, e.entity_name, e.title, e.occurred_at
           FROM events e
           WHERE e.provider_type = 'docuseal'
             AND LOWER(e.event_type) LIKE '%sent%'
-            AND e.occurred_at < ?
+            AND e.occurred_at < ?${wsFilter}
             AND NOT EXISTS (
               SELECT 1 FROM events e2
               WHERE e2.provider_type = 'docuseal'
                 AND LOWER(e2.event_type) LIKE '%completed%'
                 AND e2.entity_id = e.entity_id
-                AND e2.occurred_at > e.occurred_at
+                AND e2.occurred_at > e.occurred_at${wsFilterE2}
             )`,
-    args: [fourteenDaysAgo],
+    args: [fourteenDaysAgo, ...wsArgs, ...wsArgs],
   });
 
   return rows.rows.map(r => ({
@@ -123,11 +135,11 @@ async function detectUnsignedContracts(): Promise<RawProposal[]> {
   }));
 }
 
-export async function generateProposals(): Promise<RawProposal[]> {
+export async function generateProposals(workspaceId: string = ''): Promise<RawProposal[]> {
   const results = await Promise.allSettled([
-    detectSilentClients(),
-    detectAtRiskClients(),
-    detectUnsignedContracts(),
+    detectSilentClients(workspaceId),
+    detectAtRiskClients(workspaceId),
+    detectUnsignedContracts(workspaceId),
   ]);
 
   const silent = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -145,21 +157,21 @@ export async function generateProposals(): Promise<RawProposal[]> {
   const deduplicated: RawProposal[] = [];
 
   for (const proposal of all) {
-    if (await hasOpenProposal(proposal.action_type, proposal.target_entity_id)) continue;
+    if (await hasOpenProposal(proposal.action_type, proposal.target_entity_id, workspaceId)) continue;
     deduplicated.push(proposal);
   }
 
   return deduplicated;
 }
 
-export async function insertProposals(proposals: RawProposal[]): Promise<number> {
+export async function insertProposals(proposals: RawProposal[], workspaceId: string = ''): Promise<number> {
   let inserted = 0;
   for (const p of proposals) {
     const id = randomUUID();
     await db.execute({
-      sql: `INSERT INTO action_proposals (id, action_type, target_provider, target_entity_id, target_entity_name, title, description, payload, confidence, status, proposed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'proposed', ?)`,
-      args: [id, p.action_type, p.target_provider, p.target_entity_id, p.target_entity_name, p.title, p.description, JSON.stringify(p.payload), p.confidence, new Date().toISOString()],
+      sql: `INSERT INTO action_proposals (id, action_type, target_provider, target_entity_id, target_entity_name, title, description, payload, confidence, status, proposed_at, workspace_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'proposed', ?, ?)`,
+      args: [id, p.action_type, p.target_provider, p.target_entity_id, p.target_entity_name, p.title, p.description, JSON.stringify(p.payload), p.confidence, new Date().toISOString(), workspaceId],
     });
     inserted++;
   }

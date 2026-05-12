@@ -34,8 +34,8 @@ forecastRoutes.get('/', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const status = c.req.query('status');
-  const whereClause = status ? 'WHERE status = ?' : '';
-  const args = status ? [status] : [];
+  const whereClause = status ? 'WHERE workspace_id = ? AND status = ?' : 'WHERE workspace_id = ?';
+  const args = status ? [ws.workspaceId, status] : [ws.workspaceId];
 
   const result = await db.execute({
     sql: `SELECT * FROM forecasts ${whereClause} ORDER BY created_at DESC LIMIT 50`,
@@ -49,9 +49,10 @@ forecastRoutes.get('/calibration', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 1`,
-  );
+  const result = await db.execute({
+    sql: `SELECT * FROM calibration_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`,
+    args: [ws.workspaceId],
+  });
   if (result.rows.length === 0) return c.json({ snapshot: null });
 
   const r = result.rows[0] as Record<string, unknown>;
@@ -78,9 +79,10 @@ forecastRoutes.get('/calibration/history', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const result = await db.execute(
-    `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 10`,
-  );
+  const result = await db.execute({
+    sql: `SELECT * FROM calibration_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 10`,
+    args: [ws.workspaceId],
+  });
 
   return c.json({
     snapshots: result.rows.map((row) => {
@@ -120,7 +122,7 @@ forecastRoutes.get('/:id', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
+  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
   return c.json({ forecast: rowToForecast(result.rows[0] as Record<string, unknown>) });
@@ -154,12 +156,12 @@ forecastRoutes.post('/', async (c) => {
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO forecasts (id, question, question_type, resolution_criteria, resolution_source, created_at, resolves_at, status)
-          VALUES (?, ?, ?, ?, '{}', ?, ?, 'open')`,
-    args: [id, body.question, body.question_type, body.resolution_criteria, now, body.resolves_at],
+    sql: `INSERT INTO forecasts (id, workspace_id, question, question_type, resolution_criteria, resolution_source, created_at, resolves_at, status)
+          VALUES (?, ?, ?, ?, ?, '{}', ?, ?, 'open')`,
+    args: [id, ws.workspaceId, body.question, body.question_type, body.resolution_criteria, now, body.resolves_at],
   });
 
-  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
+  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   return c.json({ forecast: rowToForecast(result.rows[0] as Record<string, unknown>) }, 201);
 });
 
@@ -172,25 +174,25 @@ forecastRoutes.patch('/:id/resolve', async (c) => {
   const now = new Date().toISOString();
 
   if (body.void) {
-    await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ?`, args: [id] });
+    await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
     await db.execute({
-      sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
-            VALUES (?, ?, 'voided', '{}', 'user', ?)`,
-      args: [randomUUID(), id, now],
+      sql: `INSERT INTO forecast_resolutions (id, workspace_id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
+            VALUES (?, ?, ?, 'voided', '{}', 'user', ?)`,
+      args: [randomUUID(), ws.workspaceId, id, now],
     });
   } else {
     await db.execute({
-      sql: `UPDATE forecasts SET status = 'resolved', resolution_value = ?, resolved_at = ? WHERE id = ? AND status = 'open'`,
-      args: [body.resolution_value ?? null, now, id],
+      sql: `UPDATE forecasts SET status = 'resolved', resolution_value = ?, resolved_at = ? WHERE id = ? AND workspace_id = ? AND status = 'open'`,
+      args: [body.resolution_value ?? null, now, id, ws.workspaceId],
     });
     await db.execute({
-      sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
-            VALUES (?, ?, 'manual', ?, 'user', ?)`,
-      args: [randomUUID(), id, JSON.stringify({ resolution_value: body.resolution_value ?? null }), now],
+      sql: `INSERT INTO forecast_resolutions (id, workspace_id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
+            VALUES (?, ?, ?, 'manual', ?, 'user', ?)`,
+      args: [randomUUID(), ws.workspaceId, id, JSON.stringify({ resolution_value: body.resolution_value ?? null }), now],
     });
   }
 
-  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
+  const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ forecast: rowToForecast(result.rows[0] as Record<string, unknown>) });
 });
@@ -201,8 +203,8 @@ forecastRoutes.get('/:id/resolution', async (c) => {
 
   const id = c.req.param('id');
   const result = await db.execute({
-    sql: `SELECT * FROM forecast_resolutions WHERE forecast_id = ? ORDER BY resolved_at DESC LIMIT 1`,
-    args: [id],
+    sql: `SELECT * FROM forecast_resolutions WHERE forecast_id = ? AND workspace_id = ? ORDER BY resolved_at DESC LIMIT 1`,
+    args: [id, ws.workspaceId],
   });
 
   if (result.rows.length === 0) return c.json({ error: 'no_resolution' }, 404);
@@ -225,7 +227,7 @@ forecastRoutes.get('/:id/beliefs', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
   const beliefs = await getAllBeliefs(id);
@@ -237,12 +239,12 @@ forecastRoutes.get('/:id/intervals', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
   const result = await db.execute({
-    sql: `SELECT * FROM forecast_intervals WHERE forecast_id = ? ORDER BY belief_step ASC`,
-    args: [id],
+    sql: `SELECT * FROM forecast_intervals WHERE forecast_id = ? AND workspace_id = ? ORDER BY belief_step ASC`,
+    args: [id, ws.workspaceId],
   });
 
   return c.json({
@@ -266,7 +268,7 @@ forecastRoutes.get('/:id/ensemble', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
   const result = await aggregateEnsemble(id);
@@ -289,13 +291,13 @@ forecastRoutes.patch('/:id/extend', async (c) => {
   }
 
   const result = await db.execute({
-    sql: `UPDATE forecasts SET resolves_at = ? WHERE id = ? AND status = 'open'`,
-    args: [body.resolves_at, id],
+    sql: `UPDATE forecasts SET resolves_at = ? WHERE id = ? AND workspace_id = ? AND status = 'open'`,
+    args: [body.resolves_at, id, ws.workspaceId],
   });
 
   if (result.rowsAffected === 0) return c.json({ error: 'not_found_or_not_open' }, 404);
 
-  const updated = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
+  const updated = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   return c.json({ forecast: rowToForecast(updated.rows[0] as Record<string, unknown>) });
 });
 
@@ -304,6 +306,6 @@ forecastRoutes.delete('/:id', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ?`, args: [id] });
+  await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   return c.json({ ok: true });
 });
