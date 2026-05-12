@@ -43,7 +43,7 @@
   const navLinks = [
     { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat') },
     { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
-    { href: '/graph', label: 'Graph', icon: 'solar:graph-bold-duotone', match: (p: string) => p === '/graph' },
+    { href: '/entities', label: 'Entities', icon: 'solar:bill-list-bold-duotone', match: (p: string) => p === '/entities' },
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
     { href: '/resources', label: 'Resources', icon: 'solar:documents-bold-duotone', match: (p: string) => p === '/resources' },
   ];

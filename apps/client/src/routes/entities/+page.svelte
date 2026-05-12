@@ -24,8 +24,8 @@
   let loadingCommunities = $state(false);
   let narrativesMap = $state<Map<string, EntityNarrativeDetail>>(new Map());
 
-  let entities: GraphEntity[] = [];
-  let relations: EntityRelation[] = [];
+  let entities = $state<GraphEntity[]>([]);
+  let relations = $state<EntityRelation[]>([]);
 
   const COLORS: [string, string][] = [
     ['deployment', '#6366f1'],
@@ -49,8 +49,9 @@
     ['financial', '#d97706'],
   ];
 
+  const colorMap = new Map(COLORS);
   function colorFor(label: string): string {
-    for (const [key, color] of COLORS) {
+    for (const [key, color] of colorMap) {
       if (label.includes(key)) return color;
     }
     return '#6b7280';
@@ -109,17 +110,26 @@
 
   async function loadGraph() {
     try {
-      const data = await api.entities.graph();
-      entities = data.entities;
-      relations = data.relations;
+      const [graphData, narrativesData] = await Promise.all([
+        api.entities.graph(),
+        api.entities.narratives(),
+      ]);
+
+      entities = graphData.entities;
+      relations = graphData.relations;
       entityCount = entities.length;
       relationCount = relations.length;
       empty = entities.length === 0;
+
+      if (!empty) {
+        const map = new Map<string, EntityNarrativeDetail>();
+        for (const n of narrativesData.narratives) map.set(n.entity_id, n);
+        narrativesMap = map;
+      }
     } catch {
       empty = true;
     }
     loading = false;
-    if (!empty) loadNarratives();
   }
 
   onMount(() => {
@@ -128,7 +138,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Graph')}</title>
+  <title>{buildTitle('Entities')}</title>
 </svelte:head>
 
 <div class="flex h-full flex-col">
@@ -151,7 +161,7 @@
         </button>
       </div>
       <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-zinc-400 lg:ml-auto">
-        <Icon icon="solar:graph-bold-duotone" class="size-4" />
+        <Icon icon="solar:bill-list-bold-duotone" class="size-4" />
         {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
         {#if relationCount > 0}
           · {relationCount} {relationCount === 1 ? 'relation' : 'relations'}
@@ -171,7 +181,7 @@
       </div>
     {:else if viewMode === 'list'}
       <div class="flex flex-col gap-3">
-        {#each pagedAdjacency as { entity, connections }}
+        {#each pagedAdjacency as { entity, connections } (entity.id)}
           <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center gap-2">
@@ -211,7 +221,7 @@
         </div>
       {:else}
         <div class="flex flex-col gap-3">
-          {#each pagedCommunities as comm, ci}
+          {#each pagedCommunities as comm, ci (comm.id)}
             <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2">
