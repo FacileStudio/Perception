@@ -10,6 +10,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf', '.txt': 'text/plain', '.md': 'text/markdown',
+  '.csv': 'text/csv', '.json': 'application/json',
+};
+
+export function fileMime(f: File): string {
+  if (f.type) return f.type;
+  const dot = f.name.lastIndexOf('.');
+  return dot >= 0 ? (MIME_BY_EXT[f.name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
+}
 
 export const api = {
   auth: {
@@ -80,17 +90,11 @@ export const api = {
   resources: {
     list: () => request<{ resources: ResourceRow[] }>('/resources'),
     get: (id: string) => request<ResourceDetail>(`/resources/${id}`),
-    upload: async (files: File[]) => {
-      const form = new FormData();
-      for (const f of files) form.append('files', f);
-      const res = await fetch(`${API_BASE}/resources`, {
+    upload: (files: Array<{ name: string; type: string; data: string }>) =>
+      request<{ ids: string[] }>('/resources', {
         method: 'POST',
-        credentials: 'include',
-        body: form,
-      });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return res.json() as Promise<{ ids: string[] }>;
-    },
+        body: JSON.stringify({ files }),
+      }),
     downloadUrl: (id: string) => `${API_BASE}/resources/${id}/file`,
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },

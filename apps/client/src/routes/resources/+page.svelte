@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
+  import { api, fileMime, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { buildTitle } from '$lib/head';
@@ -18,7 +18,8 @@
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
-  let pendingFiles = $state<File[]>([]);
+  let pendingFiles = $state<Array<{ name: string; size: number }>>([]);
+  let encodedFiles: Array<{ name: string; type: string; data: string }> = [];
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
@@ -68,18 +69,30 @@
     }
   }
 
-  function handleFileSelect(e: Event) {
+  async function handleFileSelect(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     if (!input.files?.length) return;
-    pendingFiles = Array.from(input.files);
+    const files = Array.from(input.files);
+    pendingFiles = files.map((f) => ({ name: f.name, size: f.size }));
+    encodedFiles = [];
+    for (const f of files) {
+      const data = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(f);
+      });
+      encodedFiles.push({ name: f.name, type: f.type || fileMime(f), data });
+    }
   }
 
   async function handleUpload() {
-    if (!pendingFiles.length || uploading) return;
+    if (!encodedFiles.length || uploading) return;
     uploading = true;
     try {
-      await api.resources.upload(pendingFiles);
+      await api.resources.upload(encodedFiles);
       showUpload = false;
+      encodedFiles = [];
       pendingFiles = [];
       await load();
     } catch (e) {
@@ -203,7 +216,7 @@
           variant="outline"
           size="sm"
           class="rounded-full"
-          onclick={() => { showUpload = false; pendingFiles = []; }}
+          onclick={() => { showUpload = false; encodedFiles = []; pendingFiles = []; }}
         >
           Cancel
         </Button>
