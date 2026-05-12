@@ -267,22 +267,22 @@ The system acts, learns, and decomposes complex queries.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 5.1 | Multi-agent query decomposition | Medium | 1.2, 2.1 |
+| [x] | 5.1 | Multi-agent query decomposition | Medium | 1.2, 2.1 |
 | [ ] | 5.2 | Write-back to source systems | High | 2.2 |
 | [x] | 5.3 | Continuous retrieval eval harness | Medium | 1.5 |
-| [ ] | 5.4 | Outcome-guided retrieval (RL) | High | 1.5, 5.3 |
+| [x] | 5.4 | Outcome-guided retrieval (RL) | High | 1.5, 5.3 |
 | [x] | 5.5 | Resources & multimodal ingestion | Medium | — |
 
 ---
 
 ### 5.1 Multi-Agent Query Decomposition
 
-- [ ] Composite intent detector in planner: returns `isComposite: boolean` + `subqueries: string[]`
-- [ ] Subagent runner: lightweight wrapper around `buildQueryPlan → retrieveContext → buildContextBlock`, parameterized per sub-query
-- [ ] Fan-out in `stream.ts`: `Promise.all` over subagents, collect `RetrievalResult[]`
-- [ ] Merge strategy: deduplicate events by ID, concatenate context blocks with sub-query labels, rank by score across all sub-results
-- [ ] Token budget: cap merged context at fixed limit, prioritize highest-scoring events
-- [ ] For >5 sub-queries: two-level hierarchy (orchestrator → intermediate agents → workers)
+- [x] Composite intent detector in planner: returns `isComposite: boolean` + `subqueries: string[]`
+- [x] Subagent runner: lightweight wrapper around `buildQueryPlan → retrieveContext → buildContextBlock`, parameterized per sub-query
+- [x] Fan-out in `stream.ts`: `Promise.all` over subagents, collect `RetrievalResult[]`
+- [x] Merge strategy: deduplicate events by ID, concatenate context blocks with sub-query labels, rank by score across all sub-results
+- [x] Token budget: cap merged context at fixed limit, prioritize highest-scoring events
+- [x] For >5 sub-queries: two-level hierarchy (orchestrator → intermediate agents → workers)
 
 ---
 
@@ -318,13 +318,13 @@ Hard constraint: no autonomous execution without user confirmation.
 
 ### 5.4 Outcome-Guided Retrieval (Contextual Bandit)
 
-- [ ] `retrieval_outcomes` table: `id`, `query_id`, `session_id`, `lane_weights` (JSON), `top_event_ids` (JSON), `outcome_label` (up/down/implicit_negative), `occurred_at`
-- [ ] Migration for `retrieval_outcomes`
-- [ ] At each query: record lane weight config used + top events retrieved
-- [ ] Bandit updater worker (daily): fit updated lane weights from recent outcomes via LinUCB or Thompson sampling
-- [ ] Exploration: 10% of queries sample from exploration policy instead of current best weights
-- [ ] `retrieval_weight_versions` table for rollback
-- [ ] Implicit negative signal: follow-up question within 30s after an answer
+- [x] `retrieval_outcomes` table: `id`, `query_id`, `session_id`, `lane_weights` (JSON), `top_event_ids` (JSON), `outcome_label` (up/down/implicit_negative), `occurred_at`
+- [x] Migration for `retrieval_outcomes`
+- [x] At each query: record lane weight config used + top events retrieved
+- [x] Bandit updater worker (daily): fit updated lane weights from recent outcomes via LinUCB or Thompson sampling
+- [x] Exploration: 10% of queries sample from exploration policy instead of current best weights
+- [x] `retrieval_weight_versions` table for rollback
+- [x] Implicit negative signal: follow-up question within 30s after an answer
 
 ---
 
