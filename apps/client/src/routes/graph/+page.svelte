@@ -5,35 +5,25 @@
   import { buildTitle } from '$lib/head';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
-  import NodeDetailPane from '$lib/components/NodeDetailPane.svelte';
   ensureSolar();
-
-  type SimNode = GraphEntity & { x: number; y: number; vx: number; vy: number; r: number };
-  type ResolvedEdge = EntityRelation & { source: SimNode; target: SimNode };
 
   let loading = $state(true);
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
-  let viewMode = $state<'entities' | 'list' | 'communities'>('entities');
-  let paused = false;
+  let viewMode = $state<'list' | 'communities'>('list');
   let communities = $state<CommunityDetail[]>([]);
   let loadingCommunities = $state(false);
   let narrativesMap = $state<Map<string, EntityNarrativeDetail>>(new Map());
   let loadingNarratives = $state(false);
-  function setMode(m: 'entities' | 'list' | 'communities') {
+
+  let entities: GraphEntity[] = [];
+  let relations: EntityRelation[] = [];
+
+  function setMode(m: 'list' | 'communities') {
     viewMode = m;
-    if (m === 'list' || m === 'communities') {
-      paused = true;
-      cancelAnimationFrame(animId);
-      if (m === 'communities' && communities.length === 0) loadCommunities();
-      if (m === 'list' && narrativesMap.size === 0) loadNarratives();
-    } else {
-      if (paused) {
-        paused = false;
-        loop();
-      }
-    }
+    if (m === 'communities' && communities.length === 0) loadCommunities();
+    if (m === 'list' && narrativesMap.size === 0) loadNarratives();
   }
 
   async function loadNarratives() {
@@ -59,31 +49,6 @@
     }
     loadingCommunities = false;
   }
-
-  let container: HTMLDivElement;
-  let canvas: HTMLCanvasElement;
-  let tooltip: HTMLDivElement;
-  let tooltipName: HTMLParagraphElement;
-  let tooltipType: HTMLParagraphElement;
-  let tooltipMeta: HTMLParagraphElement;
-
-  let nodes: SimNode[] = [];
-  let edges: EntityRelation[] = [];
-  let resolvedEdges: ResolvedEdge[] = [];
-  let uniqueEdges: ResolvedEdge[] = [];
-  let nodeMap = new Map<string, SimNode>();
-  let hoveredNode: SimNode | null = null;
-  let draggedNode: SimNode | null = null;
-  let animId: number;
-  let simAlpha = 1.0;
-  let panX = 0;
-  let panY = 0;
-  let zoom = 1;
-  let isPanning = false;
-  let panStart = { x: 0, y: 0, px: 0, py: 0 };
-  let mouseDownPos = { x: 0, y: 0 };
-  let mouseDownNode: SimNode | null = null;
-  let selectedNode = $state<SimNode | null>(null);
 
   const COLORS: [string, string][] = [
     ['deployment', '#6366f1'],
@@ -114,384 +79,40 @@
     return '#6b7280';
   }
 
-  function radiusFor(count: number): number {
-    return Math.max(8, Math.min(40, 8 + Math.sqrt(count) * 4.2));
-  }
-
-  function cw(): number { return canvas?.offsetWidth ?? 800; }
-  function ch(): number { return canvas?.offsetHeight ?? 600; }
-
-  const MAX_VELOCITY = 8;
-
-  function clampVelocity(v: number): number {
-    return Math.max(-MAX_VELOCITY, Math.min(MAX_VELOCITY, v));
-  }
-
-  function reheat(target = 0.25) {
-    simAlpha = Math.max(simAlpha, target);
-  }
-
-  function tick() {
-    if (nodes.length === 0 || simAlpha <= 0.001) return;
-    simAlpha = Math.max(0.001, simAlpha * 0.96);
-    const alpha = simAlpha;
-    const cx = cw() / 2;
-    const cy = ch() / 2;
-
-    const repulsionStrength = 2000;
-    const minDist = 80;
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = (nodes[j].x - nodes[i].x) || (Math.random() - 0.5) * 2;
-        const dy = (nodes[j].y - nodes[i].y) || (Math.random() - 0.5) * 2;
-        const dSq = dx * dx + dy * dy;
-        if (dSq > 500 * 500) continue;
-        const d = Math.sqrt(dSq);
-        const safeDist = Math.max(d, minDist);
-        const f = (repulsionStrength * alpha) / (safeDist * safeDist);
-        const fx = (f * dx) / d;
-        const fy = (f * dy) / d;
-        nodes[i].vx -= fx;
-        nodes[i].vy -= fy;
-        nodes[j].vx += fx;
-        nodes[j].vy += fy;
-      }
-    }
-
-    const linkDist = 250;
-    const linkStrength = 0.03;
-    for (const edge of uniqueEdges) {
-      const s = edge.source;
-      const t = edge.target;
-      const dx = t.x - s.x;
-      const dy = t.y - s.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      const f = linkStrength * alpha * (d - linkDist);
-      const fx = (f * dx) / d;
-      const fy = (f * dy) / d;
-      s.vx += fx;
-      s.vy += fy;
-      t.vx -= fx;
-      t.vy -= fy;
-    }
-
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const dx = (nodes[j].x - nodes[i].x) || 0.01;
-        const dy = (nodes[j].y - nodes[i].y) || 0.01;
-        const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-        const minD = nodes[i].r + nodes[j].r + 28;
-        if (d < minD) {
-          const push = (minD - d) * 0.3;
-          const nx = dx / d;
-          const ny = dy / d;
-          if (nodes[i] !== draggedNode) { nodes[i].x -= nx * push; nodes[i].y -= ny * push; }
-          if (nodes[j] !== draggedNode) { nodes[j].x += nx * push; nodes[j].y += ny * push; }
-        }
-      }
-    }
-
-    const damping = 0.7;
-    const gravityStrength = 0.0015;
-    for (const node of nodes) {
-      if (node === draggedNode) { node.vx = 0; node.vy = 0; continue; }
-      node.vx += (cx - node.x) * gravityStrength * alpha;
-      node.vy += (cy - node.y) * gravityStrength * alpha;
-      node.vx *= damping;
-      node.vy *= damping;
-      node.vx = clampVelocity(node.vx);
-      node.vy = clampVelocity(node.vy);
-      node.x += node.vx;
-      node.y += node.vy;
-    }
-  }
-
-  function draw() {
-    if (!canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const W = cw();
-    const H = ch();
-
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#f4f4f5';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.scale(dpr, dpr);
-    ctx.translate(W / 2 + panX, H / 2 + panY);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-W / 2, -H / 2);
-
-    const hovId = hoveredNode?.id;
-    ctx.beginPath();
-    for (const edge of uniqueEdges) {
-      if (hovId && (edge.source.id === hovId || edge.target.id === hovId)) continue;
-      ctx.moveTo(edge.source.x, edge.source.y);
-      ctx.lineTo(edge.target.x, edge.target.y);
-    }
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    if (hovId) {
-      ctx.beginPath();
-      for (const edge of uniqueEdges) {
-        if (edge.source.id !== hovId && edge.target.id !== hovId) continue;
-        ctx.moveTo(edge.source.x, edge.source.y);
-        ctx.lineTo(edge.target.x, edge.target.y);
-      }
-      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
-
-    for (const node of nodes) {
-      const isHovered = hoveredNode?.id === node.id;
-      const isDragged = draggedNode?.id === node.id;
-      const color = colorFor(node.type_label);
-
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      if (isDragged) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r + 5, 0, Math.PI * 2);
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = 0.55;
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      } else if (isHovered) {
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.r + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = 0.3;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      }
-
-      const label = node.canonical_name.length > 12
-        ? node.canonical_name.slice(0, 10) + '\u2026'
-        : node.canonical_name;
-      ctx.font = `${isHovered ? 500 : 400} 10px system-ui,sans-serif`;
-      ctx.fillStyle = isHovered ? '#18181b' : '#52525b';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(label, node.x, node.y + node.r + 4);
-    }
-
-    ctx.restore();
-  }
-
-  function loop() {
-    if (paused) return;
-    tick();
-    draw();
-    animId = requestAnimationFrame(loop);
-  }
-
-  function screenToWorld(sx: number, sy: number) {
-    const W = cw();
-    const H = ch();
-    return {
-      x: (sx - W / 2 - panX) / zoom + W / 2,
-      y: (sy - H / 2 - panY) / zoom + H / 2,
-    };
-  }
-
-  function findHovered(sx: number, sy: number): SimNode | null {
-    const { x, y } = screenToWorld(sx, sy);
-    let best: SimNode | null = null;
-    let bestD = Infinity;
-    for (const node of nodes) {
-      const d = Math.sqrt((node.x - x) ** 2 + (node.y - y) ** 2);
-      if (d <= node.r + 4 && d < bestD) { best = node; bestD = d; }
-    }
-    return best;
-  }
-
-  function showTooltip(node: SimNode, sx: number, sy: number) {
-    if (!tooltip) return;
-    tooltipName.textContent = node.canonical_name;
-    tooltipType.textContent = node.type_label;
-    tooltipMeta.textContent = `${node.event_count} ${node.event_count === 1 ? 'event' : 'events'} · ${(node.confidence * 100).toFixed(0)}% confidence`;
-    tooltip.style.display = 'block';
-    tooltip.style.left = `${sx + 14}px`;
-    tooltip.style.top = `${sy}px`;
-  }
-
-  function hideTooltip() {
-    if (tooltip) tooltip.style.display = 'none';
-  }
-
-  function resizeCanvas() {
-    if (!canvas || !container) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = container.clientWidth;
-    const h = container.clientHeight;
-    if (w === 0 || h === 0) return;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-
-    if (draggedNode) {
-      const { x, y } = screenToWorld(sx, sy);
-      draggedNode.x = x;
-      draggedNode.y = y;
-      draggedNode.vx = 0;
-      draggedNode.vy = 0;
-      canvas.style.cursor = 'grabbing';
-      showTooltip(draggedNode, sx, sy);
-      return;
-    }
-
-    const hit = findHovered(sx, sy);
-    hoveredNode = hit;
-
-    canvas.style.cursor = hit ? 'grab' : isPanning ? 'grabbing' : 'grab';
-
-    if (hit) showTooltip(hit, sx, sy);
-    else hideTooltip();
-
-    if (isPanning) {
-      panX = panStart.px + (e.clientX - panStart.x);
-      panY = panStart.py + (e.clientY - panStart.y);
-    }
-  }
-
-  function onMouseDown(e: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    mouseDownPos = { x: sx, y: sy };
-    const hit = findHovered(sx, sy);
-    if (hit) {
-      draggedNode = hit;
-      mouseDownNode = hit;
-      draggedNode.vx = 0;
-      draggedNode.vy = 0;
-      canvas.style.cursor = 'grabbing';
-    } else {
-      mouseDownNode = null;
-      isPanning = true;
-      canvas.style.cursor = 'grabbing';
-      panStart = { x: e.clientX, y: e.clientY, px: panX, py: panY };
-    }
-  }
-
-  function onMouseUp(e: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const dx = sx - mouseDownPos.x;
-    const dy = sy - mouseDownPos.y;
-    const moved = Math.sqrt(dx * dx + dy * dy);
-    if (moved < 5 && mouseDownNode) {
-      selectedNode = mouseDownNode;
-    }
-    mouseDownNode = null;
-    if (draggedNode) reheat(0.4);
-    draggedNode = null;
-    isPanning = false;
-    canvas.style.cursor = 'grab';
-  }
-
-  function onMouseLeave() {
-    draggedNode = null;
-    hoveredNode = null;
-    isPanning = false;
-    hideTooltip();
-  }
-
-  function onWheel(e: WheelEvent) {
-    e.preventDefault();
-    zoom = Math.max(0.15, Math.min(5, zoom * (e.deltaY > 0 ? 0.9 : 1.11)));
-  }
-
   let adjacency = $derived.by(() => {
-    const adjMap = new Map<string, { other: SimNode; label: string }[]>();
-    for (const node of nodes) adjMap.set(node.id, []);
-    for (const edge of resolvedEdges) {
-      adjMap.get(edge.from_id)?.push({ other: edge.target, label: edge.label });
-      adjMap.get(edge.to_id)?.push({ other: edge.source, label: edge.label });
+    const entityMap = new Map<string, GraphEntity>();
+    for (const e of entities) entityMap.set(e.id, e);
+    const adjMap = new Map<string, { other: GraphEntity; label: string }[]>();
+    for (const e of entities) adjMap.set(e.id, []);
+    for (const rel of relations) {
+      const source = entityMap.get(rel.from_id);
+      const target = entityMap.get(rel.to_id);
+      if (!source || !target) continue;
+      adjMap.get(rel.from_id)?.push({ other: target, label: rel.label });
+      adjMap.get(rel.to_id)?.push({ other: source, label: rel.label });
     }
-    return nodes
-      .map((node) => ({ node, connections: adjMap.get(node.id) ?? [] }))
-      .sort((a, b) => b.node.event_count - a.node.event_count);
+    return entities
+      .map((entity) => ({ entity, connections: adjMap.get(entity.id) ?? [] }))
+      .sort((a, b) => b.entity.event_count - a.entity.event_count);
   });
 
-  let selectedNodeConnections = $derived(
-    selectedNode
-      ? (adjacency.find((a) => a.node.id === selectedNode!.id)?.connections ?? [])
-      : []
-  );
-
   async function loadGraph() {
-    simAlpha = 0.6;
     try {
       const data = await api.entities.graph();
-      const W = container?.clientWidth ?? 800;
-      const H = container?.clientHeight ?? 600;
-      const count = data.entities.length;
-      const baseRadius = Math.min(W, H) * 0.38;
-      nodes = data.entities.map((e, i) => {
-        const angle = (2 * Math.PI * i) / count + (Math.random() - 0.5) * 0.3;
-        const r = baseRadius * (0.6 + Math.random() * 0.4);
-        return {
-          ...e,
-          x: W / 2 + Math.cos(angle) * r,
-          y: H / 2 + Math.sin(angle) * r,
-          vx: 0,
-          vy: 0,
-          r: radiusFor(e.event_count),
-        };
-      });
-      nodeMap = new Map(nodes.map((n) => [n.id, n]));
-      edges = data.relations;
-      resolvedEdges = [];
-      const seen = new Set<string>();
-      uniqueEdges = [];
-      for (const edge of edges) {
-        const source = nodeMap.get(edge.from_id);
-        const target = nodeMap.get(edge.to_id);
-        if (!source || !target) continue;
-        const resolved = { ...edge, source, target } as ResolvedEdge;
-        resolvedEdges.push(resolved);
-        const pairKey = edge.from_id < edge.to_id
-          ? `${edge.from_id}:${edge.to_id}`
-          : `${edge.to_id}:${edge.from_id}`;
-        if (!seen.has(pairKey)) {
-          seen.add(pairKey);
-          uniqueEdges.push(resolved);
-        }
-      }
-      entityCount = nodes.length;
-      relationCount = resolvedEdges.length;
-      empty = nodes.length === 0;
-      for (let i = 0; i < 40; i++) tick();
+      entities = data.entities;
+      relations = data.relations;
+      entityCount = entities.length;
+      relationCount = relations.length;
+      empty = entities.length === 0;
     } catch {
       empty = true;
     }
     loading = false;
-    loop();
+    if (!empty) loadNarratives();
   }
 
   onMount(() => {
-    resizeCanvas();
-    const ro = new ResizeObserver(resizeCanvas);
-    ro.observe(container);
     loadGraph();
-    return () => { cancelAnimationFrame(animId); ro.disconnect(); };
   });
 </script>
 
@@ -511,30 +132,16 @@
           {relationCount} {relationCount === 1 ? 'relation' : 'relations'}
         </span>
       {/if}
-<div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
-        {#if viewMode === 'entities'}
-          {#each [['#6366f1','deploy / service'],['#7c3aed','contract'],['#059669','client'],['#2563eb','task'],['#db2777','person'],['#d97706','financial']] as [color, label]}
-            <span class="flex items-center gap-1.5">
-              <span class="size-2 rounded-full" style="background:{color}"></span>
-              {label}
-            </span>
-          {/each}
-        {:else if viewMode === 'communities'}
+      <div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
+        {#if viewMode === 'communities'}
           <span>{communities.length} {communities.length === 1 ? 'community' : 'communities'}</span>
         {/if}
       </div>
     </div>
   </div>
 
-  <div bind:this={container} class="relative min-h-0 flex-1 bg-[#f4f4f5]">
+  <div class="relative min-h-0 flex-1 bg-[#f4f4f5]">
     <div class="absolute left-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
-      <button
-        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'entities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => setMode('entities')}
-      >
-        <Icon icon="solar:layers-minimalistic-linear" class="size-3.5" />
-        Entities
-      </button>
       <button
         class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
         onclick={() => setMode('list')}
@@ -551,20 +158,29 @@
       </button>
     </div>
 
-    {#if viewMode === 'list'}
-      <div class="absolute inset-0 z-10 overflow-y-auto p-4 pt-16">
+    {#if loading}
+      <div class="flex items-center justify-center pt-20">
+        <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin text-zinc-400" />
+      </div>
+    {:else if empty}
+      <div class="flex flex-col items-center justify-center gap-2 pt-20 text-center">
+        <span class="text-sm text-zinc-500">No entities resolved yet.</span>
+        <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
+      </div>
+    {:else if viewMode === 'list'}
+      <div class="absolute inset-0 overflow-y-auto p-4 pt-16">
         <div class="mx-auto max-w-2xl space-y-2 pb-4">
-          {#each adjacency as { node, connections }}
+          {#each adjacency as { entity, connections }}
             <div class="rounded-xl border border-zinc-200/80 bg-white px-4 py-3 shadow-sm">
               <div class="flex items-center gap-2.5">
-                <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(node.type_label)}"></span>
-                <span class="text-sm font-medium text-zinc-900">{node.canonical_name}</span>
-                <span class="ml-auto font-mono text-[11px] text-zinc-400">{node.type_label}</span>
-                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">{node.event_count} {node.event_count === 1 ? 'event' : 'events'}</span>
+                <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(entity.type_label)}"></span>
+                <span class="text-sm font-medium text-zinc-900">{entity.canonical_name}</span>
+                <span class="ml-auto font-mono text-[11px] text-zinc-400">{entity.type_label}</span>
+                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
               </div>
-              {#if narrativesMap.has(node.id)}
+              {#if narrativesMap.has(entity.id)}
                 <p class="mt-2 border-t border-emerald-100 pt-2 text-xs leading-relaxed text-emerald-700">
-                  {narrativesMap.get(node.id)!.text}
+                  {narrativesMap.get(entity.id)!.text}
                 </p>
               {/if}
               {#if connections.length > 0}
@@ -582,10 +198,8 @@
           {/each}
         </div>
       </div>
-    {/if}
-
-    {#if viewMode === 'communities'}
-      <div class="absolute inset-0 z-10 overflow-y-auto p-4 pt-16">
+    {:else if viewMode === 'communities'}
+      <div class="absolute inset-0 overflow-y-auto p-4 pt-16">
         <div class="mx-auto max-w-2xl space-y-3 pb-4">
           {#if loadingCommunities}
             <div class="flex items-center justify-center py-16">
@@ -633,43 +247,5 @@
         </div>
       </div>
     {/if}
-
-    <canvas
-      bind:this={canvas}
-      class="absolute inset-0 block"
-      style="width:100%;height:100%;cursor:grab;display:{viewMode === 'list' || viewMode === 'communities' ? 'none' : 'block'}"
-      onmousemove={onMouseMove}
-      onmousedown={onMouseDown}
-      onmouseup={onMouseUp}
-      onmouseleave={onMouseLeave}
-      onwheel={onWheel}
-    ></canvas>
-
-    {#if loading}
-      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <span class="text-sm text-zinc-400">Loading graph…</span>
-      </div>
-    {:else if empty}
-      <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
-        <span class="text-sm text-zinc-500">No entities resolved yet.</span>
-        <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
-      </div>
-    {/if}
-
-    <div
-      bind:this={tooltip}
-      class="pointer-events-none absolute z-10 rounded-2xl border border-zinc-200 bg-white px-3 py-2.5 shadow-lg"
-      style="display:none;transform:translateY(-50%)"
-    >
-      <p bind:this={tooltipName} class="text-sm font-medium text-zinc-900"></p>
-      <p bind:this={tooltipType} class="mt-0.5 font-mono text-[11px] text-zinc-400"></p>
-      <p bind:this={tooltipMeta} class="mt-1.5 text-[11px] text-zinc-400"></p>
-    </div>
   </div>
 </div>
-
-<NodeDetailPane
-  node={selectedNode}
-  connections={selectedNodeConnections}
-  onclose={() => (selectedNode = null)}
-/>
