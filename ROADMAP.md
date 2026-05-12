@@ -268,7 +268,7 @@ The system acts, learns, and decomposes complex queries.
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 5.1 | Multi-agent query decomposition | Medium | 1.2, 2.1 |
-| [ ] | 5.2 | Write-back to source systems | High | 2.2 |
+| [x] | 5.2 | Write-back to source systems | High | 2.2 |
 | [x] | 5.3 | Continuous retrieval eval harness | Medium | 1.5 |
 | [x] | 5.4 | Outcome-guided retrieval (RL) | High | 1.5, 5.3 |
 | [x] | 5.5 | Resources & multimodal ingestion | Medium | — |
@@ -290,14 +290,14 @@ The system acts, learns, and decomposes complex queries.
 
 Hard constraint: no autonomous execution without user confirmation.
 
-- [ ] `action_proposals` table: `id`, `action_type`, `target_provider`, `target_entity_id`, `payload` (JSON), `confidence`, `status` (proposed/approved/executed/dismissed), `proposed_at`, `resolved_at`
-- [ ] Migration for `action_proposals`
-- [ ] Proposal generator: Perception identifies gaps and creates proposals (client silent 45 days → propose Vikunja task)
-- [ ] UI: actionable proposal cards — one-click approve or dismiss
-- [ ] Vikunja write adapter: task creation
-- [ ] Docuseal write adapter: contract annotation (not mutation)
-- [ ] Charles write adapter: client tag (at-risk, high-velocity)
-- [ ] Audit: all executed actions logged as events with `provider_type = 'perception-actions'`
+- [x] `action_proposals` table: `id`, `action_type`, `target_provider`, `target_entity_id`, `payload` (JSON), `confidence`, `status` (proposed/approved/executed/dismissed), `proposed_at`, `resolved_at`
+- [x] Migration for `action_proposals`
+- [x] Proposal generator: Perception identifies gaps and creates proposals (client silent 45 days → propose Vikunja task)
+- [x] UI: actionable proposal cards — one-click approve or dismiss
+- [x] Vikunja write adapter: task creation
+- [x] Docuseal write adapter: contract annotation (not mutation)
+- [x] Charles write adapter: client tag (at-risk, high-velocity)
+- [x] Audit: all executed actions logged as events with `provider_type = 'perception-actions'`
 
 ---
 
@@ -344,8 +344,8 @@ Expanded beyond the original multimodal scope: user-uploadable document knowledg
 - [x] `[RESOURCE]` context block in LLM prompt — injected between memory episodes and narratives
 - [x] Resource metadata in SSE done payload
 - [x] REST API: `POST /resources` (multipart upload), `GET /resources`, `GET /resources/:id` (with chunks), `DELETE /resources/:id`
-- [ ] Auto-create resources from event attachments (Docuseal PDFs, image attachments) — thin layer on top of existing pipeline
-- [ ] Image OCR adapter: Tesseract WASM or vision model for image attachments
+- [x] Auto-create resources from event attachments (Docuseal PDFs, image attachments) — thin layer on top of existing pipeline
+- [x] Image OCR adapter: Tesseract WASM or vision model for image attachments
 
 ---
 
@@ -388,7 +388,7 @@ Transform Perception from a system that explains the past into one that forecast
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 7.1 | Forecast question engine | Medium | 5.1 |
+| [x] | 7.1 | Forecast question engine | Medium | 5.1 |
 | [ ] | 7.2 | Bayesian belief state forecaster | High | 7.1, 4.1, 4.2 |
 | [ ] | 7.3 | Automated resolution oracle | Medium | 7.1 |
 | [ ] | 7.4 | Calibration and scoring system | Medium | 7.2, 7.3 |
@@ -401,14 +401,14 @@ Transform Perception from a system that explains the past into one that forecast
 
 Automatically generates well-formed forecasting questions from observed patterns, anomalies, and causal signals — then tracks them to resolution.
 
-- [ ] `forecasts` table: `id`, `question` (text), `question_type` (binary | numeric | date), `resolution_criteria` (text), `resolution_source` (JSON — lane + query to check), `base_rate` (float, nullable), `created_at`, `resolves_at`, `resolved_at`, `resolution_value` (float, nullable), `status` (open | resolved | voided | expired)
-- [ ] Migration for `forecasts`
-- [ ] Question generator worker (daily): scan recent change points (4.1), causal links (4.2), anomaly notifications (2.2), and concept drift alerts (4.4) — produce 3-10 candidate questions per day
-- [ ] Question quality gate: LLM critic pass (Haiku) — reject ambiguous, unfalsifiable, or tautological questions; require clear resolution criteria and a bounded time horizon
-- [ ] Reference class lookup: for each question, query historical events with similar entity/provider/pattern to compute empirical base rate
-- [ ] Question decomposition: for composite questions, use multi-agent decomposition (5.1) to split into sub-forecasts with independent resolution
-- [ ] User-created forecasts: `POST /forecasts` endpoint — users can pose their own questions; system validates resolution criteria feasibility
-- [ ] Admin UI: forecast dashboard with open questions, resolution timeline, and base rate context
+- [x] `forecasts` table: `id`, `question` (text), `question_type` (binary | numeric | date), `resolution_criteria` (text), `resolution_source` (JSON — lane + query to check), `base_rate` (float, nullable), `created_at`, `resolves_at`, `resolved_at`, `resolution_value` (float, nullable), `status` (open | resolved | voided | expired)
+- [x] Migration for `forecasts`
+- [x] Question generator worker (daily): scan recent change points (4.1), causal links (4.2), anomaly notifications (2.2), and concept drift alerts (4.4) — produce 3-10 candidate questions per day
+- [x] Question quality gate: LLM critic pass (Haiku) — reject ambiguous, unfalsifiable, or tautological questions; require clear resolution criteria and a bounded time horizon
+- [x] Reference class lookup: for each question, query historical events with similar entity/provider/pattern to compute empirical base rate
+- [x] Question decomposition: for composite questions, use multi-agent decomposition (5.1) to split into sub-forecasts with independent resolution
+- [x] User-created forecasts: `POST /forecasts` endpoint — users can pose their own questions; system validates resolution criteria feasibility
+- [x] Admin UI: forecast dashboard with open questions, resolution timeline, and base rate context
 
 Question types and examples:
 | Type | Example | Resolution |

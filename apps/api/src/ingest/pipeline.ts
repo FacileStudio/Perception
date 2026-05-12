@@ -8,6 +8,7 @@ import { lookupSchema, computeKeysHash, markNeedsReview } from '../schema-regist
 import { labelEvent } from '../ontology/labels';
 import { resolveEventEntity } from '../entities/resolver';
 import { extractEntityRelations } from '../entities/link';
+import { extractEventAttachments } from '../resources/attachments';
 import type { NookEventEnvelope } from './types';
 
 export function extractStringField(payload: Record<string, unknown>, keys: string[]): string | null {
@@ -219,6 +220,10 @@ export async function processIngestEvent(
     sql: 'INSERT INTO event_fts(rowid, title, summary, searchable_text) SELECT rowid, title, summary, searchable_text FROM events WHERE id = ?',
     args: [envelope.id],
   });
+
+  if (envelope.attachments?.length) {
+    extractEventAttachments(envelope.id, envelope.attachments).catch(() => {});
+  }
 
   if (quality === 'degraded') {
     await ensureInferenceJob(envelope.provider.type, envelope.event.type, envelope.id);

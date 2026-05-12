@@ -16,6 +16,7 @@ import { entitiesRoutes } from './routes/entities';
 import { usersRoutes } from './routes/users';
 import { notificationsRoutes } from './routes/notifications';
 import { resourcesRoutes } from './routes/resources';
+import { proposalRoutes } from './routes/proposals';
 import { config } from './config';
 
 const app = new Hono();
@@ -51,6 +52,10 @@ app.route('/entities', entitiesRoutes);
 app.route('/users', usersRoutes);
 app.route('/notifications', notificationsRoutes);
 app.route('/resources', resourcesRoutes);
+app.route('/proposals', proposalRoutes);
+
+const { forecastRoutes } = await import('./routes/forecasts');
+app.route('/forecasts', forecastRoutes);
 
 app.onError((err, c) => {
   console.error('[error]', err);
@@ -82,6 +87,8 @@ const { conceptDriftWorker } = await import('./math/concept-drift-worker');
 const { grangerWorker } = await import('./math/granger-worker');
 const { resourceEmbeddingWorker } = await import('./resources/embedding-worker');
 const { banditWorker } = await import('./chat/bandit-worker');
+const { proposalWorker } = await import('./proposals/worker');
+const { forecastWorker } = await import('./forecasts/worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -97,6 +104,8 @@ registerWorker({ name: 'concept-drift', description: 'Detects distribution drift
 registerWorker({ name: 'granger', description: 'Detects Granger-causal relationships between event series', intervalMs: 24 * 60 * 60 * 1000, run: grangerWorker.run });
 registerWorker({ name: 'resource-embedding', description: 'Generates vector embeddings for resource chunks', intervalMs: 5_000, run: resourceEmbeddingWorker.run });
 registerWorker({ name: 'bandit', description: 'Fits retrieval lane weights from feedback via Thompson sampling', intervalMs: 24 * 60 * 60 * 1000, run: banditWorker.run });
+registerWorker({ name: 'proposals', description: 'Generates action proposals from detected gaps', intervalMs: 24 * 60 * 60 * 1000, run: proposalWorker.run });
+registerWorker({ name: 'forecasts', description: 'Generates forecast questions from detected signals', intervalMs: 24 * 60 * 60 * 1000, run: forecastWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -112,6 +121,8 @@ scheduleWorker('concept-drift', 480_000);
 scheduleWorker('granger', 600_000);
 scheduleWorker('resource-embedding');
 scheduleWorker('bandit', 660_000);
+scheduleWorker('proposals', 720_000);
+scheduleWorker('forecasts', 780_000);
 
 export default {
   port: config.port,

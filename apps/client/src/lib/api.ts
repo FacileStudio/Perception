@@ -88,6 +88,26 @@ export const api = {
     downloadUrl: (id: string) => `${API_BASE}/resources/${id}/file`,
     delete: (id: string) => request<{ ok: boolean }>(`/resources/${id}`, { method: 'DELETE' }),
   },
+  proposals: {
+    list: (status?: string) => {
+      const q = status ? `?status=${status}` : '';
+      return request<{ proposals: ActionProposal[] }>(`/proposals${q}`);
+    },
+    approve: (id: string) => request<{ ok: boolean }>(`/proposals/${id}/approve`, { method: 'PATCH' }),
+    dismiss: (id: string) => request<{ ok: boolean }>(`/proposals/${id}/dismiss`, { method: 'PATCH' }),
+  },
+  forecasts: {
+    list: (status?: string) => {
+      const q = status ? `?status=${status}` : '';
+      return request<{ forecasts: Forecast[] }>(`/forecasts${q}`);
+    },
+    get: (id: string) => request<{ forecast: Forecast }>(`/forecasts/${id}`),
+    create: (body: { question: string; question_type: string; resolution_criteria: string; resolves_at: string }) =>
+      request<{ forecast: Forecast }>('/forecasts', { method: 'POST', body: JSON.stringify(body) }),
+    resolve: (id: string, body: { resolution_value: number; void?: boolean }) =>
+      request<{ ok: boolean }>(`/forecasts/${id}/resolve`, { method: 'PATCH', body: JSON.stringify(body) }),
+    void: (id: string) => request<{ ok: boolean }>(`/forecasts/${id}`, { method: 'DELETE' }),
+  },
   admin: {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
     reembedAll: () => request<{ reset: number }>('/admin/reembed-all', { method: 'POST' }),
@@ -281,4 +301,38 @@ export type ResourceChunkRow = {
 
 export type ResourceDetail = ResourceRow & {
   chunks: ResourceChunkRow[];
+};
+
+export type ActionProposal = {
+  id: string;
+  action_type: string;
+  target_provider: string;
+  target_entity_id: string | null;
+  target_entity_name: string | null;
+  title: string;
+  description: string;
+  payload: Record<string, unknown>;
+  confidence: number;
+  status: 'proposed' | 'approved' | 'executed' | 'dismissed' | 'failed';
+  proposed_at: string;
+  resolved_at: string | null;
+  executed_result: string | null;
+};
+
+export type Forecast = {
+  id: string;
+  question: string;
+  question_type: 'binary' | 'numeric' | 'date';
+  resolution_criteria: string;
+  resolution_source: Record<string, unknown>;
+  base_rate: number | null;
+  entity_id: string | null;
+  entity_name: string | null;
+  provider_type: string | null;
+  source_signal: string | null;
+  created_at: string;
+  resolves_at: string;
+  resolved_at: string | null;
+  resolution_value: number | null;
+  status: 'open' | 'resolved' | 'voided' | 'expired';
 };

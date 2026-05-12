@@ -431,6 +431,53 @@ CREATE TABLE IF NOT EXISTS retrieval_weight_versions (
 CREATE INDEX IF NOT EXISTS retrieval_weight_versions_ver_idx ON retrieval_weight_versions(version DESC)
       `,
     },
+    {
+      name: '021_action_proposals',
+      sql: `
+CREATE TABLE IF NOT EXISTS action_proposals (
+  id TEXT PRIMARY KEY,
+  action_type TEXT NOT NULL,
+  target_provider TEXT NOT NULL,
+  target_entity_id TEXT,
+  target_entity_name TEXT,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  payload TEXT NOT NULL DEFAULT '{}',
+  confidence REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'proposed' CHECK(status IN ('proposed','approved','executed','dismissed','failed')),
+  proposed_at TEXT NOT NULL,
+  resolved_at TEXT,
+  executed_result TEXT
+);
+CREATE INDEX IF NOT EXISTS action_proposals_status_idx ON action_proposals(status);
+CREATE INDEX IF NOT EXISTS action_proposals_proposed_idx ON action_proposals(proposed_at DESC)
+      `,
+    },
+    {
+      name: '022_forecasts',
+      sql: `
+CREATE TABLE IF NOT EXISTS forecasts (
+  id TEXT PRIMARY KEY,
+  question TEXT NOT NULL,
+  question_type TEXT NOT NULL CHECK(question_type IN ('binary','numeric','date')),
+  resolution_criteria TEXT NOT NULL,
+  resolution_source TEXT NOT NULL DEFAULT '{}',
+  base_rate REAL,
+  entity_id TEXT,
+  entity_name TEXT,
+  provider_type TEXT,
+  source_signal TEXT,
+  created_at TEXT NOT NULL,
+  resolves_at TEXT NOT NULL,
+  resolved_at TEXT,
+  resolution_value REAL,
+  status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','resolved','voided','expired'))
+);
+CREATE INDEX IF NOT EXISTS forecasts_status_idx ON forecasts(status);
+CREATE INDEX IF NOT EXISTS forecasts_resolves_idx ON forecasts(resolves_at);
+CREATE INDEX IF NOT EXISTS forecasts_entity_idx ON forecasts(entity_id)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

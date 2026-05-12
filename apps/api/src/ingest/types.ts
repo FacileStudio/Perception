@@ -24,6 +24,12 @@ export type NookEventEnvelope = {
     name: string | null;
     url: string | null;
   };
+  attachments?: Array<{
+    name: string;
+    mime_type: string;
+    url: string;
+    size?: number;
+  }>;
   payload: { normalized: Record<string, unknown>; raw: unknown | null };
   privacy: { containsPii: boolean; rawPayloadAllowed: boolean };
 };

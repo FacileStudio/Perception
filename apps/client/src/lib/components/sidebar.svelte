@@ -46,6 +46,8 @@
     { href: '/entities', label: 'Entities', icon: 'solar:bill-list-bold-duotone', match: (p: string) => p === '/entities' },
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
     { href: '/resources', label: 'Resources', icon: 'solar:documents-bold-duotone', match: (p: string) => p === '/resources' },
+    { href: '/proposals', label: 'Proposals', icon: 'solar:hand-shake-bold-duotone', match: (p: string) => p === '/proposals' },
+    { href: '/forecasts', label: 'Forecasts', icon: 'solar:telescope-bold-duotone', match: (p: string) => p === '/forecasts' },
   ];
 
   const menuItems = [

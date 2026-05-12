@@ -10,5 +10,10 @@ export async function extractText(buffer: Buffer, mimeType: string): Promise<str
     return buffer.toString('utf-8');
   }
 
+  if (mimeType === 'image/png' || mimeType === 'image/jpeg' || mimeType === 'image/webp') {
+    const { extractTextFromImage } = await import('./ocr');
+    return extractTextFromImage(buffer);
+  }
+
   throw new Error(`Unsupported MIME type: ${mimeType}`);
 }
