@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
@@ -21,6 +21,7 @@
   let pendingFiles = $state.raw<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
+  let pollTimer: ReturnType<typeof setInterval> | undefined;
 
   const MIME_ICONS: Record<string, string> = {
     'application/pdf': 'solar:document-bold-duotone',
@@ -53,6 +54,29 @@
     return `${days}d ago`;
   }
 
+  function hasProcessing(): boolean {
+    return resources.some((r) => r.status === 'processing');
+  }
+
+  function startPolling() {
+    stopPolling();
+    if (!hasProcessing()) return;
+    pollTimer = setInterval(async () => {
+      try {
+        const result = await api.resources.list();
+        resources = result.resources;
+        if (!hasProcessing()) stopPolling();
+      } catch {}
+    }, 3000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = undefined;
+    }
+  }
+
   async function load() {
     if (loading) return;
     loading = true;
@@ -60,6 +84,7 @@
     try {
       const result = await api.resources.list();
       resources = result.resources;
+      startPolling();
     } catch (e) {
       console.error('[resources] load failed:', e);
       error = 'Failed to load resources.';
@@ -140,6 +165,10 @@
 
   onMount(() => {
     load();
+  });
+
+  onDestroy(() => {
+    stopPolling();
   });
 </script>
 
