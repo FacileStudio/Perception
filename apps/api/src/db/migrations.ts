@@ -398,6 +398,10 @@ CREATE INDEX IF NOT EXISTS eval_results_run_idx ON eval_results(run_id);
 CREATE INDEX IF NOT EXISTS eval_results_fixture_idx ON eval_results(fixture_id)
       `,
     },
+    {
+      name: '019_resource_file_path',
+      sql: `ALTER TABLE resources ADD COLUMN file_path TEXT`,
+    },
   ];
 
   for (const migration of migrations) {

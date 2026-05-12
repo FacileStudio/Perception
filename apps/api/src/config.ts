@@ -1,3 +1,12 @@
+import { dirname } from 'node:path';
+
+function resolveDataDir(): string {
+  if (process.env.PERCEPTION_DATA_DIR) return process.env.PERCEPTION_DATA_DIR;
+  const dbUrl = process.env.PERCEPTION_DATABASE_URL ?? 'file:./data/perception.db';
+  const dbPath = dbUrl.replace(/^file:/, '');
+  return dirname(dbPath);
+}
+
 export const config = {
   port: parseInt(process.env.PORT ?? '8787', 10),
   databaseUrl: process.env.PERCEPTION_DATABASE_URL ?? 'file:./data/perception.db',
@@ -23,4 +32,5 @@ export const config = {
   oidcRedirectUrl: process.env.OIDC_REDIRECT_URL ?? '',
   oidcSuccessUrl: process.env.OIDC_SUCCESS_URL ?? '',
   ssoOnly: process.env.SSO_ONLY === 'true',
+  dataDir: resolveDataDir(),
 } as const;

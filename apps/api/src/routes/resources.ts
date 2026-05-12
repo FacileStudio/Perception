@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'crypto';
+import { basename } from 'node:path';
 import { requireSession } from '../security/session';
 import { db } from '../db/client';
 import { processResource } from '../resources/process';
+import { saveUpload, readUpload, removeUpload, uploadExists } from '../resources/storage';
 
 export const resourcesRoutes = new Hono();
 
@@ -14,7 +16,7 @@ const MIME_BY_EXT: Record<string, string> = {
 const SUPPORTED = ['application/pdf', 'text/plain', 'text/markdown', 'text/csv', 'application/json'];
 
 function resolveMime(name: string, type: string): string {
-  if (type) return type;
+  if (type && type !== 'application/octet-stream') return type;
   const dot = name.lastIndexOf('.');
   return dot >= 0 ? (MIME_BY_EXT[name.slice(dot).toLowerCase()] ?? 'application/octet-stream') : 'application/octet-stream';
 }
@@ -23,24 +25,58 @@ resourcesRoutes.post('/', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
+  const contentType = c.req.header('content-type') ?? '';
+
+  if (contentType.includes('multipart/form-data')) {
+    const body = await c.req.parseBody({ all: true });
+    const raw = body['files'];
+    const fileEntries = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    const files = fileEntries.filter((f): f is File => f instanceof File);
+
+    if (!files.length) return c.json({ error: 'file_required' }, 400);
+
+    const resolved = files.map((f) => ({ file: f, mime: resolveMime(f.name, f.type) }));
+    const bad = resolved.find((r) => !SUPPORTED.includes(r.mime));
+    if (bad) return c.json({ error: 'unsupported_mime_type', mime_type: bad.mime, supported: SUPPORTED }, 400);
+
+    const ids: string[] = [];
+
+    for (const { file, mime } of resolved) {
+      const id = randomUUID();
+      const now = new Date().toISOString();
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filePath = await saveUpload(id, buffer, mime);
+
+      await db.execute({
+        sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
+        args: [id, file.name, '', mime, buffer.length, filePath, now, now],
+      });
+
+      processResource(id, buffer, mime).catch(console.error);
+      ids.push(id);
+    }
+
+    return c.json({ ids }, 201);
+  }
+
   const { files } = await c.req.json<{ files: Array<{ name: string; type: string; data: string }> }>();
   if (!files?.length) return c.json({ error: 'file_required' }, 400);
 
+  const resolvedJson = files.map((f) => ({ file: f, mime: resolveMime(f.name, f.type) }));
+  const badJson = resolvedJson.find((r) => !SUPPORTED.includes(r.mime));
+  if (badJson) return c.json({ error: 'unsupported_mime_type', mime_type: badJson.mime, supported: SUPPORTED }, 400);
+
   const ids: string[] = [];
 
-  for (const file of files) {
-    const mime = resolveMime(file.name, file.type);
-    if (!SUPPORTED.includes(mime)) {
-      return c.json({ error: 'unsupported_mime_type', mime_type: mime, supported: SUPPORTED }, 400);
-    }
-
+  for (const { file, mime } of resolvedJson) {
     const id = randomUUID();
     const now = new Date().toISOString();
     const buffer = Buffer.from(file.data, 'base64');
+    const filePath = await saveUpload(id, buffer, mime);
 
     await db.execute({
-      sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?)`,
-      args: [id, file.name, '', mime, buffer.length, now, now],
+      sql: `INSERT INTO resources (id, title, description, mime_type, file_size, source_type, file_path, uploaded_at, updated_at) VALUES (?, ?, ?, ?, ?, 'upload', ?, ?, ?)`,
+      args: [id, file.name, '', mime, buffer.length, filePath, now, now],
     });
 
     processResource(id, buffer, mime).catch(console.error);
@@ -55,7 +91,8 @@ resourcesRoutes.get('/', async (c) => {
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
-    `SELECT id, title, description, mime_type, file_size, source_type, chunk_count, status, error, uploaded_at, updated_at
+    `SELECT id, title, description, mime_type, file_size, source_type, chunk_count, status, error, uploaded_at, updated_at,
+            file_path IS NOT NULL AS has_file
      FROM resources ORDER BY uploaded_at DESC LIMIT 100`,
   );
 
@@ -72,6 +109,7 @@ resourcesRoutes.get('/', async (c) => {
       error: r.error,
       uploaded_at: r.uploaded_at,
       updated_at: r.updated_at,
+      has_file: !!r.has_file,
     })),
   });
 });
@@ -82,7 +120,7 @@ resourcesRoutes.get('/:id', async (c) => {
 
   const id = c.req.param('id');
   const [resource, chunks] = await Promise.all([
-    db.execute({ sql: `SELECT * FROM resources WHERE id = ?`, args: [id] }),
+    db.execute({ sql: `SELECT *, file_path IS NOT NULL AS has_file FROM resources WHERE id = ?`, args: [id] }),
     db.execute({ sql: `SELECT id, chunk_index, content, token_count, embedding_status FROM resource_chunks WHERE resource_id = ? ORDER BY chunk_index`, args: [id] }),
   ]);
 
@@ -101,6 +139,7 @@ resourcesRoutes.get('/:id', async (c) => {
     error: r.error,
     uploaded_at: r.uploaded_at,
     updated_at: r.updated_at,
+    has_file: !!r.has_file,
     chunks: chunks.rows.map((ch) => ({
       id: ch.id,
       chunk_index: ch.chunk_index,
@@ -111,16 +150,51 @@ resourcesRoutes.get('/:id', async (c) => {
   });
 });
 
+resourcesRoutes.get('/:id/file', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const result = await db.execute({ sql: `SELECT title, mime_type, file_path FROM resources WHERE id = ?`, args: [id] });
+
+  if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const r = result.rows[0];
+  const filePath = r.file_path as string | null;
+
+  if (!filePath || !(await uploadExists(filePath))) {
+    return c.json({ error: 'file_not_available' }, 404);
+  }
+
+  const buffer = await readUpload(filePath);
+  const rawName = (r.title as string) || basename(filePath);
+  const safeName = rawName.replace(/["\r\n\\]/g, '_').replace(/[^\x20-\x7E]/g, '_');
+
+  return new Response(new Uint8Array(buffer), {
+    headers: {
+      'Content-Type': r.mime_type as string,
+      'Content-Disposition': `attachment; filename="${safeName}"`,
+      'Content-Length': String(buffer.length),
+    },
+  });
+});
+
 resourcesRoutes.delete('/:id', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
-  const result = await db.execute({ sql: `SELECT id FROM resources WHERE id = ?`, args: [id] });
+  const result = await db.execute({ sql: `SELECT id, file_path FROM resources WHERE id = ?`, args: [id] });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const filePath = result.rows[0].file_path as string | null;
 
   await db.execute({ sql: `DELETE FROM resource_chunks WHERE resource_id = ?`, args: [id] });
   await db.execute({ sql: `DELETE FROM resources WHERE id = ?`, args: [id] });
+
+  if (filePath) {
+    await removeUpload(filePath).catch(console.error);
+  }
 
   return c.json({ ok: true });
 });

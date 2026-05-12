@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { api, fileMime, type ResourceRow, type ResourceDetail } from '$lib/api';
+  import { api, type ResourceRow, type ResourceDetail } from '$lib/api';
   import { Card } from '$lib/components/ui/card';
   import { Button } from '$lib/components/ui/button';
   import { buildTitle } from '$lib/head';
@@ -18,8 +18,7 @@
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
-  let pendingFiles = $state<Array<{ name: string; size: number }>>([]);
-  let encodedFiles: Array<{ name: string; type: string; data: string }> = [];
+  let pendingFiles = $state<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
@@ -69,30 +68,18 @@
     }
   }
 
-  async function handleFileSelect(e: Event) {
+  function handleFileSelect(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     if (!input.files?.length) return;
-    const files = Array.from(input.files);
-    pendingFiles = files.map((f) => ({ name: f.name, size: f.size }));
-    encodedFiles = [];
-    for (const f of files) {
-      const data = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(f);
-      });
-      encodedFiles.push({ name: f.name, type: f.type || fileMime(f), data });
-    }
+    pendingFiles = Array.from(input.files);
   }
 
   async function handleUpload() {
-    if (!encodedFiles.length || uploading) return;
+    if (!pendingFiles.length || uploading) return;
     uploading = true;
     try {
-      await api.resources.uploadEncoded(encodedFiles);
+      await api.resources.upload(pendingFiles);
       showUpload = false;
-      encodedFiles = [];
       pendingFiles = [];
       await load();
     } catch (e) {
@@ -216,7 +203,7 @@
           variant="outline"
           size="sm"
           class="rounded-full"
-          onclick={() => { showUpload = false; encodedFiles = []; pendingFiles = []; }}
+          onclick={() => { showUpload = false; pendingFiles = []; }}
         >
           Cancel
         </Button>
@@ -342,6 +329,16 @@
       <span class="text-[10px] text-zinc-400">Uploaded {timeAgo(detail.uploaded_at)}</span>
       {#if detail.error}
         <span class="text-[10px] text-red-500">{detail.error}</span>
+      {/if}
+      {#if detail.has_file}
+        <a
+          href={api.resources.downloadUrl(detail.id)}
+          class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+          download
+        >
+          <Icon icon="solar:download-bold-duotone" class="size-3.5" />
+          Download
+        </a>
       {/if}
     </div>
 
