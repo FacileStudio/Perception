@@ -26,6 +26,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     method: event.request.method,
     headers,
     body: event.request.body,
+    redirect: 'manual',
     // @ts-expect-error duplex needed for streaming request body
     duplex: 'half',
   });
