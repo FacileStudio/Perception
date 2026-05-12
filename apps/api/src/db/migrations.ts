@@ -593,6 +593,68 @@ CREATE INDEX IF NOT EXISTS strategy_forecasts_forecast_idx ON strategy_forecasts
 CREATE INDEX IF NOT EXISTS strategy_forecasts_strategy_idx ON strategy_forecasts(strategy_id)
       `,
     },
+    {
+      name: '030_workspace_id',
+      sql: `
+ALTER TABLE events ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE dynamic_facts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE ontology_concepts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE ontology_concept_aliases ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE entities ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE entity_aliases ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE event_entities ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE event_concepts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE entity_relations ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE entity_communities ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE entity_narratives ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE provider_schemas ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE schema_inference_jobs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE chat_sessions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE chat_messages ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE memory_episodes ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE stats_snapshots ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE notifications ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE resources ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE resource_chunks ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE change_points ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE graph_health_snapshots ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE concept_drift_alerts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE event_counts_daily ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE causal_links ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE forecasts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE forecast_resolutions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE forecast_beliefs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE forecast_intervals ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE forecast_strategies ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE strategy_forecasts ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE calibration_snapshots ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE topology_snapshots ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE action_proposals ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE retrieval_outcomes ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE retrieval_weight_versions ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE eval_fixtures ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE eval_runs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE eval_results ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE ingest_rejections ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE token_usage ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE worker_runs ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'default';
+
+CREATE INDEX IF NOT EXISTS events_ws_idx ON events(workspace_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS entities_ws_idx ON entities(workspace_id, canonical_name);
+CREATE INDEX IF NOT EXISTS chat_sessions_ws_idx ON chat_sessions(workspace_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS notifications_ws_idx ON notifications(workspace_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS forecasts_ws_idx ON forecasts(workspace_id, status);
+CREATE INDEX IF NOT EXISTS resources_ws_idx ON resources(workspace_id, status);
+CREATE INDEX IF NOT EXISTS ontology_concepts_ws_idx ON ontology_concepts(workspace_id, kind);
+CREATE INDEX IF NOT EXISTS provider_schemas_ws_idx ON provider_schemas(workspace_id, provider_type);
+CREATE INDEX IF NOT EXISTS action_proposals_ws_idx ON action_proposals(workspace_id, status);
+CREATE INDEX IF NOT EXISTS change_points_ws_idx ON change_points(workspace_id, detected_at DESC);
+CREATE INDEX IF NOT EXISTS causal_links_ws_idx ON causal_links(workspace_id, cause_series);
+CREATE INDEX IF NOT EXISTS entity_communities_ws_idx ON entity_communities(workspace_id);
+CREATE INDEX IF NOT EXISTS stats_snapshots_ws_idx ON stats_snapshots(workspace_id, kind);
+CREATE INDEX IF NOT EXISTS event_counts_daily_ws_idx ON event_counts_daily(workspace_id, series_key, day)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

@@ -52,6 +52,7 @@ async function ensureInferenceJob(providerType: string, eventType: string, sampl
 
 export async function processIngestEvent(
   envelope: NookEventEnvelope,
+  workspaceId: string = 'default',
 ): Promise<{ ok: true; duplicate?: boolean } | { error: string; status: 400 | 409 }> {
   if (envelope.schemaVersion !== 1) {
     return { error: 'unsupported_schema_version', status: 400 };
@@ -159,8 +160,8 @@ export async function processIngestEvent(
         event_type, entity_type, entity_id, entity_name, actor_name, actor_email_hash,
         status, due_at, completed_at,
         occurred_at, emitted_at, ingested_at, url, title, summary, searchable_text,
-        payload_redacted_json, payload_hash, quality
-      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        payload_redacted_json, payload_hash, quality, workspace_id
+      ) VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         envelope.id,
         envelope.source,
@@ -186,11 +187,12 @@ export async function processIngestEvent(
         JSON.stringify(redacted),
         payloadHash,
         quality,
+        workspaceId,
       ],
     },
     {
-      sql: 'INSERT INTO dynamic_facts (event_id, provider_type, facts_json) VALUES (?, ?, ?)',
-      args: [envelope.id, envelope.provider.type, JSON.stringify(facts)],
+      sql: 'INSERT INTO dynamic_facts (event_id, provider_type, facts_json, workspace_id) VALUES (?, ?, ?, ?)',
+      args: [envelope.id, envelope.provider.type, JSON.stringify(facts), workspaceId],
     },
     {
       sql: 'INSERT INTO event_embeddings (event_id, model, dimensions, input_hash, status) VALUES (?, ?, ?, ?, ?)',

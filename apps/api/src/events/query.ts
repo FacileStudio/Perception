@@ -5,6 +5,7 @@ import type { EventRow } from '../events/types';
 import { EVENT_LIST_ORDER_BY } from '../events/order';
 
 export type EventFilters = {
+  workspaceId: string;
   q?: string;
   providerType?: string;
   entityType?: string;
@@ -18,15 +19,15 @@ export type EventFilters = {
 export async function listEvents(
   filters: EventFilters,
 ): Promise<{ events: Array<EventRow & { concepts: string[] }>; total: number }> {
-  const { q, providerType, entityType, quality, from, to, limit, offset } = filters;
+  const { workspaceId, q, providerType, entityType, quality, from, to, limit, offset } = filters;
 
   let ftsIds: Set<string> | null = null;
 
   if (q) {
     try {
       const ftsResult = await db.execute({
-        sql: 'SELECT e.id FROM event_fts JOIN events e ON e.rowid = event_fts.rowid WHERE event_fts MATCH ? LIMIT 200',
-        args: [q],
+        sql: 'SELECT e.id FROM event_fts JOIN events e ON e.rowid = event_fts.rowid WHERE event_fts MATCH ? AND e.workspace_id = ? LIMIT 200',
+        args: [q, workspaceId],
       });
       ftsIds = new Set(ftsResult.rows.map((r) => r.id as string));
     } catch {
@@ -34,8 +35,8 @@ export async function listEvents(
     }
   }
 
-  const conditions: string[] = ['1=1'];
-  const args: InValue[] = [];
+  const conditions: string[] = ['workspace_id = ?'];
+  const args: InValue[] = [workspaceId];
 
   if (ftsIds !== null && ftsIds.size > 0) {
     const placeholders = Array.from(ftsIds).map(() => '?').join(',');
@@ -109,13 +110,17 @@ export async function listEvents(
 
 export async function getEventDetail(
   id: string,
+  workspaceId?: string,
 ): Promise<{
   event: EventRow;
   facts: Record<string, unknown> | null;
   embedding: { status: string; embedded_at: string | null } | null;
 } | null> {
+  const wsCondition = workspaceId ? ' AND workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
+
   const [eventResult, factsResult, embeddingResult] = await Promise.all([
-    db.execute({ sql: 'SELECT * FROM events WHERE id = ?', args: [id] }),
+    db.execute({ sql: `SELECT * FROM events WHERE id = ?${wsCondition}`, args: [id, ...wsArgs] }),
     db.execute({ sql: 'SELECT facts_json FROM dynamic_facts WHERE event_id = ?', args: [id] }),
     db.execute({ sql: 'SELECT status, embedded_at FROM event_embeddings WHERE event_id = ?', args: [id] }),
   ]);

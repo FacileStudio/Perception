@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'crypto';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
 import type { Forecast } from '../forecasts/types';
 import { getAllBeliefs } from '../forecasts/belief-updater';
@@ -30,8 +30,8 @@ function rowToForecast(r: Record<string, unknown>): Forecast {
 }
 
 forecastRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const status = c.req.query('status');
   const whereClause = status ? 'WHERE status = ?' : '';
@@ -46,8 +46,8 @@ forecastRoutes.get('/', async (c) => {
 });
 
 forecastRoutes.get('/calibration', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 1`,
@@ -75,8 +75,8 @@ forecastRoutes.get('/calibration', async (c) => {
 });
 
 forecastRoutes.get('/calibration/history', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 10`,
@@ -100,24 +100,24 @@ forecastRoutes.get('/calibration/history', async (c) => {
 });
 
 forecastRoutes.get('/conformal/state', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const state = await getConformalState();
   return c.json({ state });
 });
 
 forecastRoutes.get('/strategies', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const leaderboard = await getStrategyLeaderboard();
   return c.json({ strategies: leaderboard });
 });
 
 forecastRoutes.get('/:id', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
@@ -127,8 +127,8 @@ forecastRoutes.get('/:id', async (c) => {
 });
 
 forecastRoutes.post('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const body = await c.req.json<{
     question: string;
@@ -164,8 +164,8 @@ forecastRoutes.post('/', async (c) => {
 });
 
 forecastRoutes.patch('/:id/resolve', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const body = await c.req.json<{ resolution_value?: number; void?: boolean }>();
@@ -196,8 +196,8 @@ forecastRoutes.patch('/:id/resolve', async (c) => {
 });
 
 forecastRoutes.get('/:id/resolution', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const result = await db.execute({
@@ -221,8 +221,8 @@ forecastRoutes.get('/:id/resolution', async (c) => {
 });
 
 forecastRoutes.get('/:id/beliefs', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
@@ -233,8 +233,8 @@ forecastRoutes.get('/:id/beliefs', async (c) => {
 });
 
 forecastRoutes.get('/:id/intervals', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
@@ -262,8 +262,8 @@ forecastRoutes.get('/:id/intervals', async (c) => {
 });
 
 forecastRoutes.get('/:id/ensemble', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
@@ -275,8 +275,8 @@ forecastRoutes.get('/:id/ensemble', async (c) => {
 });
 
 forecastRoutes.patch('/:id/extend', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const body = await c.req.json<{ resolves_at: string }>();
@@ -300,8 +300,8 @@ forecastRoutes.patch('/:id/extend', async (c) => {
 });
 
 forecastRoutes.delete('/:id', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ?`, args: [id] });

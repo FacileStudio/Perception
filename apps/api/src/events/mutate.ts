@@ -1,9 +1,11 @@
 import { db } from '../db/client';
 
-export async function deleteEvent(id: string): Promise<boolean> {
+export async function deleteEvent(id: string, workspaceId?: string): Promise<boolean> {
+  const wsCondition = workspaceId ? ' AND workspace_id = ?' : '';
+  const wsArgs = workspaceId ? [workspaceId] : [];
   const eventRow = await db.execute({
-    sql: 'SELECT rowid, title, summary, searchable_text FROM events WHERE id = ?',
-    args: [id],
+    sql: `SELECT rowid, title, summary, searchable_text FROM events WHERE id = ?${wsCondition}`,
+    args: [id, ...wsArgs],
   });
   if (eventRow.rows.length === 0) return false;
 

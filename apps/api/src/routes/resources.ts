@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'crypto';
 import { basename } from 'node:path';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
 import { processResource } from '../resources/process';
 import { saveUpload, readUpload, removeUpload, uploadExists } from '../resources/storage';
@@ -22,8 +22,8 @@ function resolveMime(name: string, type: string): string {
 }
 
 resourcesRoutes.post('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const contentType = c.req.header('content-type') ?? '';
 
@@ -93,8 +93,8 @@ resourcesRoutes.post('/', async (c) => {
 });
 
 resourcesRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT id, title, description, mime_type, file_size, source_type, chunk_count, status, error, uploaded_at, updated_at,
@@ -121,8 +121,8 @@ resourcesRoutes.get('/', async (c) => {
 });
 
 resourcesRoutes.get('/:id', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const [resource, chunks] = await Promise.all([
@@ -157,8 +157,8 @@ resourcesRoutes.get('/:id', async (c) => {
 });
 
 resourcesRoutes.get('/:id/file', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const result = await db.execute({ sql: `SELECT title, mime_type, file_path FROM resources WHERE id = ?`, args: [id] });
@@ -186,8 +186,8 @@ resourcesRoutes.get('/:id/file', async (c) => {
 });
 
 resourcesRoutes.delete('/:id', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const result = await db.execute({ sql: `SELECT id, file_path FROM resources WHERE id = ?`, args: [id] });

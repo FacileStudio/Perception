@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import type { InValue } from '@libsql/client';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
 import { executeProposal } from '../proposals/executor';
 import type { ActionProposal } from '../proposals/types';
@@ -38,8 +38,8 @@ function rowToProposal(r: Record<string, unknown>): ActionProposal {
 }
 
 proposalRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const status = c.req.query('status');
   const args: InValue[] = [];
@@ -62,8 +62,8 @@ proposalRoutes.get('/', async (c) => {
 });
 
 proposalRoutes.patch('/:id/approve', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const updateResult = await db.execute({
@@ -87,8 +87,8 @@ proposalRoutes.patch('/:id/approve', async (c) => {
 });
 
 proposalRoutes.patch('/:id/dismiss', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   const now = new Date().toISOString();
@@ -106,8 +106,8 @@ proposalRoutes.patch('/:id/dismiss', async (c) => {
 });
 
 proposalRoutes.post('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const body = await c.req.json<{
     action_type: string;

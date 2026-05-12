@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { getLatestSnapshotGeneratedAt, getLatestSnapshots, hasAllExpectedKinds, refreshSnapshots } from '../stats/snapshots';
 import { db } from '../db/client';
 import { daysAgoIso } from '../lib/time';
@@ -9,8 +9,8 @@ export const statsRoutes = new Hono();
 const STATS_STALE_MS = 15 * 60 * 1000;
 
 statsRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const forceRefresh = c.req.query('refresh') === '1';
   const latestGeneratedAt = await getLatestSnapshotGeneratedAt();
@@ -42,8 +42,8 @@ statsRoutes.get('/', async (c) => {
 });
 
 statsRoutes.get('/intelligence', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const thirtyDaysAgo = daysAgoIso(30);
 

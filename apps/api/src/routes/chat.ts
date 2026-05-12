@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { buildQueryPlan } from '../chat/planner';
 import { retrieveWithCorrection } from '../chat/retrieve';
 import type { RetrievalResult, RetrievalMeta } from '../chat/retrieve';
@@ -23,16 +23,16 @@ import type { ChatRequest } from '../types';
 export const chatRoutes = new Hono();
 
 chatRoutes.get('/sessions', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const sessions = await loadSessionSummaries();
   return c.json({ sessions });
 });
 
 chatRoutes.get('/sessions/:sessionId', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const session = await loadSessionDetail(c.req.param('sessionId'));
   if (!session) {
@@ -43,8 +43,8 @@ chatRoutes.get('/sessions/:sessionId', async (c) => {
 });
 
 chatRoutes.delete('/sessions/:sessionId', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const sessionId = c.req.param('sessionId');
   const deleted = await deleteSession(sessionId);
@@ -56,8 +56,8 @@ chatRoutes.delete('/sessions/:sessionId', async (c) => {
 });
 
 chatRoutes.patch('/messages/:messageId/feedback', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const messageId = c.req.param('messageId');
   let body: { feedback: 'up' | 'down' | null };
@@ -83,8 +83,8 @@ chatRoutes.patch('/messages/:messageId/feedback', async (c) => {
 });
 
 chatRoutes.post('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   let body: ChatRequest;
   try {

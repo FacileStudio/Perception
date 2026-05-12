@@ -514,25 +514,155 @@ Multiple forecasting strategies compete. The best-calibrated strategies earn mor
 
 ---
 
-## Phase 8 — Hardening & Production Readiness
+## Phase 8 — Multi-Tenancy & User Management
 
-The system grew fast through 7 phases. Before expanding the surface area, make what exists reliable, observable, and testable. No new features — just trust.
+Workspace separation, proper auth, and team-based data isolation. Every business table gets a `workspace_id`. Auth moves from a shared password to Better Auth with organizations, roles, and invitations.
+
+**Architecture principle:** Row-level isolation with `workspace_id` on all business tables. Auth as a gateway, not an afterthought. Existing data migrates to a default workspace. Single-workspace mode stays functional throughout.
+
+| Status | # | Task | Effort | Depends On |
+|--------|---|------|--------|------------|
+| [x] | 8.1 | Better Auth + organization plugin | High | — |
+| [x] | 8.2 | Database migration: workspace_id on all tables | High | 8.1 |
+| [x] | 8.3 | Scoped DB query wrapper | Medium | 8.2 |
+| [x] | 8.4 | Workspace-aware API middleware + route updates | High | 8.1, 8.3 |
+| [x] | 8.5 | Workspace-scoped ingest pipeline | Medium | 8.2 |
+| [x] | 8.6 | Worker workspace iteration helper | Medium | 8.2 |
+| [x] | 8.7 | SvelteKit auth client + workspace routing | High | 8.1 |
+| [ ] | 8.8 | Deep workspace scoping in all SQL queries | Very High | 8.4 |
+| [ ] | 8.9 | Worker per-workspace execution | High | 8.6, 8.8 |
+| [ ] | 8.10 | Team roles & permissions enforcement | Medium | 8.1 |
+| [ ] | 8.11 | Workspace admin UI (members, invites, settings) | Medium | 8.7, 8.10 |
+
+---
+
+### 8.1 Better Auth + Organization Plugin
+
+- [x] Install `better-auth` with Kysely + libSQL dialect
+- [x] Configure email/password auth, session management, cookie cache
+- [x] Enable organization plugin with owner/admin/member roles
+- [x] Mount Better Auth handler on Hono at `/auth/*`
+- [x] Bootstrap default workspace on first startup
+- [x] Migrate existing users to Better Auth's `user` table + default org membership
+
+---
+
+### 8.2 Database Migration: workspace_id on All Tables
+
+- [x] Migration 030: add `workspace_id TEXT NOT NULL DEFAULT 'default'` to all 40+ business tables
+- [x] Composite indexes with `workspace_id` as leftmost column on high-traffic tables
+- [x] Default workspace bootstrap: create organization, backfill all rows with org ID
+
+---
+
+### 8.3 Scoped DB Query Wrapper
+
+- [x] `scopedDb(workspaceId)` wrapper in `apps/api/src/db/scoped.ts`
+- [x] `WORKSPACE_TABLES` set listing all tenant-scoped tables
+- [x] `getActiveWorkspaceIds()` and `forEachWorkspace()` helpers for workers
+
+---
+
+### 8.4 Workspace-Aware API Middleware + Route Updates
+
+- [x] `requireWorkspace(c)` middleware: extracts session → active org → workspace context
+- [x] `requireAdmin(c)` middleware: same + role check for owner/admin
+- [x] Replace `requireSession` with `requireWorkspace` across all 14 route files
+- [x] Workspace context (`workspaceId`, `userId`, `role`) available in every route handler
+
+---
+
+### 8.5 Workspace-Scoped Ingest Pipeline
+
+- [x] Workspace resolution for webhooks: `X-Perception-Workspace` header → query param → app_settings → first org
+- [x] `processIngestEvent` accepts `workspaceId` parameter
+- [x] Events and dynamic_facts INSERTs include `workspace_id`
+- [x] Ingest rejections include `workspace_id`
+
+---
+
+### 8.6 Worker Workspace Iteration Helper
+
+- [x] `getActiveWorkspaceIds()`: lists all organizations
+- [x] `getDefaultWorkspaceId()`: resolves default workspace
+- [x] `forEachWorkspace(fn)`: iterates over all workspaces for worker execution
+
+---
+
+### 8.7 SvelteKit Auth Client + Workspace Routing
+
+- [x] Better Auth Svelte client with organization plugin
+- [x] Auth store: session check via Better Auth → fallback to legacy → workspace loading
+- [x] Workspace switcher state: `switchWorkspace()` calls `setActive()`
+- [x] Login page: email/password sign-in + sign-up (replaces shared password)
+- [x] Layout: logout via Better Auth `signOut()`
+- [x] Workspaces API endpoints in client API layer
+
+---
+
+### 8.8 Deep Workspace Scoping in All SQL Queries
+
+Every SQL query that reads or writes business data must include `WHERE workspace_id = ?`. This is the largest remaining task — ~60+ files with raw SQL.
+
+- [ ] Events query module: all WHERE clauses include workspace_id
+- [ ] Chat retrieval lanes: vector, FTS, SQL, entity, concept, stats, community, narrative, memory, resource, text-to-sql, causal — all scoped
+- [ ] Entity resolver: scoped entity lookup and creation
+- [ ] Ontology labels: scoped concept lookup
+- [ ] Stats computation: scoped aggregation
+- [ ] Forecast system: all queries scoped
+- [ ] Notification generation: scoped anomaly evaluation
+
+---
+
+### 8.9 Worker Per-Workspace Execution
+
+- [ ] Each worker wraps its `run()` in `forEachWorkspace()` loop
+- [ ] Embedding worker: process events per workspace
+- [ ] Community/narrative workers: detect and summarize per workspace
+- [ ] BOCPD/Granger/TDA workers: compute per workspace
+- [ ] Forecast workers: generate/resolve/calibrate per workspace
+
+---
+
+### 8.10 Team Roles & Permissions Enforcement
+
+- [ ] `owner`: full access + workspace settings + member management
+- [ ] `admin`: read/write + approve proposals + manage forecasts
+- [ ] `member`: read/write + chat (no destructive operations)
+- [ ] Role checks on: delete events, approve proposals, manage workspace settings, invite members
+- [ ] Superadmin concept for cross-workspace operations
+
+---
+
+### 8.11 Workspace Admin UI
+
+- [ ] Workspace settings page: name, slug, webhook keys
+- [ ] Member list with role badges and remove/change-role actions
+- [ ] Invitation form: email + role → Better Auth invitation flow
+- [ ] Workspace switcher dropdown in sidebar
+- [ ] Workspace creation flow for new teams
+
+---
+
+## Phase 9 — Hardening & Production Readiness
+
+The system grew fast through 8 phases. Before expanding the surface area, make what exists reliable, observable, and testable. No new features — just trust.
 
 **Architecture principle:** A prediction engine nobody can debug is a liability, not a feature. Hardening is the difference between a prototype and a product.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 8.1 | Worker lifecycle manager | Medium | — |
-| [ ] | 8.2 | Structured logging & observability | Medium | 8.1 |
-| [ ] | 8.3 | Math module test suite | High | — |
-| [ ] | 8.4 | Retrieval & integration test suite | Medium | 5.3 |
-| [ ] | 8.5 | Automated backup & recovery | Medium | — |
-| [ ] | 8.6 | Graceful shutdown & startup ordering | Low | 8.1 |
-| [ ] | 8.7 | CI pipeline & quality gate | Medium | 8.3, 8.4 |
+| [ ] | 9.1 | Worker lifecycle manager | Medium | — |
+| [ ] | 9.2 | Structured logging & observability | Medium | 9.1 |
+| [ ] | 9.3 | Math module test suite | High | — |
+| [ ] | 9.4 | Retrieval & integration test suite | Medium | 5.3 |
+| [ ] | 9.5 | Automated backup & recovery | Medium | — |
+| [ ] | 9.6 | Graceful shutdown & startup ordering | Low | 9.1 |
+| [ ] | 9.7 | CI pipeline & quality gate | Medium | 9.3, 9.4 |
 
 ---
 
-### 8.1 Worker Lifecycle Manager
+### 9.1 Worker Lifecycle Manager
 
 10+ background workers (BOCPD, Granger, communities, narratives, beliefs, resolution, calibration, TDA, drift, digests, embedding, eval, bandit, resource embedding) run as intervals with no coordination or health tracking.
 
@@ -546,7 +676,7 @@ The system grew fast through 7 phases. Before expanding the surface area, make w
 
 ---
 
-### 8.2 Structured Logging & Observability
+### 9.2 Structured Logging & Observability
 
 Replace `console.log` scatter with structured, queryable logs.
 
@@ -559,7 +689,7 @@ Replace `console.log` scatter with structured, queryable logs.
 
 ---
 
-### 8.3 Math Module Test Suite
+### 9.3 Math Module Test Suite
 
 Pure math modules (BOCPD, Granger, conformal, Brier, ADWIN, Louvain, TDA, VAR) are the most testable and most dangerous to get wrong.
 
@@ -575,7 +705,7 @@ Pure math modules (BOCPD, Granger, conformal, Brier, ADWIN, Louvain, TDA, VAR) a
 
 ---
 
-### 8.4 Retrieval & Integration Test Suite
+### 9.4 Retrieval & Integration Test Suite
 
 End-to-end retrieval quality beyond the existing eval harness — focused on lane interaction and edge cases.
 
@@ -589,7 +719,7 @@ End-to-end retrieval quality beyond the existing eval harness — focused on lan
 
 ---
 
-### 8.5 Automated Backup & Recovery
+### 9.5 Automated Backup & Recovery
 
 libSQL on a single node with no backup is one disk failure from total loss.
 
@@ -603,7 +733,7 @@ libSQL on a single node with no backup is one disk failure from total loss.
 
 ---
 
-### 8.6 Graceful Shutdown & Startup Ordering
+### 9.6 Graceful Shutdown & Startup Ordering
 
 Bun process with 10+ interval workers needs clean shutdown to avoid data corruption and orphaned state.
 
@@ -615,7 +745,7 @@ Bun process with 10+ interval workers needs clean shutdown to avoid data corrupt
 
 ---
 
-### 8.7 CI Pipeline & Quality Gate
+### 9.7 CI Pipeline & Quality Gate
 
 Automated quality checks that prevent regression.
 
@@ -628,7 +758,7 @@ Automated quality checks that prevent regression.
 
 ---
 
-## Phase 9 — Entity Resolution & Adaptive Ontology
+## Phase 10 — Entity Resolution & Adaptive Ontology
 
 Deepen entity resolution from exact matching to fuzzy resolution, and move from hardcoded type enums to capability-based classification. Makes Perception truly provider-agnostic and self-improving.
 
@@ -636,16 +766,16 @@ Deepen entity resolution from exact matching to fuzzy resolution, and move from 
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 9.1 | Fuzzy entity resolver | High | — |
-| [ ] | 9.2 | Entity merge/split operations | Medium | 9.1 |
-| [ ] | 9.3 | Entity review queue | Medium | 9.1, 9.2 |
-| [ ] | 9.4 | Capability-based ontology migration | High | — |
-| [ ] | 9.5 | Ontology inference worker | High | 9.4 |
-| [ ] | 9.6 | Cross-provider entity linking | Medium | 9.1, 9.4 |
+| [ ] | 10.1 | Fuzzy entity resolver | High | — |
+| [ ] | 10.2 | Entity merge/split operations | Medium | 10.1 |
+| [ ] | 10.3 | Entity review queue | Medium | 10.1, 10.2 |
+| [ ] | 10.4 | Capability-based ontology migration | High | — |
+| [ ] | 10.5 | Ontology inference worker | High | 10.4 |
+| [ ] | 10.6 | Cross-provider entity linking | Medium | 10.1, 10.4 |
 
 ---
 
-### 9.1 Fuzzy Entity Resolver
+### 10.1 Fuzzy Entity Resolver
 
 Move beyond exact name/ID matching to similarity-based entity linking with confidence scoring.
 
@@ -661,7 +791,7 @@ Move beyond exact name/ID matching to similarity-based entity linking with confi
 
 ---
 
-### 9.2 Entity Merge/Split Operations
+### 10.2 Entity Merge/Split Operations
 
 Reversible entity manipulation with full audit trail.
 
@@ -675,7 +805,7 @@ Reversible entity manipulation with full audit trail.
 
 ---
 
-### 9.3 Entity Review Queue
+### 10.3 Entity Review Queue
 
 Human-in-the-loop interface for entity corrections — tentative matches, ambiguous merges, and confidence below threshold.
 
@@ -689,7 +819,7 @@ Human-in-the-loop interface for entity corrections — tentative matches, ambigu
 
 ---
 
-### 9.4 Capability-Based Ontology Migration
+### 10.4 Capability-Based Ontology Migration
 
 Replace hardcoded `entity_type` string enums with a capability system grounded in `ontology_concepts`.
 
@@ -705,7 +835,7 @@ Replace hardcoded `entity_type` string enums with a capability system grounded i
 
 ---
 
-### 9.5 Ontology Inference Worker
+### 10.5 Ontology Inference Worker
 
 Automatically generate ontology concepts when Perception encounters unknown provider/event shapes — with structured proposals, confidence gates, and review integration.
 
@@ -721,7 +851,7 @@ Automatically generate ontology concepts when Perception encounters unknown prov
 
 ---
 
-### 9.6 Cross-Provider Entity Linking
+### 10.6 Cross-Provider Entity Linking
 
 Link the same real-world entity across different SaaS providers when identifiers don't match.
 
@@ -782,22 +912,35 @@ Phase 7 (Predictive)                      │
   7.5 Conformal intervals ───────(4.1,7.4)
   7.6 Ensemble aggregation ──────(7.2,7.4)
                                           │
-Phase 8 (Hardening)                       │
-  8.1 Worker lifecycle manager ───────────┤
-  8.2 Structured logging ────────────(8.1)│
-  8.3 Math test suite ────────────────────┤
-  8.4 Retrieval test suite ──────────(5.3)│
-  8.5 Automated backup ──────────────────-┤
-  8.6 Graceful shutdown ─────────────(8.1)│
-  8.7 CI pipeline ───────────────(8.3,8.4)
+Phase 8 (Multi-Tenancy)                    │
+  8.1 Better Auth + org plugin ─────────────┤
+  8.2 workspace_id migration ──────────(8.1)│
+  8.3 Scoped DB wrapper ──────────────(8.2)│
+  8.4 Route middleware ────────────(8.1,8.3)│
+  8.5 Workspace-scoped ingest ─────────(8.2)│
+  8.6 Worker workspace helper ─────────(8.2)│
+  8.7 SvelteKit auth client ───────────(8.1)│
+  8.8 Deep SQL scoping ───────────────(8.4)│
+  8.9 Worker per-ws execution ────(8.6,8.8)│
+  8.10 Roles & permissions ────────────(8.1)│
+  8.11 Workspace admin UI ──────(8.7,8.10)
                                           │
-Phase 9 (Entity Resolution)              │
-  9.1 Fuzzy entity resolver ──────────────┤
-  9.2 Entity merge/split ────────────(9.1)│
-  9.3 Entity review queue ───────(9.1,9.2)│
-  9.4 Capability ontology migration ──────┤
-  9.5 Ontology inference worker ─────(9.4)│
-  9.6 Cross-provider linking ────(9.1,9.4)
+Phase 9 (Hardening)                       │
+  9.1 Worker lifecycle manager ───────────┤
+  9.2 Structured logging ────────────(9.1)│
+  9.3 Math test suite ────────────────────┤
+  9.4 Retrieval test suite ──────────(5.3)│
+  9.5 Automated backup ──────────────────-┤
+  9.6 Graceful shutdown ─────────────(9.1)│
+  9.7 CI pipeline ───────────────(9.3,9.4)
+                                          │
+Phase 10 (Entity Resolution)              │
+  10.1 Fuzzy entity resolver ─────────────┤
+  10.2 Entity merge/split ──────────(10.1)│
+  10.3 Entity review queue ───(10.1,10.2)│
+  10.4 Capability ontology migration ─────┤
+  10.5 Ontology inference worker ───(10.4)│
+  10.6 Cross-provider linking ─(10.1,10.4)
 ```
 
 ---
@@ -812,9 +955,11 @@ Phase 9 (Entity Resolution)              │
 
 **Phase 7 internal parallelism:** 7.1 (question engine) and 7.3 (resolution oracle) can be built together — resolution is the other end of the question lifecycle. 7.5 (conformal) and 7.6 (ensemble) both need 7.4 but are independent of each other. The critical path is: 7.1 → 7.2 → 7.4 → (7.5 | 7.6). The system produces value at 7.1 alone (structured forecast tracking), becomes predictive at 7.2, and becomes *trustworthy* at 7.4+.
 
-**Phase 8 is almost fully parallelizable:** 8.1 (worker manager) gates 8.2 (logging) and 8.6 (shutdown), but 8.3 (math tests), 8.4 (retrieval tests), and 8.5 (backup) are independent of each other and can run in parallel from day one. 8.7 (CI) gates on tests being written first. Critical path: (8.1 | 8.3 | 8.4 | 8.5) → 8.7.
+**Phase 8 ships incrementally:** 8.1-8.7 (auth + migration + middleware) are the foundation — shipped as a single commit. 8.8 (deep SQL scoping) is the largest remaining task (~60+ files). 8.9-8.11 (workers, roles, admin UI) follow once scoping is complete. The system works in single-workspace mode immediately.
 
-**Phase 9 has two independent tracks:** 9.1-9.3 (fuzzy resolution + review) and 9.4-9.5 (capability ontology + inference) can be built in parallel. 9.6 (cross-provider linking) needs both tracks. The entity track is user-facing immediately (review queue drives quality); the ontology track is infrastructure that pays off when new providers appear.
+**Phase 9 is almost fully parallelizable:** 9.1 (worker manager) gates 9.2 (logging) and 9.6 (shutdown), but 9.3 (math tests), 9.4 (retrieval tests), and 9.5 (backup) are independent of each other and can run in parallel from day one. 9.7 (CI) gates on tests being written first. Critical path: (9.1 | 9.3 | 9.4 | 9.5) → 9.7.
+
+**Phase 10 has two independent tracks:** 10.1-10.3 (fuzzy resolution + review) and 10.4-10.5 (capability ontology + inference) can be built in parallel. 10.6 (cross-provider linking) needs both tracks. The entity track is user-facing immediately (review queue drives quality); the ontology track is infrastructure that pays off when new providers appear.
 
 **Token cost profile:**
 - Phase 1: minimal (embedding input change is free, intent classification uses existing Haiku call)
@@ -824,8 +969,9 @@ Phase 9 (Entity Resolution)              │
 - Phase 5: Text-to-SQL adds one Haiku call per qualifying query; multi-agent fans out existing pipeline
 - Phase 6: counterfactual uses existing Granger data, minimal new LLM cost
 - Phase 7: belief updates = 1 Haiku call per step (capped at 20/forecast); question generation = daily batch; calibration/conformal = pure math; ensemble = pure math. Heaviest cost is 7.2 belief loop but amortized over forecast lifetime (days/weeks), not per-query
-- Phase 8: zero LLM cost (infrastructure, tests, logging)
-- Phase 9: ontology inference = 1 Haiku call per unknown shape (rare after initial learning); fuzzy matching and capability resolution = pure computation
+- Phase 8: zero LLM cost (auth, migration, middleware — pure infrastructure)
+- Phase 9: zero LLM cost (infrastructure, tests, logging)
+- Phase 10: ontology inference = 1 Haiku call per unknown shape (rare after initial learning); fuzzy matching and capability resolution = pure computation
 
 ---
 

@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { db } from '../db/client';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { extractAllMissingRelations } from '../entities/link';
 
 export const entitiesRoutes = new Hono();
 
 entitiesRoutes.get('/graph', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const [entitiesResult, relationsResult] = await Promise.all([
     db.execute(`
@@ -53,8 +53,8 @@ entitiesRoutes.get('/graph', async (c) => {
 });
 
 entitiesRoutes.get('/communities', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT id, title, summary, importance, member_count, member_entity_ids, generated_at, stale
@@ -97,8 +97,8 @@ entitiesRoutes.get('/communities', async (c) => {
 });
 
 entitiesRoutes.get('/narratives', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT en.entity_id, e.canonical_name AS entity_name,
@@ -121,8 +121,8 @@ entitiesRoutes.get('/narratives', async (c) => {
 });
 
 entitiesRoutes.get('/:id/narrative', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const entityId = c.req.param('id');
   const result = await db.execute({
@@ -149,8 +149,8 @@ entitiesRoutes.get('/:id/narrative', async (c) => {
 });
 
 entitiesRoutes.get('/:id/community', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const entityId = c.req.param('id');
   const result = await db.execute(
@@ -184,8 +184,8 @@ entitiesRoutes.get('/:id/community', async (c) => {
 });
 
 entitiesRoutes.post('/relations/resolve-all', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const created = await extractAllMissingRelations();
   return c.json({ created });

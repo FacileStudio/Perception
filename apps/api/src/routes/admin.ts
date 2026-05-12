@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Hono } from 'hono';
-import { requireSession } from '../security/session';
+import { requireAdmin } from '../security/workspace';
 import { getWorkerStatuses, getWorkerHistory, executeWorker, areWorkersPaused } from '../workers/registry';
 import { setSetting } from '../db/settings';
 import { retryFailedEmbeddings, backfillMissingEmbeddings, getEmbeddingStats, reembedAll } from '../embeddings/admin';
@@ -13,31 +13,31 @@ import { promoteToFixture } from '../eval/promote';
 export const adminRoutes = new Hono();
 
 adminRoutes.get('/workers', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const workers = await getWorkerStatuses();
   const paused = await areWorkersPaused();
   return c.json({ workers, paused });
 });
 
 adminRoutes.put('/workers/paused', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const body = await c.req.json<{ paused: boolean }>();
   await setSetting('workers_paused', String(body.paused));
   return c.json({ ok: true, paused: body.paused });
 });
 
 adminRoutes.get('/workers/:name/history', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const history = await getWorkerHistory(c.req.param('name'));
   return c.json({ history });
 });
 
 adminRoutes.post('/workers/:name/run', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const name = c.req.param('name');
   try {
     await executeWorker(name);
@@ -49,48 +49,48 @@ adminRoutes.post('/workers/:name/run', async (c) => {
 });
 
 adminRoutes.post('/embedding-jobs/retry', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const reset = await retryFailedEmbeddings();
   return c.json({ reset });
 });
 
 adminRoutes.post('/backfill-embeddings', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const enqueued = await backfillMissingEmbeddings();
   return c.json({ enqueued });
 });
 
 adminRoutes.post('/reinfer-schemas', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const queued = await reinferAllSchemas();
   return c.json({ queued });
 });
 
 adminRoutes.get('/embedding-stats', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   return c.json(await getEmbeddingStats());
 });
 
 adminRoutes.post('/reembed-all', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   const reset = await reembedAll();
   return c.json({ reset });
 });
 
 adminRoutes.post('/reprocess-entities', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   return c.json(await reprocessActorEntities());
 });
 
 adminRoutes.get('/graph-health', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const [snapshotRow, isolatedRows] = await Promise.all([
     db.execute(`SELECT * FROM graph_health_snapshots ORDER BY computed_at DESC LIMIT 1`).catch(() => ({ rows: [] })),
@@ -122,8 +122,8 @@ adminRoutes.get('/graph-health', async (c) => {
 });
 
 adminRoutes.get('/topology', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const snapshotResult = await db.execute(
     `SELECT * FROM topology_snapshots ORDER BY computed_at DESC LIMIT 1`,
@@ -167,8 +167,8 @@ adminRoutes.get('/topology', async (c) => {
 });
 
 adminRoutes.get('/drift-alerts', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT id, provider_type, field_name, detected_at, old_distribution, new_distribution, drift_score
@@ -191,8 +191,8 @@ adminRoutes.get('/drift-alerts', async (c) => {
 });
 
 adminRoutes.post('/eval/run', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   try {
     const result = await runEvaluation();
@@ -204,8 +204,8 @@ adminRoutes.post('/eval/run', async (c) => {
 });
 
 adminRoutes.get('/eval/runs', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT id, ran_at, fixture_count, precision_at_5, recall_at_5, mrr, lane_hit_rates, duration_ms, regression_detected
@@ -228,8 +228,8 @@ adminRoutes.get('/eval/runs', async (c) => {
 });
 
 adminRoutes.get('/eval/runs/:runId', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const runId = c.req.param('runId');
   const [run, results] = await Promise.all([
@@ -269,8 +269,8 @@ adminRoutes.get('/eval/runs/:runId', async (c) => {
 });
 
 adminRoutes.get('/eval/fixtures', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(
     `SELECT id, question, expected_event_ids, expected_lanes, intent, notes, source_message_id, created_at
@@ -292,8 +292,8 @@ adminRoutes.get('/eval/fixtures', async (c) => {
 });
 
 adminRoutes.post('/eval/fixtures', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const body = await c.req.json<{
     question: string;
@@ -317,8 +317,8 @@ adminRoutes.post('/eval/fixtures', async (c) => {
 });
 
 adminRoutes.delete('/eval/fixtures/:id', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   await db.execute({ sql: `DELETE FROM eval_results WHERE fixture_id = ?`, args: [id] });
@@ -327,8 +327,8 @@ adminRoutes.delete('/eval/fixtures/:id', async (c) => {
 });
 
 adminRoutes.post('/eval/promote/:messageId', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireAdmin(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const messageId = c.req.param('messageId');
   const body = await c.req.json<{ notes?: string }>().catch(() => ({}));

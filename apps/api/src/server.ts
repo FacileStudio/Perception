@@ -4,7 +4,7 @@ import { logger } from 'hono/logger';
 import { bodyLimit } from 'hono/body-limit';
 import { runMigrations } from './db/migrations';
 import { db } from './db/client';
-import { authRoutes } from './routes/auth';
+import { auth } from './auth';
 import { ingestRoutes } from './routes/ingest';
 import { chatRoutes } from './routes/chat';
 import { eventsRoutes } from './routes/events';
@@ -17,6 +17,7 @@ import { usersRoutes } from './routes/users';
 import { notificationsRoutes } from './routes/notifications';
 import { resourcesRoutes } from './routes/resources';
 import { proposalRoutes } from './routes/proposals';
+import { workspaceRoutes } from './routes/workspaces';
 import { config } from './config';
 
 const app = new Hono();
@@ -25,6 +26,7 @@ app.use('*', logger());
 app.use('*', cors({
   origin: ['http://localhost:3000', 'http://localhost:5173', process.env.CLIENT_ORIGIN ?? ''].filter(Boolean),
   credentials: true,
+  allowHeaders: ['Content-Type', 'Authorization'],
   exposeHeaders: ['X-Session-Id'],
 }));
 app.use('/ingest', bodyLimit({ maxSize: 1 * 1024 * 1024 }));
@@ -40,7 +42,10 @@ app.get('/ready', async (c) => {
   }
 });
 
-app.route('/auth', authRoutes);
+app.on(['POST', 'GET'], '/auth/*', (c) => {
+  return auth.handler(c.req.raw);
+});
+
 app.route('/ingest', ingestRoutes);
 app.route('/chat', chatRoutes);
 app.route('/events', eventsRoutes);
@@ -53,6 +58,7 @@ app.route('/users', usersRoutes);
 app.route('/notifications', notificationsRoutes);
 app.route('/resources', resourcesRoutes);
 app.route('/proposals', proposalRoutes);
+app.route('/workspaces', workspaceRoutes);
 
 const { forecastRoutes } = await import('./routes/forecasts');
 app.route('/forecasts', forecastRoutes);
@@ -69,7 +75,98 @@ app.onError((err, c) => {
 });
 
 await runMigrations();
+await bootstrapDefaultWorkspace();
 console.log(`[perception] API ready on :${config.port}`);
+
+async function bootstrapDefaultWorkspace() {
+  const existing = await db.execute("SELECT id FROM organization WHERE slug = 'default'");
+  if (existing.rows.length > 0) return;
+
+  const orgId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: "INSERT OR IGNORE INTO organization (id, name, slug, logo, metadata, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+    args: [orgId, 'Default Workspace', 'default', null, null, now],
+  });
+
+  await db.execute("UPDATE events SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE entities SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE ontology_concepts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE chat_sessions SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE notifications SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE forecasts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE resources SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE action_proposals SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE provider_schemas SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE dynamic_facts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE entity_aliases SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE entity_relations SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE entity_communities SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE entity_narratives SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE event_entities SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE event_concepts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE ontology_concept_aliases SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE memory_episodes SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE stats_snapshots SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE change_points SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE graph_health_snapshots SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE concept_drift_alerts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE event_counts_daily SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE causal_links SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE forecast_resolutions SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE forecast_beliefs SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE forecast_intervals SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE forecast_strategies SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE strategy_forecasts SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE calibration_snapshots SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE topology_snapshots SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE retrieval_outcomes SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE retrieval_weight_versions SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE schema_inference_jobs SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE chat_messages SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE resource_chunks SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE eval_fixtures SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE eval_runs SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE eval_results SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE ingest_rejections SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+  await db.execute("UPDATE token_usage SET workspace_id = ? WHERE workspace_id = 'default'", [orgId]);
+
+  const userResult = await db.execute("SELECT id FROM users LIMIT 1");
+  if (userResult.rows.length > 0) {
+    for (const row of userResult.rows) {
+      const oldUserId = row.id as string;
+      const userRow = await db.execute({ sql: "SELECT email, name FROM users WHERE id = ?", args: [oldUserId] });
+      if (userRow.rows.length === 0) continue;
+      const email = userRow.rows[0].email as string;
+      const name = userRow.rows[0].name as string | null;
+
+      const existingBaUser = await db.execute({ sql: "SELECT id FROM user WHERE email = ?", args: [email] });
+      let baUserId: string;
+      if (existingBaUser.rows.length > 0) {
+        baUserId = existingBaUser.rows[0].id as string;
+      } else {
+        baUserId = crypto.randomUUID();
+        await db.execute({
+          sql: "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+          args: [baUserId, name ?? email, email, 0, now, now],
+        });
+      }
+
+      const existingMember = await db.execute({
+        sql: "SELECT id FROM member WHERE userId = ? AND organizationId = ?",
+        args: [baUserId, orgId],
+      });
+      if (existingMember.rows.length === 0) {
+        await db.execute({
+          sql: "INSERT INTO member (id, userId, organizationId, role, createdAt) VALUES (?, ?, ?, ?, ?)",
+          args: [crypto.randomUUID(), baUserId, orgId, 'owner', now],
+        });
+      }
+    }
+  }
+
+  console.log(`[workspace] bootstrapped default workspace: ${orgId}`);
+}
 
 import { registerWorker, scheduleWorker } from './workers/registry';
 

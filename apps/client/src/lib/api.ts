@@ -18,6 +18,11 @@ export const api = {
     status: () => request<{ authenticated: boolean; user: AuthUser | null }>('/auth/status'),
     config: () => request<{ sso_only: boolean; oidc_enabled: boolean }>('/auth/config'),
   },
+  workspaces: {
+    list: () => request<{ workspaces: Array<{ id: string; name: string; slug: string; role: string; created_at: string }>; active_workspace_id: string | null }>('/workspaces'),
+    members: (id: string) => request<{ members: Array<{ id: string; user_id: string; name: string; email: string; role: string; joined_at: string }> }>(`/workspaces/${id}/members`),
+    stats: (id: string) => request<{ event_count: number; entity_count: number; session_count: number; open_forecast_count: number }>(`/workspaces/${id}/stats`),
+  },
   users: {
     list: () => request<{ users: AuthUser[] }>('/users'),
     me: () => request<{ user: AuthUser }>('/users/me'),

@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
 
 export const notificationsRoutes = new Hono();
 
 notificationsRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const filter = c.req.query('filter') ?? 'all';
   const limit = Math.min(Number(c.req.query('limit') ?? 50), 200);
@@ -47,16 +47,16 @@ notificationsRoutes.get('/', async (c) => {
 });
 
 notificationsRoutes.get('/unread-count', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute('SELECT COUNT(*) as cnt FROM notifications WHERE read_at IS NULL');
   return c.json({ count: Number(result.rows[0]?.cnt ?? 0) });
 });
 
 notificationsRoutes.patch('/:id/read', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const id = c.req.param('id');
   await db.execute({
@@ -68,8 +68,8 @@ notificationsRoutes.patch('/:id/read', async (c) => {
 });
 
 notificationsRoutes.patch('/read-all', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute({
     sql: 'UPDATE notifications SET read_at = ? WHERE read_at IS NULL',

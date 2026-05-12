@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
   import { auth, checkAuth, clearChatState, loadChatSessions } from '$lib/stores';
-  import { api } from '$lib/api';
+  import { authClient } from '$lib/auth-client';
   import Sidebar from '$lib/components/sidebar.svelte';
   import { ensureSolar } from '$lib/solar';
 
@@ -30,9 +30,12 @@
   });
 
   async function handleLogout() {
-    await api.auth.logout();
+    await authClient.signOut();
     clearChatState();
     auth.authenticated = false;
+    auth.user = null;
+    auth.workspace = null;
+    auth.workspaces = [];
     goto('/login');
   }
 </script>

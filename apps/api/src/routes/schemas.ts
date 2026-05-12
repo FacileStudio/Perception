@@ -1,13 +1,13 @@
 import { Hono } from 'hono';
 import { db } from '../db/client';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import type { InferredFieldMapping } from '../types';
 
 export const schemasRoutes = new Hono();
 
 schemasRoutes.use('*', async (c, next) => {
-  const ok = await requireSession(c);
-  if (!ok) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
   return next();
 });
 

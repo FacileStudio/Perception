@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { requireSession } from '../security/session';
+import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
 import { getAllEffectiveSettings, setSetting, deleteSetting, getSettingSource } from '../db/settings';
 
@@ -26,8 +26,8 @@ function maskValue(key: string, value: string): string {
 }
 
 settingsRoutes.get('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const all = await getAllEffectiveSettings();
   const settings: Record<string, string> = {};
@@ -43,8 +43,8 @@ settingsRoutes.get('/', async (c) => {
 });
 
 settingsRoutes.put('/', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   let body: Record<string, string | null>;
   try {
@@ -83,8 +83,8 @@ const EMBEDDING_PRICING: Record<string, number> = {
 };
 
 settingsRoutes.get('/usage', async (c) => {
-  const authed = await requireSession(c);
-  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute(`
     SELECT kind, model, SUM(input_tokens) as input_tokens, SUM(output_tokens) as output_tokens, COUNT(*) as calls
