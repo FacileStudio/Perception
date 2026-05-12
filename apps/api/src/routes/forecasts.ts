@@ -4,6 +4,8 @@ import { requireSession } from '../security/session';
 import { db } from '../db/client';
 import type { Forecast } from '../forecasts/types';
 import { getAllBeliefs } from '../forecasts/belief-updater';
+import { getConformalState } from '../forecasts/conformal';
+import { aggregateEnsemble, getStrategyLeaderboard } from '../forecasts/ensemble';
 
 export const forecastRoutes = new Hono();
 
@@ -41,6 +43,75 @@ forecastRoutes.get('/', async (c) => {
   });
 
   return c.json({ forecasts: result.rows.map((r) => rowToForecast(r as Record<string, unknown>)) });
+});
+
+forecastRoutes.get('/calibration', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 1`,
+  );
+  if (result.rows.length === 0) return c.json({ snapshot: null });
+
+  const r = result.rows[0] as Record<string, unknown>;
+  return c.json({
+    snapshot: {
+      id: r.id as string,
+      computed_at: r.computed_at as string,
+      bin_edges: JSON.parse((r.bin_edges as string) || '[]'),
+      bin_counts: JSON.parse((r.bin_counts as string) || '[]'),
+      bin_actuals: JSON.parse((r.bin_actuals as string) || '[]'),
+      brier_score: Number(r.brier_score),
+      log_score: Number(r.log_score),
+      resolution_score: Number(r.resolution_score),
+      reliability_score: Number(r.reliability_score),
+      sharpness_score: Number(r.sharpness_score),
+      domain_scores: JSON.parse((r.domain_scores as string) || '{}'),
+      forecast_count: Number(r.forecast_count),
+    },
+  });
+});
+
+forecastRoutes.get('/calibration/history', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const result = await db.execute(
+    `SELECT * FROM calibration_snapshots ORDER BY computed_at DESC LIMIT 10`,
+  );
+
+  return c.json({
+    snapshots: result.rows.map((row) => {
+      const r = row as Record<string, unknown>;
+      return {
+        id: r.id as string,
+        computed_at: r.computed_at as string,
+        brier_score: Number(r.brier_score),
+        log_score: Number(r.log_score),
+        reliability_score: Number(r.reliability_score),
+        resolution_score: Number(r.resolution_score),
+        sharpness_score: Number(r.sharpness_score),
+        forecast_count: Number(r.forecast_count),
+      };
+    }),
+  });
+});
+
+forecastRoutes.get('/conformal/state', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const state = await getConformalState();
+  return c.json({ state });
+});
+
+forecastRoutes.get('/strategies', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const leaderboard = await getStrategyLeaderboard();
+  return c.json({ strategies: leaderboard });
 });
 
 forecastRoutes.get('/:id', async (c) => {
@@ -158,6 +229,48 @@ forecastRoutes.get('/:id/beliefs', async (c) => {
 
   const beliefs = await getAllBeliefs(id);
   return c.json({ beliefs });
+});
+
+forecastRoutes.get('/:id/intervals', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const result = await db.execute({
+    sql: `SELECT * FROM forecast_intervals WHERE forecast_id = ? ORDER BY belief_step ASC`,
+    args: [id],
+  });
+
+  return c.json({
+    intervals: result.rows.map((r) => {
+      const row = r as Record<string, unknown>;
+      return {
+        id: row.id as string,
+        forecast_id: row.forecast_id as string,
+        belief_step: Number(row.belief_step),
+        lower_bound: Number(row.lower_bound),
+        upper_bound: Number(row.upper_bound),
+        coverage_target: Number(row.coverage_target),
+        nonconformity_score: row.nonconformity_score != null ? Number(row.nonconformity_score) : null,
+      };
+    }),
+  });
+});
+
+forecastRoutes.get('/:id/ensemble', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const result = await aggregateEnsemble(id);
+  if (!result) return c.json({ ensemble: null });
+  return c.json({ ensemble: result });
 });
 
 forecastRoutes.patch('/:id/extend', async (c) => {

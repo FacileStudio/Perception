@@ -391,9 +391,9 @@ Transform Perception from a system that explains the past into one that forecast
 | [x] | 7.1 | Forecast question engine | Medium | 5.1 |
 | [x] | 7.2 | Bayesian belief state forecaster | High | 7.1, 4.1, 4.2 |
 | [x] | 7.3 | Automated resolution oracle | Medium | 7.1 |
-| [ ] | 7.4 | Calibration and scoring system | Medium | 7.2, 7.3 |
-| [ ] | 7.5 | Conformal prediction intervals | Medium | 4.1, 7.4 |
-| [ ] | 7.6 | Ensemble aggregation with track-record weighting | High | 7.2, 7.4 |
+| [x] | 7.4 | Calibration and scoring system | Medium | 7.2, 7.3 |
+| [x] | 7.5 | Conformal prediction intervals | Medium | 4.1, 7.4 |
+| [x] | 7.6 | Ensemble aggregation with track-record weighting | High | 7.2, 7.4 |
 
 ---
 
@@ -459,17 +459,17 @@ Resolves forecasts programmatically when their time horizon expires — no manua
 
 Measures how well Perception's confidence maps to reality. A 70% prediction should come true ~70% of the time.
 
-- [ ] `calibration_snapshots` table: `id`, `computed_at`, `bin_edges` (JSON — probability bins), `bin_counts` (JSON — forecasts per bin), `bin_actuals` (JSON — fraction resolved true per bin), `brier_score` (float), `log_score` (float), `resolution_score` (float), `reliability_score` (float), `sharpness_score` (float)
-- [ ] Migration for `calibration_snapshots`
-- [ ] Brier score computation: `BS = (1/N) * sum((p_i - o_i)^2)` where p_i = predicted probability, o_i = actual outcome (0 or 1)
-- [ ] Brier decomposition: separate into reliability (calibration error), resolution (discrimination power), and uncertainty (base rate variance) — diagnose *why* score is good or bad
-- [ ] Log score (information gain): `LS = (1/N) * sum(o_i * log(p_i) + (1-o_i) * log(1-p_i))` — heavily penalizes confident wrong predictions
-- [ ] Calibration worker (weekly + after every 20 resolutions): recompute scores, generate reliability diagram data
-- [ ] Isotonic regression recalibration: fit PAV (pool-adjacent-violators) on resolved forecasts; apply monotonic correction to future raw probabilities
-- [ ] Per-domain calibration: separate scores by entity type, provider, question type — identify blind spots (e.g., "well-calibrated on client activity, overconfident on infrastructure")
-- [ ] Reliability diagram endpoint: `GET /forecasts/calibration` — returns bin data for frontend plotting
-- [ ] Admin UI: calibration dashboard with reliability diagram, Brier score trend, per-domain breakdown, and sharpness histogram
-- [ ] Degradation alert: if Brier score increases >0.05 over rolling 50-forecast window → notification
+- [x] `calibration_snapshots` table: `id`, `computed_at`, `bin_edges` (JSON — probability bins), `bin_counts` (JSON — forecasts per bin), `bin_actuals` (JSON — fraction resolved true per bin), `brier_score` (float), `log_score` (float), `resolution_score` (float), `reliability_score` (float), `sharpness_score` (float)
+- [x] Migration for `calibration_snapshots`
+- [x] Brier score computation: `BS = (1/N) * sum((p_i - o_i)^2)` where p_i = predicted probability, o_i = actual outcome (0 or 1)
+- [x] Brier decomposition: separate into reliability (calibration error), resolution (discrimination power), and uncertainty (base rate variance) — diagnose *why* score is good or bad
+- [x] Log score (information gain): `LS = (1/N) * sum(o_i * log(p_i) + (1-o_i) * log(1-p_i))` — heavily penalizes confident wrong predictions
+- [x] Calibration worker (weekly + after every 20 resolutions): recompute scores, generate reliability diagram data
+- [x] Isotonic regression recalibration: fit PAV (pool-adjacent-violators) on resolved forecasts; apply monotonic correction to future raw probabilities
+- [x] Per-domain calibration: separate scores by entity type, provider, question type — identify blind spots (e.g., "well-calibrated on client activity, overconfident on infrastructure")
+- [x] Reliability diagram endpoint: `GET /forecasts/calibration` — returns bin data for frontend plotting
+- [x] Admin UI: calibration dashboard with reliability diagram, Brier score trend, per-domain breakdown, and sharpness histogram
+- [x] Degradation alert: if Brier score increases >0.05 over rolling 50-forecast window → notification
 
 ---
 
@@ -477,15 +477,15 @@ Measures how well Perception's confidence maps to reality. A 70% prediction shou
 
 Distribution-free uncertainty quantification. Wraps point forecasts in prediction intervals with guaranteed coverage — no distributional assumptions required.
 
-- [ ] Conformal calibration set: maintain rolling window of last 200 resolved numeric forecasts with their nonconformity scores (`|actual - predicted|`)
-- [ ] Coverage target: 90% marginal coverage (configurable per question type)
-- [ ] Split conformal method: compute quantile of calibration residuals at level `ceil((n+1)(1-alpha))/n` — yields prediction interval `[p - q, p + q]`
-- [ ] Adaptive conformal (ACI): for non-stationary streams, use exponentially weighted quantile that adapts coverage when distribution shifts (connects to BOCPD change points from 4.1)
-- [ ] `forecast_intervals` table: `id`, `forecast_id`, `belief_step`, `lower_bound` (float), `upper_bound` (float), `coverage_target` (float), `nonconformity_score` (float, post-resolution)
-- [ ] Migration for `forecast_intervals`
-- [ ] Coverage monitoring: track empirical coverage rate; if it drifts below target → widen intervals automatically (no manual tuning)
-- [ ] Surface intervals in forecast UI: show prediction as range, not point — "between 3 and 8 tickets (90% coverage)"
-- [ ] Binary forecast equivalent: for binary questions, conformal set = `{yes}`, `{no}`, or `{yes, no}` (uncertain) — honest expression of ignorance when evidence is insufficient
+- [x] Conformal calibration set: maintain rolling window of last 200 resolved numeric forecasts with their nonconformity scores (`|actual - predicted|`)
+- [x] Coverage target: 90% marginal coverage (configurable per question type)
+- [x] Split conformal method: compute quantile of calibration residuals at level `ceil((n+1)(1-alpha))/n` — yields prediction interval `[p - q, p + q]`
+- [x] Adaptive conformal (ACI): for non-stationary streams, use exponentially weighted quantile that adapts coverage when distribution shifts (connects to BOCPD change points from 4.1)
+- [x] `forecast_intervals` table: `id`, `forecast_id`, `belief_step`, `lower_bound` (float), `upper_bound` (float), `coverage_target` (float), `nonconformity_score` (float, post-resolution)
+- [x] Migration for `forecast_intervals`
+- [x] Coverage monitoring: track empirical coverage rate; if it drifts below target → widen intervals automatically (no manual tuning)
+- [x] Surface intervals in forecast UI: show prediction as range, not point — "between 3 and 8 tickets (90% coverage)"
+- [x] Binary forecast equivalent: for binary questions, conformal set = `{yes}`, `{no}`, or `{yes, no}` (uncertain) — honest expression of ignorance when evidence is insufficient
 
 ---
 
@@ -493,24 +493,24 @@ Distribution-free uncertainty quantification. Wraps point forecasts in predictio
 
 Multiple forecasting strategies compete. The best-calibrated strategies earn more weight over time — evolutionary pressure toward accuracy.
 
-- [ ] `forecast_strategies` table: `id`, `name`, `description`, `strategy_type` (base_rate | causal | pattern | llm_belief | human), `is_active`, `created_at`
-- [ ] Migration for `forecast_strategies`
-- [ ] Built-in strategy roster:
+- [x] `forecast_strategies` table: `id`, `name`, `description`, `strategy_type` (base_rate | causal | pattern | llm_belief | human), `is_active`, `created_at`
+- [x] Migration for `forecast_strategies`
+- [x] Built-in strategy roster:
   - **Base rate**: pure reference class frequency (no reasoning, just historical rate)
   - **Causal**: Granger links (4.2) + BOCPD signals (4.1) → extrapolate from causal structure
   - **Pattern**: entity narrative (3.2) + community context (3.1) → LLM pattern matching
   - **Full belief**: complete BLF loop from 7.2 (most expensive, most capable)
   - **Human**: user-submitted probability (optional — for comparison)
-- [ ] `strategy_forecasts` table: `id`, `forecast_id`, `strategy_id`, `probability` (float), `created_at`
-- [ ] Migration for `strategy_forecasts`
-- [ ] Per-strategy Brier score tracking: each strategy scored independently on resolved forecasts
-- [ ] Logit-space aggregation: final probability = `sigmoid(sum(w_i * logit(p_i)))` where w_i = inverse-Brier weight per strategy, normalized
-- [ ] Shrinkage parameter: when strategies disagree strongly (logit variance > threshold), apply shrinkage toward base rate — reduces overconfidence under uncertainty
-- [ ] Track-record weight updater (after each resolution): Bayesian update on strategy weights using log-likelihood of observed outcome given strategy's prediction
-- [ ] Strategy exploration: 10% of forecasts use uniform weights (exploration) to prevent premature convergence on a dominant strategy
-- [ ] Cold-start: new strategies begin with uniform prior weight; earn differentiated weight only after 30+ scored predictions
-- [ ] Admin UI: strategy leaderboard — Brier score, weight, forecast count, calibration curve per strategy
-- [ ] Retire underperformers: if a strategy's rolling Brier score exceeds 0.35 over 50+ forecasts → auto-deactivate, log reason
+- [x] `strategy_forecasts` table: `id`, `forecast_id`, `strategy_id`, `probability` (float), `created_at`
+- [x] Migration for `strategy_forecasts`
+- [x] Per-strategy Brier score tracking: each strategy scored independently on resolved forecasts
+- [x] Logit-space aggregation: final probability = `sigmoid(sum(w_i * logit(p_i)))` where w_i = inverse-Brier weight per strategy, normalized
+- [x] Shrinkage parameter: when strategies disagree strongly (logit variance > threshold), apply shrinkage toward base rate — reduces overconfidence under uncertainty
+- [x] Track-record weight updater (after each resolution): Bayesian update on strategy weights using log-likelihood of observed outcome given strategy's prediction
+- [x] Strategy exploration: 10% of forecasts use uniform weights (exploration) to prevent premature convergence on a dominant strategy
+- [x] Cold-start: new strategies begin with uniform prior weight; earn differentiated weight only after 30+ scored predictions
+- [x] Admin UI: strategy leaderboard — Brier score, weight, forecast count, calibration curve per strategy
+- [x] Retire underperformers: if a strategy's rolling Brier score exceeds 0.35 over 50+ forecasts → auto-deactivate, log reason
 
 ---
 

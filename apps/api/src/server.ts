@@ -92,6 +92,9 @@ const { forecastWorker } = await import('./forecasts/worker');
 const { resolutionWorker } = await import('./forecasts/resolution-worker');
 const { beliefWorker } = await import('./forecasts/belief-worker');
 const { tdaWorker } = await import('./math/tda-worker');
+const { calibrationWorker } = await import('./forecasts/calibration-worker');
+const { conformalWorker } = await import('./forecasts/conformal-worker');
+const { ensembleWorker } = await import('./forecasts/ensemble-worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -112,6 +115,9 @@ registerWorker({ name: 'forecasts', description: 'Generates forecast questions f
 registerWorker({ name: 'resolution-oracle', description: 'Auto-resolves matured forecasts', intervalMs: 60 * 60 * 1000, run: resolutionWorker.run });
 registerWorker({ name: 'belief-updater', description: 'Updates Bayesian belief states for open forecasts', intervalMs: 6 * 60 * 60 * 1000, run: beliefWorker.run });
 registerWorker({ name: 'tda', description: 'Computes topological persistence for knowledge gap detection', intervalMs: 7 * 24 * 60 * 60 * 1000, run: tdaWorker.run });
+registerWorker({ name: 'calibration', description: 'Computes forecast calibration scores and reliability diagrams', intervalMs: 7 * 24 * 60 * 60 * 1000, run: calibrationWorker.run });
+registerWorker({ name: 'conformal', description: 'Computes conformal prediction intervals for forecasts', intervalMs: 6 * 60 * 60 * 1000, run: conformalWorker.run });
+registerWorker({ name: 'ensemble', description: 'Generates strategy forecasts and updates track-record weights', intervalMs: 24 * 60 * 60 * 1000, run: ensembleWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -132,6 +138,9 @@ scheduleWorker('forecasts', 780_000);
 scheduleWorker('resolution-oracle', 60_000);
 scheduleWorker('belief-updater', 840_000);
 scheduleWorker('tda', 900_000);
+scheduleWorker('calibration', 960_000);
+scheduleWorker('conformal', 1020_000);
+scheduleWorker('ensemble', 1080_000);
 
 export default {
   port: config.port,

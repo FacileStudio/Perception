@@ -526,6 +526,71 @@ CREATE TABLE IF NOT EXISTS topology_snapshots (
 CREATE INDEX IF NOT EXISTS topology_snapshots_computed_idx ON topology_snapshots(computed_at DESC)
       `,
     },
+    {
+      name: '026_calibration_snapshots',
+      sql: `
+CREATE TABLE IF NOT EXISTS calibration_snapshots (
+  id TEXT PRIMARY KEY,
+  computed_at TEXT NOT NULL,
+  bin_edges TEXT NOT NULL DEFAULT '[]',
+  bin_counts TEXT NOT NULL DEFAULT '[]',
+  bin_actuals TEXT NOT NULL DEFAULT '[]',
+  brier_score REAL NOT NULL,
+  log_score REAL NOT NULL,
+  resolution_score REAL NOT NULL,
+  reliability_score REAL NOT NULL,
+  sharpness_score REAL NOT NULL,
+  domain_scores TEXT NOT NULL DEFAULT '{}',
+  forecast_count INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS calibration_snapshots_computed_idx ON calibration_snapshots(computed_at DESC)
+      `,
+    },
+    {
+      name: '027_forecast_intervals',
+      sql: `
+CREATE TABLE IF NOT EXISTS forecast_intervals (
+  id TEXT PRIMARY KEY,
+  forecast_id TEXT NOT NULL REFERENCES forecasts(id) ON DELETE CASCADE,
+  belief_step INTEGER NOT NULL,
+  lower_bound REAL NOT NULL,
+  upper_bound REAL NOT NULL,
+  coverage_target REAL NOT NULL DEFAULT 0.9,
+  nonconformity_score REAL
+);
+CREATE INDEX IF NOT EXISTS forecast_intervals_forecast_idx ON forecast_intervals(forecast_id, belief_step)
+      `,
+    },
+    {
+      name: '028_forecast_strategies',
+      sql: `
+CREATE TABLE IF NOT EXISTS forecast_strategies (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT NOT NULL,
+  strategy_type TEXT NOT NULL CHECK(strategy_type IN ('base_rate','causal','pattern','llm_belief','human')),
+  is_active INTEGER NOT NULL DEFAULT 1,
+  brier_score REAL,
+  brier_count INTEGER NOT NULL DEFAULT 0,
+  log_weight REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+)
+      `,
+    },
+    {
+      name: '029_strategy_forecasts',
+      sql: `
+CREATE TABLE IF NOT EXISTS strategy_forecasts (
+  id TEXT PRIMARY KEY,
+  forecast_id TEXT NOT NULL REFERENCES forecasts(id) ON DELETE CASCADE,
+  strategy_id TEXT NOT NULL REFERENCES forecast_strategies(id),
+  probability REAL NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS strategy_forecasts_forecast_idx ON strategy_forecasts(forecast_id);
+CREATE INDEX IF NOT EXISTS strategy_forecasts_strategy_idx ON strategy_forecasts(strategy_id)
+      `,
+    },
   ];
 
   for (const migration of migrations) {
