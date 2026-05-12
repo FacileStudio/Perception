@@ -16,6 +16,7 @@
   let error = $state('');
   let uploading = $state(false);
   let deleting = $state<string | null>(null);
+  let confirmDelete = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
   let pendingFiles = $state.raw<File[]>([]);
@@ -144,6 +145,7 @@
       error = 'Delete failed.';
     } finally {
       deleting = null;
+      confirmDelete = null;
     }
   }
 
@@ -316,14 +318,50 @@
                 </div>
               </div>
             </button>
-            <button
-              onclick={(e) => { e.stopPropagation(); handleDelete(resource.id); }}
-              class="absolute right-3 top-3 rounded-lg p-1.5 text-zinc-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
-              title="Delete resource"
-              disabled={deleting === resource.id}
-            >
-              <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
-            </button>
+            {#if confirmDelete !== resource.id}
+              <button
+                onclick={(e) => { e.stopPropagation(); confirmDelete = resource.id; }}
+                class="absolute right-3 top-3 rounded-lg p-1.5 text-zinc-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                title="Delete resource"
+                disabled={deleting === resource.id}
+              >
+                <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
+              </button>
+            {/if}
+
+            {#if confirmDelete === resource.id}
+              <div
+                class="absolute inset-0 z-10 flex items-center justify-between gap-3 rounded-[20px] bg-white/95 px-4 backdrop-blur-sm"
+                transition:fade={{ duration: 120 }}
+              >
+                <span class="min-w-0 truncate text-sm text-zinc-600">
+                  Delete <span class="font-semibold text-zinc-900">{resource.title}</span>?
+                </span>
+                <div class="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="rounded-full text-xs"
+                    onclick={(e: MouseEvent) => { e.stopPropagation(); confirmDelete = null; }}
+                    disabled={deleting === resource.id}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    class="rounded-full bg-red-600 text-xs text-white hover:bg-red-700"
+                    onclick={(e: MouseEvent) => { e.stopPropagation(); handleDelete(resource.id); }}
+                    disabled={deleting === resource.id}
+                  >
+                    {#if deleting === resource.id}
+                      Deleting...
+                    {:else}
+                      Delete
+                    {/if}
+                  </Button>
+                </div>
+              </div>
+            {/if}
           </Card>
         {/each}
       </div>
