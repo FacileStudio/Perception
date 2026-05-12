@@ -19,10 +19,11 @@ async function fetchResolvedForecasts(): Promise<ResolvedForecast[]> {
       f.resolution_value AS outcome,
       f.question_type,
       f.provider_type,
-      e.entity_type
+      oc.label AS entity_type
     FROM forecasts f
     JOIN forecast_beliefs fb ON fb.forecast_id = f.id
     LEFT JOIN entities e ON e.id = f.entity_id
+    LEFT JOIN ontology_concepts oc ON oc.id = e.type_concept_id
     WHERE f.status = 'resolved'
       AND f.question_type = 'binary'
       AND f.resolution_value IS NOT NULL
