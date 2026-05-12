@@ -15,6 +15,7 @@ COPY --from=builder /app/apps/client/build ./build
 COPY --from=builder /app/apps/client/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 ENV PORT=3000
+ENV BODY_SIZE_LIMIT=Infinity
 ENV ORIGIN=https://perception.facile.studio
 EXPOSE 3000
 CMD ["bun", "build/index.js"]
