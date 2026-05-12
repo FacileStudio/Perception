@@ -133,5 +133,9 @@ export function buildContextBlock(
     lines.push('');
   }
 
-  return lines.join('\n');
+  const joined = lines.join('\n');
+  if (joined.length > 60_000) {
+    return joined.slice(0, 60_000) + '\n[CONTEXT_TRUNCATED]';
+  }
+  return joined;
 }

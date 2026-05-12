@@ -402,6 +402,35 @@ CREATE INDEX IF NOT EXISTS eval_results_fixture_idx ON eval_results(fixture_id)
       name: '019_resource_file_path',
       sql: `ALTER TABLE resources ADD COLUMN file_path TEXT`,
     },
+    {
+      name: '020_retrieval_outcomes',
+      sql: `
+CREATE TABLE IF NOT EXISTS retrieval_outcomes (
+  id TEXT PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  intent TEXT NOT NULL,
+  lane_weights TEXT NOT NULL,
+  active_lanes TEXT NOT NULL,
+  top_event_ids TEXT NOT NULL,
+  outcome_label TEXT CHECK(outcome_label IN ('up','down','implicit_negative')),
+  occurred_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS retrieval_outcomes_session_idx ON retrieval_outcomes(session_id);
+CREATE INDEX IF NOT EXISTS retrieval_outcomes_occurred_idx ON retrieval_outcomes(occurred_at);
+CREATE INDEX IF NOT EXISTS retrieval_outcomes_message_idx ON retrieval_outcomes(message_id);
+
+CREATE TABLE IF NOT EXISTS retrieval_weight_versions (
+  id TEXT PRIMARY KEY,
+  version INTEGER NOT NULL,
+  weights TEXT NOT NULL,
+  sample_size INTEGER NOT NULL,
+  avg_reward REAL NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS retrieval_weight_versions_ver_idx ON retrieval_weight_versions(version DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

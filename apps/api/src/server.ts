@@ -81,6 +81,7 @@ const { graphHealthWorker } = await import('./math/graph-health-worker');
 const { conceptDriftWorker } = await import('./math/concept-drift-worker');
 const { grangerWorker } = await import('./math/granger-worker');
 const { resourceEmbeddingWorker } = await import('./resources/embedding-worker');
+const { banditWorker } = await import('./chat/bandit-worker');
 
 registerWorker({ name: 'embedding', description: 'Generates vector embeddings for events', intervalMs: 5_000, run: embeddingWorker.run });
 registerWorker({ name: 'schema-inference', description: 'Infers and applies provider schemas', intervalMs: 15_000, run: schemaInferenceWorker.run });
@@ -95,6 +96,7 @@ registerWorker({ name: 'graph-health', description: 'Computes graph entropy and 
 registerWorker({ name: 'concept-drift', description: 'Detects distribution drift per provider and invalidates schemas', intervalMs: 24 * 60 * 60 * 1000, run: conceptDriftWorker.run });
 registerWorker({ name: 'granger', description: 'Detects Granger-causal relationships between event series', intervalMs: 24 * 60 * 60 * 1000, run: grangerWorker.run });
 registerWorker({ name: 'resource-embedding', description: 'Generates vector embeddings for resource chunks', intervalMs: 5_000, run: resourceEmbeddingWorker.run });
+registerWorker({ name: 'bandit', description: 'Fits retrieval lane weights from feedback via Thompson sampling', intervalMs: 24 * 60 * 60 * 1000, run: banditWorker.run });
 
 scheduleWorker('embedding');
 scheduleWorker('schema-inference');
@@ -109,6 +111,7 @@ scheduleWorker('graph-health', 420_000);
 scheduleWorker('concept-drift', 480_000);
 scheduleWorker('granger', 600_000);
 scheduleWorker('resource-embedding');
+scheduleWorker('bandit', 660_000);
 
 export default {
   port: config.port,

@@ -1,7 +1,8 @@
+import { db } from '../../db/client';
 import type { QueryPlan } from '../planner';
 import type { RetrievalSource, ScoredEvent, RankedEvent } from './types';
 
-const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
+const BASE_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number>> = {
   lookup:       { entity: 0.7, fts: 0.5, concept: 0.4, sql: 0.25, vector: 0.1, stats: 0, graph: 0.35, community: 0.3, text_to_sql: 0.4 },
   trend:        { entity: 0.2, fts: 0.15, concept: 0.2, sql: 0.5, vector: 0.1, stats: 0, graph: 0.1, community: 0.1, text_to_sql: 0.45 },
   status_check: { entity: 0.6, fts: 0.3, concept: 0.2, sql: 0.4, vector: 0.15, stats: 0, graph: 0.2, community: 0.2, text_to_sql: 0.35 },
@@ -10,16 +11,61 @@ const INTENT_WEIGHTS: Record<QueryPlan['intent'], Record<RetrievalSource, number
   narrative:    { entity: 0.55, fts: 0.4, concept: 0.4, sql: 0.25, vector: 0.3, stats: 0, graph: 0.5, community: 0.5, text_to_sql: 0.2 },
 };
 
+const WEIGHT_CACHE_TTL = 5 * 60 * 1000;
+const EXPLORATION_RATE = 0.1;
+
+let weightCache: {
+  weights: Record<QueryPlan['intent'], Record<RetrievalSource, number>>;
+  fetchedAt: number;
+} | null = null;
+
+async function loadBanditWeights(): Promise<Record<QueryPlan['intent'], Record<RetrievalSource, number>> | null> {
+  if (weightCache && Date.now() - weightCache.fetchedAt < WEIGHT_CACHE_TTL) {
+    return weightCache.weights;
+  }
+
+  try {
+    const result = await db.execute(
+      `SELECT weights FROM retrieval_weight_versions ORDER BY version DESC LIMIT 1`,
+    );
+    if (result.rows.length === 0) return null;
+
+    const weights = JSON.parse(result.rows[0].weights as string);
+    weightCache = { weights, fetchedAt: Date.now() };
+    return weights;
+  } catch {
+    return null;
+  }
+}
+
+export async function getActiveWeights(): Promise<{
+  weights: Record<QueryPlan['intent'], Record<RetrievalSource, number>>;
+  exploring: boolean;
+}> {
+  if (Math.random() < EXPLORATION_RATE) {
+    return { weights: BASE_WEIGHTS, exploring: true };
+  }
+
+  const bandit = await loadBanditWeights();
+  if (bandit) {
+    return { weights: bandit, exploring: false };
+  }
+
+  return { weights: BASE_WEIGHTS, exploring: false };
+}
+
 export function mergeAndRank(
   lanes: Array<Array<ScoredEvent & { concepts?: string[]; entity_names?: string[] }>>,
   plan: QueryPlan,
+  intentWeights?: Record<QueryPlan['intent'], Record<RetrievalSource, number>>,
 ): RankedEvent[] {
+  const weights = intentWeights ?? BASE_WEIGHTS;
   const best = new Map<string, RankedEvent>();
 
   for (const lane of lanes) {
     for (const event of lane) {
       const existing = best.get(event.id);
-      const laneWeight = INTENT_WEIGHTS[plan.intent][event.source];
+      const laneWeight = weights[plan.intent][event.source];
       const scored: RankedEvent = {
         ...event,
         score: event.score + laneWeight,

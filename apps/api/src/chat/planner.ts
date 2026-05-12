@@ -37,6 +37,8 @@ export type QueryPlan = {
   prefersRecency: boolean;
   retrievalMode: 'full' | 'history' | 'light';
   requiresRetrieval: boolean;
+  isComposite: boolean;
+  subqueries: string[];
   rawMessage: string;
 };
 
@@ -61,7 +63,9 @@ Output a single JSON object — no markdown, no code fences, no explanation:
   "requiresStats": boolean,
   "prefersRecency": boolean,
   "queryTerms": string[],
-  "capabilities": string[]
+  "capabilities": string[],
+  "isComposite": boolean,
+  "subqueries": string[]
 }
 
 Field rules:
@@ -86,6 +90,8 @@ Field rules:
 - prefersRecency: true if asking about recent, latest, or new activity.
 - queryTerms: key content search terms extracted from the message. Lowercase. No stop words. No language-specific articles or prepositions. Max 10 terms.
 - capabilities: ontology capabilities relevant to the query. Empty if none clearly apply.
+- isComposite: true when the question requires multiple independent data lookups that span different entities, providers, or time periods. False for simple questions.
+- subqueries: when isComposite is true, decompose into 2-6 focused sub-questions. Each sub-query must be independently retrievable with no references to other sub-queries. Empty array when isComposite is false.
 - intent: classify the user's information need.
     "lookup"       → finding specific entities, facts, or events
     "trend"        → patterns over time, growth, decline, cadence
@@ -109,6 +115,8 @@ function fallbackPlan(message: string): QueryPlan {
     prefersRecency: false,
     retrievalMode: 'full',
     requiresRetrieval: true,
+    isComposite: false,
+    subqueries: [],
     rawMessage: message,
   };
 }
@@ -127,7 +135,7 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       model: anthropic('claude-haiku-4-5-20251001'),
       system: systemPrompt,
       prompt: `Current datetime: ${now}\n\nUser message: ${message}`,
-      maxTokens: 400,
+      maxTokens: 600,
     });
 
     const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
@@ -159,6 +167,8 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       prefersRecency: Boolean(raw.prefersRecency),
       retrievalMode,
       requiresRetrieval: retrievalMode === 'full',
+      isComposite: Boolean(raw.isComposite) && Array.isArray(raw.subqueries) && raw.subqueries.length > 1,
+      subqueries: Array.isArray(raw.subqueries) ? raw.subqueries.filter((s: unknown) => typeof s === 'string').slice(0, 6) : [],
       rawMessage: message,
     };
   } catch {

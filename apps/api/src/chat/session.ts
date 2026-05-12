@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { db } from '../db/client';
+import { labelOutcome } from './outcomes';
 import type { ChatMessageRecord, ChatSessionDetail, ChatSessionSummary, ChatSource } from './types';
 
 function normalizeChatText(value: string): string {
@@ -211,6 +212,10 @@ export async function setMessageFeedback(
     sql: `UPDATE chat_messages SET feedback = ? WHERE id = ?`,
     args: [feedback, messageId],
   });
+
+  if (feedback === 'up' || feedback === 'down') {
+    labelOutcome(messageId, feedback).catch(() => {});
+  }
 
   return 'ok';
 }

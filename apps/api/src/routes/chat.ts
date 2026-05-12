@@ -2,8 +2,9 @@ import { Hono } from 'hono';
 import { requireSession } from '../security/session';
 import { buildQueryPlan } from '../chat/planner';
 import { retrieveWithCorrection } from '../chat/retrieve';
-import type { RetrievalResult } from '../chat/retrieve';
-import { streamChat } from '../chat/stream';
+import type { RetrievalResult, RetrievalMeta } from '../chat/retrieve';
+import { streamChat, streamChatComposite } from '../chat/stream';
+import { decomposeAndRetrieve } from '../chat/decompose';
 import { embedQuery } from '../embeddings/voyage';
 import {
   loadSessionSummaries,
@@ -13,6 +14,7 @@ import {
   upsertSession,
   saveUserMessage,
 } from '../chat/session';
+import { recordRetrievalOutcome, detectImplicitNegative } from '../chat/outcomes';
 import type { ChatRequest } from '../types';
 
 export const chatRoutes = new Hono();
@@ -93,6 +95,7 @@ chatRoutes.post('/', async (c) => {
   }
 
   const sessionId = await upsertSession(body.session_id);
+  detectImplicitNegative(sessionId).catch(() => {});
   await saveUserMessage(sessionId, body.message);
 
   const [plan, queryEmbedding] = await Promise.all([
@@ -100,14 +103,35 @@ chatRoutes.post('/', async (c) => {
     embedQuery(body.message).catch(() => [] as number[]),
   ]);
 
-  let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [], causalLinks: [], resourceChunks: [] };
-  let corrected = false;
-  if (plan.requiresRetrieval) {
-    const result = await retrieveWithCorrection(plan, queryEmbedding);
-    context = result;
-    corrected = result.corrected;
+  let stream: ReadableStream;
+  let retrievalMeta: RetrievalMeta | null = null;
+
+  if (plan.isComposite && plan.subqueries.length > 1) {
+    const decomposed = await decomposeAndRetrieve(plan.subqueries);
+    stream = streamChatComposite(sessionId, body.message, plan, decomposed.mergedContext, decomposed.contextBlock);
+  } else {
+    let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [], causalLinks: [], resourceChunks: [] };
+    let corrected = false;
+    if (plan.requiresRetrieval) {
+      const result = await retrieveWithCorrection(plan, queryEmbedding);
+      context = result;
+      corrected = result.corrected;
+      retrievalMeta = result.meta;
+    }
+    stream = streamChat(sessionId, body.message, plan, context, corrected, (messageId) => {
+      if (retrievalMeta) {
+        const topIds = context.events.slice(0, 5).map((e) => e.id);
+        recordRetrievalOutcome(
+          messageId,
+          sessionId,
+          plan.intent,
+          retrievalMeta.laneWeights as Record<string, number>,
+          retrievalMeta.activeLanes as string[],
+          topIds,
+        ).catch(() => {});
+      }
+    });
   }
-  const stream = streamChat(sessionId, body.message, plan, context, corrected);
 
   return new Response(stream, {
     headers: {

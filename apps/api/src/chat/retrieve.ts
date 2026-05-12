@@ -14,7 +14,7 @@ import { textToSqlLane } from './lanes/text-to-sql';
 import { fetchNarratives } from '../narratives/retrieve';
 import { fetchMemoryEpisodes } from '../memory/retrieve';
 import { fetchResourceChunks } from '../resources/retrieve';
-import { mergeAndRank } from './lanes/merge';
+import { mergeAndRank, getActiveWeights } from './lanes/merge';
 
 export type { RetrievalResult, RetrievalSource, ContextConfidence, TemporalComparison, TemporalPeriod, RankedEvent };
 
@@ -99,26 +99,41 @@ function relaxPlan(plan: QueryPlan): QueryPlan {
   return relaxed;
 }
 
+export type RetrievalMeta = {
+  laneWeights: Record<string, number>;
+  activeLanes: string[];
+  exploring: boolean;
+};
+
 export async function retrieveWithCorrection(
   plan: QueryPlan,
   queryEmbedding: number[],
-): Promise<RetrievalResult & { corrected: boolean; confidence: ContextConfidence }> {
-  const initial = await retrieveContext(plan, queryEmbedding);
+): Promise<RetrievalResult & { corrected: boolean; confidence: ContextConfidence; meta: RetrievalMeta }> {
+  const { weights, exploring } = await getActiveWeights();
+  const initial = await retrieveContext(plan, queryEmbedding, weights);
   const confidence = scoreContextQuality(initial, plan);
 
+  const activeLanes = [...new Set(initial.events.flatMap((e) => e.lanes))];
+  const meta: RetrievalMeta = {
+    laneWeights: weights[plan.intent],
+    activeLanes,
+    exploring,
+  };
+
   if (confidence.verdict === 'correct') {
-    return { ...initial, corrected: false, confidence };
+    return { ...initial, corrected: false, confidence, meta };
   }
 
   const relaxed = relaxPlan(plan);
-  const retry = await retrieveContext(relaxed, queryEmbedding);
+  const retry = await retrieveContext(relaxed, queryEmbedding, weights);
   const retryConfidence = scoreContextQuality(retry, relaxed);
 
   if (retryConfidence.score > confidence.score) {
-    return { ...retry, corrected: true, confidence: retryConfidence };
+    const retryLanes = [...new Set(retry.events.flatMap((e) => e.lanes))];
+    return { ...retry, corrected: true, confidence: retryConfidence, meta: { ...meta, activeLanes: retryLanes } };
   }
 
-  return { ...initial, corrected: false, confidence };
+  return { ...initial, corrected: false, confidence, meta };
 }
 
 export async function fetchSystemSummary(): Promise<string> {
@@ -212,7 +227,7 @@ async function buildTemporalComparisons(plan: QueryPlan): Promise<TemporalCompar
   return comparisons;
 }
 
-export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[]): Promise<RetrievalResult> {
+export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[], intentWeights?: Record<QueryPlan['intent'], Record<RetrievalSource, number>>): Promise<RetrievalResult> {
   const intent = plan.intent;
   const prefersRecency = plan.prefersRecency || intent === 'status_check';
   const shouldRunRecentLane =
@@ -256,7 +271,7 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[])
     shouldResources ? fetchResourceChunks(queryEmbedding) : Promise.resolve([]),
   ]);
 
-  let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan);
+  let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan, intentWeights);
   if (events.length === 0) {
     events = (await recentLane(plan)).map((event) => ({ ...event, lanes: ['sql' as const] }));
   }

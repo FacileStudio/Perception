@@ -50,17 +50,39 @@ function trimLatestUserEcho(history: ChatMessageRow[], message: string): ChatMes
   return history;
 }
 
+export function streamChatComposite(
+  sessionId: string,
+  message: string,
+  plan: QueryPlan,
+  context: RetrievalResult,
+  prebuiltContextBlock: string,
+): ReadableStream {
+  return buildStream(sessionId, message, plan, context, prebuiltContextBlock);
+}
+
 export function streamChat(
   sessionId: string,
   message: string,
   plan: QueryPlan,
   context: RetrievalResult,
   corrected = false,
+  onMessagePersisted?: (messageId: string) => void,
 ): ReadableStream {
   let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults, context.narratives, context.memoryEpisodes, context.causalLinks, context.resourceChunks);
   if (corrected) {
     contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
   }
+  return buildStream(sessionId, message, plan, context, contextBlock, onMessagePersisted);
+}
+
+function buildStream(
+  sessionId: string,
+  message: string,
+  plan: QueryPlan,
+  context: RetrievalResult,
+  contextBlock: string,
+  onMessagePersisted?: (messageId: string) => void,
+): ReadableStream {
   const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
   const signalEvents = context.events.filter((e) => e.lanes.some((l) => l !== 'sql'));
@@ -131,6 +153,7 @@ export function streamChat(
         }
 
         const messageId = await persistAssistantMessage(sessionId, fullText, sources);
+        if (onMessagePersisted) onMessagePersisted(messageId);
         const donePayload: Record<string, unknown> = { done: true, sources, message_id: messageId };
         if (sqlQueryMeta) donePayload.sql_query = sqlQueryMeta;
         if (communitySummariesMeta) donePayload.community_summaries = communitySummariesMeta;
