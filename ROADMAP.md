@@ -356,7 +356,7 @@ Research-grade capabilities. High effort, unique differentiation.
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 6.1 | Counterfactual / what-if simulation | High | 4.2, 5.2 |
-| [ ] | 6.2 | Topological knowledge gap detection (TDA) | High | 2.1, 4.3 |
+| [x] | 6.2 | Topological knowledge gap detection (TDA) | High | 2.1, 4.3 |
 
 ---
 
@@ -372,11 +372,11 @@ Research-grade capabilities. High effort, unique differentiation.
 
 ### 6.2 Topological Knowledge Gap Detection (TDA)
 
-- [ ] Graph export: serialize `entity_relations` as weighted adjacency matrix
-- [ ] TDA worker (Python sidecar or WASM build): compute H0/H1 persistence via Vietoris-Rips filtration using `gudhi` or `ripser`
-- [ ] `topology_snapshots` table: `id`, `computed_at`, `h0_component_count`, `h1_loop_count`, `max_h0_persistence`, `gap_entity_ids` (JSON)
-- [ ] Migration for `topology_snapshots`
-- [ ] Admin UI: "knowledge gaps" section — entity clusters that have never connected to the main component
+- [x] Graph export: serialize `entity_relations` as weighted adjacency matrix with Dijkstra shortest paths
+- [x] TDA worker (pure TypeScript): compute H0/H1 persistence via Vietoris-Rips filtration — no external sidecar, 500-node cap with degree-based sampling
+- [x] `topology_snapshots` table: `id`, `computed_at`, `h0_component_count`, `h1_loop_count`, `max_h0_persistence`, `persistence_pairs` (JSON), `gap_entity_ids` (JSON)
+- [x] Migration 025 for `topology_snapshots`
+- [x] Admin endpoint: `GET /admin/topology` — latest snapshot + gap entities with names
 
 ---
 
@@ -389,8 +389,8 @@ Transform Perception from a system that explains the past into one that forecast
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
 | [x] | 7.1 | Forecast question engine | Medium | 5.1 |
-| [ ] | 7.2 | Bayesian belief state forecaster | High | 7.1, 4.1, 4.2 |
-| [ ] | 7.3 | Automated resolution oracle | Medium | 7.1 |
+| [x] | 7.2 | Bayesian belief state forecaster | High | 7.1, 4.1, 4.2 |
+| [x] | 7.3 | Automated resolution oracle | Medium | 7.1 |
 | [ ] | 7.4 | Calibration and scoring system | Medium | 7.2, 7.3 |
 | [ ] | 7.5 | Conformal prediction intervals | Medium | 4.1, 7.4 |
 | [ ] | 7.6 | Ensemble aggregation with track-record weighting | High | 7.2, 7.4 |
@@ -423,18 +423,18 @@ Question types and examples:
 
 Iterative agentic forecasting loop inspired by BLF (Murphy et al., 2026). Maintains a structured belief state that updates as new evidence arrives — not a one-shot prediction.
 
-- [ ] `forecast_beliefs` table: `id`, `forecast_id`, `step` (int), `probability` (float), `confidence` (low | medium | high), `evidence_for` (text), `evidence_against` (text), `open_questions` (text), `update_reasoning` (text), `created_at`
-- [ ] Migration for `forecast_beliefs`
-- [ ] Initial belief: seed with base rate from 7.1 reference class lookup; if no base rate available, start at 0.5 (maximum entropy prior)
-- [ ] Belief update loop (triggered on relevant new events):
-  1. Retrieve new evidence since last update (vector + entity + SQL lanes scoped to forecast entities)
+- [x] `forecast_beliefs` table: `id`, `forecast_id`, `step` (int), `probability` (float), `confidence` (low | medium | high), `evidence_for` (text), `evidence_against` (text), `open_questions` (text), `update_reasoning` (text), `created_at`
+- [x] Migration 024 for `forecast_beliefs`
+- [x] Initial belief: seed with base rate from 7.1 reference class lookup; if no base rate available, start at 0.5 (maximum entropy prior)
+- [x] Belief update loop (triggered on relevant new events):
+  1. Retrieve new evidence since last update (events, change points, causal links scoped to forecast entities)
   2. Present current belief state + new evidence to LLM
   3. LLM outputs updated belief state (structured JSON: `{p, confidence, evidence_for, evidence_against, open_questions, update_reasoning}`)
-  4. Validate: probability must move in direction justified by reasoning; flag contradictions
+  4. Validate: probability clamped to ±0.3 max delta per step; probability bounded [0,1]
   5. Store new belief step; cap at 20 steps per forecast
-- [ ] Superforecaster prompting: system prompt encodes Tetlock's methodology — outside view first (base rate), then inside view (specific evidence), granular probability updates, consider both sides
-- [ ] Active information seeking: if belief confidence is "low" after 3 steps, trigger targeted retrieval (corrective RAG pattern from 2.3) to seek disconfirming evidence
-- [ ] Real-time update trigger: when an ingested event matches a forecast's entity/provider scope, queue belief update within 5 minutes
+- [x] Superforecaster prompting: system prompt encodes Tetlock's methodology — outside view first (base rate), then inside view (specific evidence), granular probability updates, consider both sides
+- [x] Active information seeking: if belief confidence is "low" after 3 steps, trigger wide search across related entities for disconfirming evidence
+- [x] Belief worker (6h interval): processes up to 10 forecasts per run with 2s delay between LLM calls
 
 ---
 
@@ -442,16 +442,16 @@ Iterative agentic forecasting loop inspired by BLF (Murphy et al., 2026). Mainta
 
 Resolves forecasts programmatically when their time horizon expires — no manual intervention for well-defined questions.
 
-- [ ] Resolution engine worker (hourly): scan forecasts where `resolves_at <= now()` and `status = 'open'`
-- [ ] Resolution strategies by question type:
+- [x] Resolution engine worker (hourly): scan forecasts where `resolves_at <= now()` and `status = 'open'`
+- [x] Resolution strategies by question type:
   - **Binary**: execute `resolution_source` query (SQL count, entity existence check, event pattern match) → resolve yes (1.0) if condition met, no (0.0) otherwise
   - **Numeric**: execute `resolution_source` query → store actual value as `resolution_value`
   - **Date**: check if target event occurred → store actual timestamp or mark unresolved if window expired
-- [ ] Ambiguity handling: if resolution query returns inconclusive results, flag for manual review rather than auto-resolving
-- [ ] `forecast_resolutions` table: `id`, `forecast_id`, `resolution_method` (auto | manual | voided), `raw_evidence` (JSON — query results that determined outcome), `resolved_by` (system | user_id), `resolved_at`
-- [ ] Migration for `forecast_resolutions`
-- [ ] Manual override: `PATCH /forecasts/:id/resolve` — user can resolve, void (criteria became invalid), or extend deadline
-- [ ] Audit trail: resolution evidence stored verbatim — any resolution can be challenged and re-evaluated
+- [x] Ambiguity handling: if resolution query returns inconclusive results, expire forecast rather than auto-resolving
+- [x] `forecast_resolutions` table: `id`, `forecast_id`, `resolution_method` (auto | manual | voided), `raw_evidence` (JSON — query results that determined outcome), `resolved_by` (system | user_id), `resolved_at`
+- [x] Migration 023 for `forecast_resolutions`
+- [x] Manual override: `PATCH /forecasts/:id/resolve` — user can resolve, void, or extend; all manual actions recorded in audit trail
+- [x] Audit trail: resolution evidence stored verbatim — `GET /forecasts/:id/resolution` endpoint
 
 ---
 

@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { requireSession } from '../security/session';
 import { db } from '../db/client';
 import type { Forecast } from '../forecasts/types';
+import { getAllBeliefs } from '../forecasts/belief-updater';
 
 export const forecastRoutes = new Hono();
 
@@ -96,20 +97,67 @@ forecastRoutes.patch('/:id/resolve', async (c) => {
 
   const id = c.req.param('id');
   const body = await c.req.json<{ resolution_value?: number; void?: boolean }>();
+  const now = new Date().toISOString();
 
   if (body.void) {
     await db.execute({ sql: `UPDATE forecasts SET status = 'voided' WHERE id = ?`, args: [id] });
+    await db.execute({
+      sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
+            VALUES (?, ?, 'voided', '{}', 'user', ?)`,
+      args: [randomUUID(), id, now],
+    });
   } else {
-    const now = new Date().toISOString();
     await db.execute({
       sql: `UPDATE forecasts SET status = 'resolved', resolution_value = ?, resolved_at = ? WHERE id = ? AND status = 'open'`,
       args: [body.resolution_value ?? null, now, id],
+    });
+    await db.execute({
+      sql: `INSERT INTO forecast_resolutions (id, forecast_id, resolution_method, raw_evidence, resolved_by, resolved_at)
+            VALUES (?, ?, 'manual', ?, 'user', ?)`,
+      args: [randomUUID(), id, JSON.stringify({ resolution_value: body.resolution_value ?? null }), now],
     });
   }
 
   const result = await db.execute({ sql: 'SELECT * FROM forecasts WHERE id = ?', args: [id] });
   if (result.rows.length === 0) return c.json({ error: 'not_found' }, 404);
   return c.json({ forecast: rowToForecast(result.rows[0] as Record<string, unknown>) });
+});
+
+forecastRoutes.get('/:id/resolution', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const result = await db.execute({
+    sql: `SELECT * FROM forecast_resolutions WHERE forecast_id = ? ORDER BY resolved_at DESC LIMIT 1`,
+    args: [id],
+  });
+
+  if (result.rows.length === 0) return c.json({ error: 'no_resolution' }, 404);
+
+  const r = result.rows[0];
+  return c.json({
+    resolution: {
+      id: r.id as string,
+      forecast_id: r.forecast_id as string,
+      resolution_method: r.resolution_method as string,
+      raw_evidence: JSON.parse((r.raw_evidence as string) || '{}'),
+      resolved_by: r.resolved_by as string,
+      resolved_at: r.resolved_at as string,
+    },
+  });
+});
+
+forecastRoutes.get('/:id/beliefs', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ?', args: [id] });
+  if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
+
+  const beliefs = await getAllBeliefs(id);
+  return c.json({ beliefs });
 });
 
 forecastRoutes.patch('/:id/extend', async (c) => {

@@ -121,6 +121,51 @@ adminRoutes.get('/graph-health', async (c) => {
   return c.json({ snapshot, isolated });
 });
 
+adminRoutes.get('/topology', async (c) => {
+  const authed = await requireSession(c);
+  if (!authed) return c.json({ error: 'unauthorized' }, 401);
+
+  const snapshotResult = await db.execute(
+    `SELECT * FROM topology_snapshots ORDER BY computed_at DESC LIMIT 1`,
+  ).catch(() => ({ rows: [] }));
+
+  if (snapshotResult.rows.length === 0) {
+    return c.json({ snapshot: null, gaps: [] });
+  }
+
+  const snapshot = snapshotResult.rows[0];
+  const gapIds: string[] = JSON.parse(snapshot.gap_entity_ids as string);
+
+  let gaps: Array<{ id: string; name: string; type: string }> = [];
+  if (gapIds.length > 0) {
+    const placeholders = gapIds.map(() => '?').join(',');
+    const gapRows = await db.execute({
+      sql: `SELECT e.id, e.canonical_name, oc.label AS type_label
+            FROM entities e
+            JOIN ontology_concepts oc ON oc.id = e.type_concept_id
+            WHERE e.id IN (${placeholders})`,
+      args: gapIds,
+    });
+    gaps = gapRows.rows.map((r) => ({
+      id: r.id as string,
+      name: r.canonical_name as string,
+      type: r.type_label as string,
+    }));
+  }
+
+  return c.json({
+    snapshot: {
+      id: snapshot.id,
+      computed_at: snapshot.computed_at,
+      h0_component_count: snapshot.h0_component_count,
+      h1_loop_count: snapshot.h1_loop_count,
+      max_h0_persistence: snapshot.max_h0_persistence,
+      persistence_pairs: JSON.parse(snapshot.persistence_pairs as string),
+    },
+    gaps,
+  });
+});
+
 adminRoutes.get('/drift-alerts', async (c) => {
   const authed = await requireSession(c);
   if (!authed) return c.json({ error: 'unauthorized' }, 401);

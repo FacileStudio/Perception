@@ -479,6 +479,53 @@ CREATE INDEX IF NOT EXISTS forecasts_entity_idx ON forecasts(entity_id);
 CREATE INDEX IF NOT EXISTS forecasts_dedup_idx ON forecasts(entity_id, source_signal, question_type, status)
       `,
     },
+    {
+      name: '023_forecast_resolutions',
+      sql: `
+CREATE TABLE IF NOT EXISTS forecast_resolutions (
+  id TEXT PRIMARY KEY,
+  forecast_id TEXT NOT NULL REFERENCES forecasts(id) ON DELETE CASCADE,
+  resolution_method TEXT NOT NULL CHECK(resolution_method IN ('auto','manual','voided')),
+  raw_evidence TEXT NOT NULL DEFAULT '{}',
+  resolved_by TEXT NOT NULL DEFAULT 'system',
+  resolved_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS forecast_resolutions_forecast_idx ON forecast_resolutions(forecast_id)
+      `,
+    },
+    {
+      name: '024_forecast_beliefs',
+      sql: `
+CREATE TABLE IF NOT EXISTS forecast_beliefs (
+  id TEXT PRIMARY KEY,
+  forecast_id TEXT NOT NULL REFERENCES forecasts(id) ON DELETE CASCADE,
+  step INTEGER NOT NULL,
+  probability REAL NOT NULL,
+  confidence TEXT NOT NULL CHECK(confidence IN ('low','medium','high')),
+  evidence_for TEXT NOT NULL DEFAULT '',
+  evidence_against TEXT NOT NULL DEFAULT '',
+  open_questions TEXT NOT NULL DEFAULT '',
+  update_reasoning TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS forecast_beliefs_forecast_idx ON forecast_beliefs(forecast_id, step)
+      `,
+    },
+    {
+      name: '025_topology_snapshots',
+      sql: `
+CREATE TABLE IF NOT EXISTS topology_snapshots (
+  id TEXT PRIMARY KEY,
+  computed_at TEXT NOT NULL,
+  h0_component_count INTEGER NOT NULL,
+  h1_loop_count INTEGER NOT NULL,
+  max_h0_persistence REAL NOT NULL,
+  persistence_pairs TEXT NOT NULL DEFAULT '[]',
+  gap_entity_ids TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS topology_snapshots_computed_idx ON topology_snapshots(computed_at DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

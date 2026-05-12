@@ -79,13 +79,23 @@ export async function loadEntityContext(entityId: string): Promise<EntityContext
   };
 }
 
+const MAX_TITLE_LEN = 120;
+const MAX_SUMMARY_LEN = 200;
+const MAX_EVENTS = 10;
+const MAX_RELATIONS = 20;
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max - 1) + '…';
+}
+
 function buildNarrativePrompt(ctx: EntityContext): string {
   const events = ctx.recentEvents
-    .map((e) => `- [${e.occurred_at.slice(0, 10)}] ${e.title} (${e.provider}): ${e.summary}`)
+    .slice(0, MAX_EVENTS)
+    .map((e) => `- [${e.occurred_at.slice(0, 10)}] ${truncate(e.title, MAX_TITLE_LEN)} (${e.provider}): ${truncate(e.summary, MAX_SUMMARY_LEN)}`)
     .join('\n');
 
   const relations = ctx.relations.length > 0
-    ? ctx.relations.map((r) => `- ${r.name} (${r.type}) — ${r.label.replace(/_/g, ' ')}`).join('\n')
+    ? ctx.relations.slice(0, MAX_RELATIONS).map((r) => `- ${r.name} (${r.type}) — ${r.label.replace(/_/g, ' ')}`).join('\n')
     : '(none)';
 
   const community = ctx.communityTitle ? `Part of cluster: "${ctx.communityTitle}"` : '';
@@ -113,6 +123,41 @@ Write 3-5 sentences. Cover:
 Be specific — name related entities, cite dates, reference providers. Do not speculate beyond the data. Output plain text only, no markdown.`;
 }
 
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 5_000;
+
+async function callLLMWithRetry(
+  anthropic: ReturnType<typeof createAnthropic>,
+  prompt: string,
+): Promise<string> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const { text } = await generateText({
+        model: anthropic('claude-haiku-4-5-20251001'),
+        system: 'You are a concise business analyst writing operational summaries. Plain text only, no markdown.',
+        prompt,
+        maxTokens: 500,
+      });
+      return text;
+    } catch (err: unknown) {
+      const isRateLimit =
+        err instanceof Error &&
+        ('status' in err && (err as any).status === 429 ||
+         err.message?.includes('rate') ||
+         err.message?.includes('429'));
+
+      if (isRateLimit && attempt < MAX_RETRIES) {
+        const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        console.warn(`[narratives] rate-limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('unreachable');
+}
+
 export async function generateNarrative(entityId: string): Promise<{ text: string; sourceEventCount: number } | null> {
   const ctx = await loadEntityContext(entityId);
   if (!ctx || ctx.eventCount === 0) return null;
@@ -120,12 +165,7 @@ export async function generateNarrative(entityId: string): Promise<{ text: strin
   const apiKey = await getEffectiveSetting('anthropic_api_key');
   const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
 
-  const { text } = await generateText({
-    model: anthropic('claude-haiku-4-5-20251001'),
-    system: 'You are a concise business analyst writing operational summaries. Plain text only, no markdown.',
-    prompt: buildNarrativePrompt(ctx),
-    maxTokens: 500,
-  });
+  const text = await callLLMWithRetry(anthropic, buildNarrativePrompt(ctx));
 
   return { text: text.trim(), sourceEventCount: ctx.eventCount };
 }

@@ -91,10 +91,31 @@ Rules:
 - Output raw JSON, no markdown fences`;
 }
 
+const MAX_MEMBERS = 50;
+const MAX_EVENT_TITLE_LEN = 120;
+const MAX_DESCRIPTION_LEN = 200;
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : s.slice(0, max - 1) + '…';
+}
+
+function trimInput(input: CommunityInput): CommunityInput {
+  return {
+    entities: input.entities.slice(0, MAX_MEMBERS).map((e) => ({
+      ...e,
+      description: e.description ? truncate(e.description, MAX_DESCRIPTION_LEN) : null,
+    })),
+    relations: input.relations.slice(0, MAX_MEMBERS * 2),
+    recentEventTitles: input.recentEventTitles.map((t) => truncate(t, MAX_EVENT_TITLE_LEN)),
+  };
+}
+
 export async function generateCommunitySummary(
   memberEntityIds: string[],
 ): Promise<{ title: string; summary: string; importance: number }> {
-  const input = await loadCommunityInput(memberEntityIds);
+  const cappedIds = memberEntityIds.slice(0, MAX_MEMBERS);
+  const raw = await loadCommunityInput(cappedIds);
+  const input = trimInput(raw);
 
   if (input.entities.length === 0) {
     return { title: 'Empty cluster', summary: 'No entity data available.', importance: 0 };

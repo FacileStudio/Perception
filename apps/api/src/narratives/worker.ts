@@ -19,14 +19,16 @@ async function run(): Promise<void> {
      FROM event_entities ee
      GROUP BY ee.entity_id
      ORDER BY cnt DESC
-     LIMIT 50`,
+     LIMIT 5`,
   );
 
   if (topEntities.rows.length === 0) return;
 
+  const LLM_DELAY_MS = 3_000;
   let generated = 0;
   let refreshed = 0;
   let skipped = 0;
+  let llmCalls = 0;
 
   for (const row of topEntities.rows) {
     const entityId = row.entity_id as string;
@@ -55,7 +57,9 @@ async function run(): Promise<void> {
         continue;
       }
 
+      if (llmCalls > 0) await new Promise((r) => setTimeout(r, LLM_DELAY_MS));
       const result = await generateNarrative(entityId);
+      llmCalls++;
       if (!result) { skipped++; continue; }
 
       await db.execute({
@@ -68,7 +72,9 @@ async function run(): Promise<void> {
       continue;
     }
 
+    if (llmCalls > 0) await new Promise((r) => setTimeout(r, LLM_DELAY_MS));
     const result = await generateNarrative(entityId);
+    llmCalls++;
     if (!result) { skipped++; continue; }
 
     await db.execute({
