@@ -56,8 +56,10 @@ export function streamChatComposite(
   plan: QueryPlan,
   context: RetrievalResult,
   prebuiltContextBlock: string,
+  onMessagePersisted?: (messageId: string) => void,
+  subQueries?: string[],
 ): ReadableStream {
-  return buildStream(sessionId, message, plan, context, prebuiltContextBlock);
+  return buildStream(sessionId, message, plan, context, prebuiltContextBlock, onMessagePersisted, subQueries);
 }
 
 export function streamChat(
@@ -82,6 +84,7 @@ function buildStream(
   context: RetrievalResult,
   contextBlock: string,
   onMessagePersisted?: (messageId: string) => void,
+  subQueries?: string[],
 ): ReadableStream {
   const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
@@ -160,6 +163,7 @@ function buildStream(
         if (narrativesMeta) donePayload.narratives = narrativesMeta;
         if (memoryMeta) donePayload.memory_episodes = memoryMeta;
         if (resourcesMeta) donePayload.resources = resourcesMeta;
+        if (subQueries?.length) donePayload.sub_queries = subQueries;
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(donePayload)}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();

@@ -108,7 +108,18 @@ chatRoutes.post('/', async (c) => {
 
   if (plan.isComposite && plan.subqueries.length > 1) {
     const decomposed = await decomposeAndRetrieve(plan.subqueries);
-    stream = streamChatComposite(sessionId, body.message, plan, decomposed.mergedContext, decomposed.contextBlock);
+    stream = streamChatComposite(sessionId, body.message, plan, decomposed.mergedContext, decomposed.contextBlock, (messageId) => {
+      const topIds = decomposed.mergedContext.events.slice(0, 5).map((e) => e.id);
+      const activeLanes = [...new Set(decomposed.mergedContext.events.flatMap((e) => e.lanes))];
+      recordRetrievalOutcome(
+        messageId,
+        sessionId,
+        plan.intent,
+        {} as Record<string, number>,
+        activeLanes as string[],
+        topIds,
+      ).catch(() => {});
+    }, decomposed.subqueries);
   } else {
     let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [], causalLinks: [], resourceChunks: [] };
     let corrected = false;

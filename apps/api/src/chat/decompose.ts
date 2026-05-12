@@ -1,14 +1,18 @@
 import { buildQueryPlan } from './planner';
 import type { QueryPlan } from './planner';
 import { retrieveContext } from './retrieve';
+import { getActiveWeights } from './lanes/merge';
 import { embedQuery } from '../embeddings/voyage';
 import type { RetrievalResult, RankedEvent } from './lanes/types';
 import { buildContextBlock } from './prompt';
 import type { ResourceChunk } from '../resources/retrieve';
+import type { MemoryEpisode } from '../memory/types';
+import type { CausalLink } from './lanes/types';
 
 const MAX_SUBQUERIES = 6;
 const MAX_MERGED_EVENTS = 25;
 const MAX_CONTEXT_CHARS = 60_000;
+const SUBQUERY_TIMEOUT_MS = 15_000;
 
 export type SubqueryResult = {
   subquery: string;
@@ -20,9 +24,18 @@ export type DecomposedResult = {
   subResults: SubqueryResult[];
   mergedContext: RetrievalResult;
   contextBlock: string;
+  subqueries: string[];
 };
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('subquery_timeout')), ms)),
+  ]);
+}
+
 async function runSubquery(subquery: string): Promise<SubqueryResult> {
+  const { weights } = await getActiveWeights();
   const [plan, embedding] = await Promise.all([
     buildQueryPlan(subquery),
     embedQuery(subquery).catch(() => [] as number[]),
@@ -32,7 +45,7 @@ async function runSubquery(subquery: string): Promise<SubqueryResult> {
   plan.isComposite = false;
   plan.subqueries = [];
 
-  const context = await retrieveContext(plan, embedding);
+  const context = await retrieveContext(plan, embedding, weights);
   return { subquery, plan, context };
 }
 
@@ -49,6 +62,35 @@ function deduplicateResourceChunks(subResults: SubqueryResult[]): ResourceChunk[
     }
   }
   return chunks.sort((a, b) => b.score - a.score).slice(0, 5);
+}
+
+function deduplicateMemoryEpisodes(subResults: SubqueryResult[]): MemoryEpisode[] {
+  const seen = new Set<string>();
+  const episodes: MemoryEpisode[] = [];
+  for (const sr of subResults) {
+    for (const ep of sr.context.memoryEpisodes) {
+      if (!seen.has(ep.id)) {
+        seen.add(ep.id);
+        episodes.push(ep);
+      }
+    }
+  }
+  return episodes.slice(0, 5);
+}
+
+function deduplicateCausalLinks(subResults: SubqueryResult[]): CausalLink[] {
+  const seen = new Set<string>();
+  const links: CausalLink[] = [];
+  for (const sr of subResults) {
+    for (const cl of sr.context.causalLinks) {
+      const key = `${cl.causeSeries}→${cl.effectSeries}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        links.push(cl);
+      }
+    }
+  }
+  return links.sort((a, b) => a.pValue - b.pValue).slice(0, 5);
 }
 
 function mergeRetrievalResults(subResults: SubqueryResult[]): RetrievalResult {
@@ -88,8 +130,8 @@ function mergeRetrievalResults(subResults: SubqueryResult[]): RetrievalResult {
     communitySummaries: Array.from(communityMap.values()).slice(0, 5),
     sqlResults: subResults.flatMap((sr) => sr.context.sqlResults).slice(0, 3),
     narratives: Array.from(narrativeMap.values()).slice(0, 5),
-    memoryEpisodes: subResults[0]?.context.memoryEpisodes ?? [],
-    causalLinks: subResults[0]?.context.causalLinks ?? [],
+    memoryEpisodes: deduplicateMemoryEpisodes(subResults),
+    causalLinks: deduplicateCausalLinks(subResults),
     resourceChunks: deduplicateResourceChunks(subResults),
   };
 }
@@ -128,9 +170,24 @@ export async function decomposeAndRetrieve(
   subqueries: string[],
 ): Promise<DecomposedResult> {
   const capped = subqueries.slice(0, MAX_SUBQUERIES);
-  const subResults = await Promise.all(capped.map(runSubquery));
+
+  const settled = await Promise.allSettled(
+    capped.map((sq) => withTimeout(runSubquery(sq), SUBQUERY_TIMEOUT_MS)),
+  );
+
+  const subResults: SubqueryResult[] = [];
+  for (const result of settled) {
+    if (result.status === 'fulfilled') {
+      subResults.push(result.value);
+    }
+  }
+
+  if (subResults.length === 0) {
+    throw new Error('All sub-queries failed');
+  }
+
   const mergedContext = mergeRetrievalResults(subResults);
   const contextBlock = buildLabeledContextBlock(subResults, mergedContext);
 
-  return { subResults, mergedContext, contextBlock };
+  return { subResults, mergedContext, contextBlock, subqueries: subResults.map((sr) => sr.subquery) };
 }

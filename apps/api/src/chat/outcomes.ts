@@ -30,9 +30,23 @@ export async function labelOutcome(
   messageId: string,
   label: 'up' | 'down' | 'implicit_negative',
 ): Promise<void> {
+  if (label === 'implicit_negative') {
+    await db.execute({
+      sql: `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND outcome_label IS NULL`,
+      args: [label, messageId],
+    });
+  } else {
+    await db.execute({
+      sql: `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ?`,
+      args: [label, messageId],
+    });
+  }
+}
+
+export async function clearOutcomeLabel(messageId: string): Promise<void> {
   await db.execute({
-    sql: `UPDATE retrieval_outcomes SET outcome_label = ? WHERE message_id = ? AND outcome_label IS NULL`,
-    args: [label, messageId],
+    sql: `UPDATE retrieval_outcomes SET outcome_label = NULL WHERE message_id = ?`,
+    args: [messageId],
   });
 }
 

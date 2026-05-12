@@ -108,7 +108,7 @@
     <ChatInput onsend={send} />
   </div>
 
-  {#if sourcesOpen && (lastSources.length > 0 || lastMessage?.sql_query || lastMessage?.community_summaries?.length)}
+  {#if sourcesOpen && (lastSources.length > 0 || lastMessage?.sql_query || lastMessage?.community_summaries?.length || lastMessage?.narratives?.length || lastMessage?.memory_episodes?.length || lastMessage?.resources?.length || lastMessage?.sub_queries?.length)}
     <ChatSources sources={lastSources} message={lastMessage} onclose={() => { sourcesOpen = false; }} />
   {/if}
 </div>

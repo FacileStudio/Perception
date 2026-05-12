@@ -83,6 +83,55 @@
         {/each}
       {/if}
 
+      {#if message?.sub_queries && message.sub_queries.length > 0}
+        <div class="flex flex-col gap-1.5 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3">
+          <div class="flex items-center gap-2">
+            <Icon icon="solar:branching-paths-up-bold-duotone" class="size-4 text-amber-500" />
+            <span class="text-xs font-medium text-amber-700">Composite query</span>
+          </div>
+          <ol class="ml-4 list-decimal text-xs leading-relaxed text-amber-600">
+            {#each message.sub_queries as sq}
+              <li>{sq}</li>
+            {/each}
+          </ol>
+        </div>
+      {/if}
+
+      {#if message?.memory_episodes && message.memory_episodes.length > 0}
+        {#each message.memory_episodes as ep}
+          <div class="flex flex-col gap-1.5 rounded-2xl border border-sky-200/80 bg-sky-50/50 p-3">
+            <div class="flex items-center gap-2">
+              <Icon icon="solar:brain-bold-duotone" class="size-4 text-sky-500" />
+              <span class="text-xs font-medium text-sky-700">Memory episode</span>
+            </div>
+            <p class="text-xs leading-relaxed text-sky-600">{ep.summary}</p>
+            {#if ep.entities.length > 0}
+              <div class="flex flex-wrap gap-1">
+                {#each ep.entities as entity}
+                  <Badge variant="outline" class="rounded-full border-sky-200 text-[10px] text-sky-600">
+                    {entity}
+                  </Badge>
+                {/each}
+              </div>
+            {/if}
+            <span class="font-mono text-[10px] text-sky-400">{ep.occurred}</span>
+          </div>
+        {/each}
+      {/if}
+
+      {#if message?.resources && message.resources.length > 0}
+        {#each message.resources as r}
+          <div class="flex flex-col gap-1.5 rounded-2xl border border-orange-200/80 bg-orange-50/50 p-3">
+            <div class="flex items-center gap-2">
+              <Icon icon="solar:file-text-bold-duotone" class="size-4 text-orange-500" />
+              <span class="text-xs font-medium text-orange-700">{r.title}</span>
+            </div>
+            <p class="text-xs leading-relaxed text-orange-600">{r.content}</p>
+            <span class="font-mono text-[10px] text-orange-400">chunk {r.chunk_index}</span>
+          </div>
+        {/each}
+      {/if}
+
       {#each sources as src}
         <div class="flex flex-col gap-1 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3">
           <span class="text-xs font-medium text-zinc-900">{src.title}</span>

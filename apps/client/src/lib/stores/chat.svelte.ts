@@ -1,4 +1,4 @@
-import { api, type ChatMessage, type ChatSessionSummary, type ChatSource, type SqlQueryMeta, type CommunitySummaryMeta, type NarrativeMeta } from '$lib/api';
+import { api, type ChatMessage, type ChatSessionSummary, type ChatSource, type SqlQueryMeta, type CommunitySummaryMeta, type NarrativeMeta, type MemoryEpisodeMeta, type ResourceMeta } from '$lib/api';
 
 export const chatState = $state({
   sessionId: null as string | null,
@@ -135,6 +135,9 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
             sql_query?: SqlQueryMeta;
             community_summaries?: CommunitySummaryMeta[];
             narratives?: NarrativeMeta[];
+            memory_episodes?: MemoryEpisodeMeta[];
+            resources?: ResourceMeta[];
+            sub_queries?: string[];
           };
           if (parsed.session_id && !sessionId) {
             sessionId = parsed.session_id;
@@ -160,6 +163,15 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
           }
           if (parsed.narratives?.length) {
             chatState.messages[idx].narratives = parsed.narratives;
+          }
+          if (parsed.memory_episodes?.length) {
+            chatState.messages[idx].memory_episodes = parsed.memory_episodes;
+          }
+          if (parsed.resources?.length) {
+            chatState.messages[idx].resources = parsed.resources;
+          }
+          if (parsed.sub_queries?.length) {
+            chatState.messages[idx].sub_queries = parsed.sub_queries;
           }
         } catch (error) {
           if (error instanceof Error) throw error;

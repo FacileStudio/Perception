@@ -90,6 +90,34 @@
                   {/each}
                 </div>
               {/if}
+              {#if msg.sub_queries && msg.sub_queries.length > 0}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                    <Icon icon="solar:branching-paths-up-bold-duotone" class="size-3" />
+                    {msg.sub_queries.length} sub-queries
+                  </span>
+                </div>
+              {/if}
+              {#if msg.memory_episodes && msg.memory_episodes.length > 0}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  {#each msg.memory_episodes as ep}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700" title={ep.summary}>
+                      <Icon icon="solar:brain-bold-duotone" class="size-3" />
+                      Memory · {ep.occurred.slice(0, 10)}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
+              {#if msg.resources && msg.resources.length > 0}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  {#each msg.resources as r}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700" title={r.content}>
+                      <Icon icon="solar:file-text-bold-duotone" class="size-3" />
+                      {r.title}
+                    </span>
+                  {/each}
+                </div>
+              {/if}
               {#if msg.sources && msg.sources.length > 0}
                 <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
                   {#each msg.sources as src}
