@@ -3,52 +3,29 @@
   import { api } from '$lib/api';
   import type { GraphEntity, EntityRelation, CommunityDetail, EntityNarrativeDetail } from '$lib/api';
   import { buildTitle } from '$lib/head';
+  import { Card } from '$lib/components/ui/card';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Button } from '$lib/components/ui/button';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
   ensureSolar();
+
+  const PAGE_SIZE = 20;
 
   let loading = $state(true);
   let empty = $state(false);
   let entityCount = $state(0);
   let relationCount = $state(0);
   let viewMode = $state<'list' | 'communities'>('list');
+  let entityPage = $state(1);
+  let communityPage = $state(1);
+
   let communities = $state<CommunityDetail[]>([]);
   let loadingCommunities = $state(false);
   let narrativesMap = $state<Map<string, EntityNarrativeDetail>>(new Map());
-  let loadingNarratives = $state(false);
 
   let entities: GraphEntity[] = [];
   let relations: EntityRelation[] = [];
-
-  function setMode(m: 'list' | 'communities') {
-    viewMode = m;
-    if (m === 'communities' && communities.length === 0) loadCommunities();
-    if (m === 'list' && narrativesMap.size === 0) loadNarratives();
-  }
-
-  async function loadNarratives() {
-    loadingNarratives = true;
-    try {
-      const data = await api.entities.narratives();
-      const map = new Map<string, EntityNarrativeDetail>();
-      for (const n of data.narratives) map.set(n.entity_id, n);
-      narrativesMap = map;
-    } catch {
-      narrativesMap = new Map();
-    }
-    loadingNarratives = false;
-  }
-
-  async function loadCommunities() {
-    loadingCommunities = true;
-    try {
-      const data = await api.entities.communities();
-      communities = data.communities;
-    } catch {
-      communities = [];
-    }
-    loadingCommunities = false;
-  }
 
   const COLORS: [string, string][] = [
     ['deployment', '#6366f1'],
@@ -79,6 +56,34 @@
     return '#6b7280';
   }
 
+  function setMode(m: 'list' | 'communities') {
+    viewMode = m;
+    if (m === 'communities' && communities.length === 0) loadCommunities();
+    if (m === 'list' && narrativesMap.size === 0) loadNarratives();
+  }
+
+  async function loadNarratives() {
+    try {
+      const data = await api.entities.narratives();
+      const map = new Map<string, EntityNarrativeDetail>();
+      for (const n of data.narratives) map.set(n.entity_id, n);
+      narrativesMap = map;
+    } catch {
+      narrativesMap = new Map();
+    }
+  }
+
+  async function loadCommunities() {
+    loadingCommunities = true;
+    try {
+      const data = await api.entities.communities();
+      communities = data.communities;
+    } catch {
+      communities = [];
+    }
+    loadingCommunities = false;
+  }
+
   let adjacency = $derived.by(() => {
     const entityMap = new Map<string, GraphEntity>();
     for (const e of entities) entityMap.set(e.id, e);
@@ -95,6 +100,12 @@
       .map((entity) => ({ entity, connections: adjMap.get(entity.id) ?? [] }))
       .sort((a, b) => b.entity.event_count - a.entity.event_count);
   });
+
+  let entityTotalPages = $derived(Math.ceil(adjacency.length / PAGE_SIZE));
+  let pagedAdjacency = $derived(adjacency.slice((entityPage - 1) * PAGE_SIZE, entityPage * PAGE_SIZE));
+
+  let communityTotalPages = $derived(Math.ceil(communities.length / PAGE_SIZE));
+  let pagedCommunities = $derived(communities.slice((communityPage - 1) * PAGE_SIZE, communityPage * PAGE_SIZE));
 
   async function loadGraph() {
     try {
@@ -121,131 +132,138 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="shrink-0 border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-    <div class="flex flex-wrap items-center gap-3">
-      <span class="text-sm font-medium text-zinc-900">Entity Graph</span>
-      <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-500">
-        {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
-      </span>
-      {#if relationCount > 0}
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-500">
-          {relationCount} {relationCount === 1 ? 'relation' : 'relations'}
-        </span>
-      {/if}
-      <div class="ml-auto flex flex-wrap items-center gap-3 text-[11px] text-zinc-400">
-        {#if viewMode === 'communities'}
-          <span>{communities.length} {communities.length === 1 ? 'community' : 'communities'}</span>
-        {/if}
+  <div class="border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div class="flex gap-0.5 rounded-xl border border-zinc-200/80 bg-zinc-50 p-0.5">
+        <button
+          class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+          onclick={() => setMode('list')}
+        >
+          <Icon icon="solar:list-linear" class="size-3.5" />
+          Entities
+        </button>
+        <button
+          class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'communities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
+          onclick={() => setMode('communities')}
+        >
+          <Icon icon="solar:users-group-rounded-linear" class="size-3.5" />
+          Communities
+        </button>
       </div>
+      <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-zinc-400 lg:ml-auto">
+        <Icon icon="solar:graph-bold-duotone" class="size-4" />
+        {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
+        {#if relationCount > 0}
+          · {relationCount} {relationCount === 1 ? 'relation' : 'relations'}
+        {/if}
+      </span>
     </div>
   </div>
 
-  <div class="relative min-h-0 flex-1 bg-[#f4f4f5]">
-    <div class="absolute left-3 top-3 z-20 flex gap-0.5 rounded-xl border border-zinc-200/80 bg-white/80 p-0.5 shadow-sm backdrop-blur-md">
-      <button
-        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => setMode('list')}
-      >
-        <Icon icon="solar:list-linear" class="size-3.5" />
-        List
-      </button>
-      <button
-        class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'communities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-        onclick={() => setMode('communities')}
-      >
-        <Icon icon="solar:users-group-rounded-linear" class="size-3.5" />
-        Communities
-      </button>
-    </div>
-
+  <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
     {#if loading}
-      <div class="flex items-center justify-center pt-20">
-        <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin text-zinc-400" />
+      <div class="flex items-center justify-center py-12">
+        <span class="text-sm text-zinc-400">Loading...</span>
       </div>
     {:else if empty}
-      <div class="flex flex-col items-center justify-center gap-2 pt-20 text-center">
-        <span class="text-sm text-zinc-500">No entities resolved yet.</span>
-        <span class="text-xs text-zinc-400">Entities appear here as events are ingested.</span>
+      <div class="flex items-center justify-center py-12">
+        <span class="text-sm text-zinc-400">No entities resolved yet.</span>
       </div>
     {:else if viewMode === 'list'}
-      <div class="absolute inset-0 overflow-y-auto p-4 pt-16">
-        <div class="mx-auto max-w-2xl space-y-2 pb-4">
-          {#each adjacency as { entity, connections }}
-            <div class="rounded-xl border border-zinc-200/80 bg-white px-4 py-3 shadow-sm">
-              <div class="flex items-center gap-2.5">
+      <div class="flex flex-col gap-3">
+        {#each pagedAdjacency as { entity, connections }}
+          <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center gap-2">
                 <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(entity.type_label)}"></span>
-                <span class="text-sm font-medium text-zinc-900">{entity.canonical_name}</span>
-                <span class="ml-auto font-mono text-[11px] text-zinc-400">{entity.type_label}</span>
-                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-500">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
+                <p class="text-sm font-medium text-zinc-900">{entity.canonical_name}</p>
+                <Badge variant="secondary" class="font-mono">{entity.type_label}</Badge>
+                <span class="ml-auto text-xs text-zinc-400">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
               </div>
               {#if narrativesMap.has(entity.id)}
-                <p class="mt-2 border-t border-emerald-100 pt-2 text-xs leading-relaxed text-emerald-700">
-                  {narrativesMap.get(entity.id)!.text}
-                </p>
+                <p class="text-sm text-zinc-500">{narrativesMap.get(entity.id)!.text}</p>
               {/if}
               {#if connections.length > 0}
-                <div class="mt-2 space-y-1 border-t border-zinc-100 pt-2">
-                  {#each connections as { other, label }}
-                    <div class="flex items-center gap-2 text-xs">
-                      <span class="text-zinc-300">→</span>
-                      <span class="font-medium text-zinc-700">{other.canonical_name}</span>
-                      <span class="ml-auto font-mono text-[10px] text-zinc-400">{label.replace(/_/g, ' ')}</span>
-                    </div>
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                  {#each connections.slice(0, 8) as { other, label }}
+                    <Badge variant="outline" class="font-mono">
+                      {other.canonical_name}
+                      <span class="ml-1 text-zinc-400">{label.replace(/_/g, ' ')}</span>
+                    </Badge>
                   {/each}
+                  {#if connections.length > 8}
+                    <span class="text-xs text-zinc-400">+{connections.length - 8} more</span>
+                  {/if}
                 </div>
               {/if}
             </div>
-          {/each}
-        </div>
+          </Card>
+        {/each}
       </div>
     {:else if viewMode === 'communities'}
-      <div class="absolute inset-0 overflow-y-auto p-4 pt-16">
-        <div class="mx-auto max-w-2xl space-y-3 pb-4">
-          {#if loadingCommunities}
-            <div class="flex items-center justify-center py-16">
-              <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin text-zinc-400" />
-            </div>
-          {:else if communities.length === 0}
-            <div class="flex flex-col items-center justify-center gap-2 py-16 text-center">
-              <Icon icon="solar:users-group-rounded-bold-duotone" class="size-10 text-zinc-300" />
-              <p class="text-sm text-zinc-500">No communities detected yet.</p>
-              <p class="text-xs text-zinc-400">Run the communities worker from Settings to generate clusters.</p>
-            </div>
-          {:else}
-            {#each communities as comm, ci}
-              <div class="rounded-2xl border border-zinc-200/80 bg-white shadow-sm">
-                <div class="flex items-start gap-3 px-5 py-4">
-                  <span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-semibold text-violet-600">
-                    {ci + 1}
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-semibold text-zinc-900">{comm.title}</span>
-                      {#if comm.stale}
-                        <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-600">stale</span>
-                      {/if}
-                    </div>
-                    <p class="mt-1 text-xs leading-relaxed text-zinc-500">{comm.summary}</p>
-                    <div class="mt-2.5 flex flex-wrap gap-1.5">
-                      {#each comm.members as member}
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[11px] font-medium text-zinc-700">
-                          <span class="size-1.5 shrink-0 rounded-full" style="background:{colorFor(member.type_label)}"></span>
-                          {member.name}
-                        </span>
-                      {/each}
-                    </div>
-                    <div class="mt-2.5 flex items-center gap-3 text-[11px] text-zinc-400">
-                      <span class="font-mono">{comm.member_count} entities</span>
-                      <span>importance {(comm.importance * 100).toFixed(0)}%</span>
-                      <span>{new Date(comm.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            {/each}
-          {/if}
+      {#if loadingCommunities}
+        <div class="flex items-center justify-center py-12">
+          <span class="text-sm text-zinc-400">Loading...</span>
         </div>
-      </div>
+      {:else if communities.length === 0}
+        <div class="flex items-center justify-center py-12">
+          <span class="text-sm text-zinc-400">No communities detected yet.</span>
+        </div>
+      {:else}
+        <div class="flex flex-col gap-3">
+          {#each pagedCommunities as comm, ci}
+            <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-2">
+                  <Badge variant="secondary">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
+                  <p class="text-sm font-medium text-zinc-900">{comm.title}</p>
+                  {#if comm.stale}
+                    <Badge variant="outline" class="text-amber-600">stale</Badge>
+                  {/if}
+                  <span class="ml-auto text-xs text-zinc-400">
+                    {comm.member_count} {comm.member_count === 1 ? 'entity' : 'entities'} · {(comm.importance * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <p class="text-sm text-zinc-500">{comm.summary}</p>
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                  {#each comm.members.slice(0, 10) as member}
+                    <Badge variant="outline" class="font-mono">
+                      <span class="mr-1.5 size-1.5 shrink-0 rounded-full" style="background:{colorFor(member.type_label)}"></span>
+                      {member.name}
+                    </Badge>
+                  {/each}
+                  {#if comm.members.length > 10}
+                    <span class="text-xs text-zinc-400">+{comm.members.length - 10} more</span>
+                  {/if}
+                </div>
+                <span class="text-xs text-zinc-400">
+                  {new Date(comm.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </span>
+              </div>
+            </Card>
+          {/each}
+        </div>
+      {/if}
     {/if}
   </div>
+
+  {#if viewMode === 'list' && entityTotalPages > 1}
+    <div class="border-t border-zinc-200/80 bg-white/90 px-4 py-3 sm:px-6">
+      <div class="flex items-center justify-between">
+        <Button variant="outline" size="sm" onclick={() => { if (entityPage > 1) entityPage -= 1; }} disabled={entityPage <= 1}>Prev</Button>
+        <span class="text-xs text-zinc-500">Page {entityPage} of {entityTotalPages}</span>
+        <Button variant="outline" size="sm" onclick={() => { if (entityPage < entityTotalPages) entityPage += 1; }} disabled={entityPage >= entityTotalPages}>Next</Button>
+      </div>
+    </div>
+  {/if}
+
+  {#if viewMode === 'communities' && communityTotalPages > 1}
+    <div class="border-t border-zinc-200/80 bg-white/90 px-4 py-3 sm:px-6">
+      <div class="flex items-center justify-between">
+        <Button variant="outline" size="sm" onclick={() => { if (communityPage > 1) communityPage -= 1; }} disabled={communityPage <= 1}>Prev</Button>
+        <span class="text-xs text-zinc-500">Page {communityPage} of {communityTotalPages}</span>
+        <Button variant="outline" size="sm" onclick={() => { if (communityPage < communityTotalPages) communityPage += 1; }} disabled={communityPage >= communityTotalPages}>Next</Button>
+      </div>
+    </div>
+  {/if}
 </div>
