@@ -18,8 +18,7 @@
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
-  let pendingFiles = $state<Array<{ name: string; size: number }>>([]);
-  let encodedFiles: Array<{ name: string; type: string; data: string }> = [];
+  let pendingFiles = $state<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
@@ -69,30 +68,33 @@
     }
   }
 
-  async function handleFileSelect(e: Event) {
+  function handleFileSelect(e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     if (!input.files?.length) return;
-    const files = Array.from(input.files);
-    pendingFiles = files.map((f) => ({ name: f.name, size: f.size }));
-    encodedFiles = [];
-    for (const f of files) {
-      const data = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(f);
-      });
-      encodedFiles.push({ name: f.name, type: f.type || fileMime(f), data });
-    }
+    pendingFiles = Array.from(input.files);
+  }
+
+  function readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve((r.result as string).substring((r.result as string).indexOf(',') + 1));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
   }
 
   async function handleUpload() {
-    if (!encodedFiles.length || uploading) return;
+    if (!pendingFiles.length || uploading) return;
     uploading = true;
+    error = '';
     try {
-      await api.resources.upload(encodedFiles);
+      const encoded: Array<{ name: string; type: string; data: string }> = [];
+      for (const f of pendingFiles) {
+        const data = await readFileAsBase64(f);
+        encoded.push({ name: f.name, type: f.type || fileMime(f), data });
+      }
+      await api.resources.upload(encoded);
       showUpload = false;
-      encodedFiles = [];
       pendingFiles = [];
       await load();
     } catch (e) {
@@ -216,7 +218,7 @@
           variant="outline"
           size="sm"
           class="rounded-full"
-          onclick={() => { showUpload = false; encodedFiles = []; pendingFiles = []; }}
+          onclick={() => { showUpload = false; pendingFiles = []; }}
         >
           Cancel
         </Button>
