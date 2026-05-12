@@ -150,7 +150,15 @@ export type CommunitySummaryMeta = { title: string; summary: string; member_coun
 export type NarrativeMeta = { entity_name: string; narrative: string; event_count: number };
 export type MemoryEpisodeMeta = { summary: string; entities: string[]; occurred: string };
 export type ResourceMeta = { title: string; chunk_index: number; content: string };
-export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null; sql_query?: SqlQueryMeta | null; community_summaries?: CommunitySummaryMeta[] | null; narratives?: NarrativeMeta[] | null; memory_episodes?: MemoryEpisodeMeta[] | null; resources?: ResourceMeta[] | null; sub_queries?: string[] | null };
+export type CounterfactualMeta = {
+  scenario: string;
+  confidence: string;
+  affected_count: number;
+  causal_chain: Array<{ cause: string; effect: string; lag_days: number; p_value: number; coefficient: number }>;
+  affected_entities: Array<{ series: string; direction: string; magnitude: number; probability: number; lag_days: number }>;
+  distribution: { p10: number; p25: number; p50: number; p75: number; p90: number } | null;
+};
+export type ChatMessage = { role: 'user' | 'assistant'; content: string; sources?: ChatSource[]; id?: string; feedback?: 'up' | 'down' | null; sql_query?: SqlQueryMeta | null; community_summaries?: CommunitySummaryMeta[] | null; narratives?: NarrativeMeta[] | null; memory_episodes?: MemoryEpisodeMeta[] | null; resources?: ResourceMeta[] | null; sub_queries?: string[] | null; counterfactual?: CounterfactualMeta | null };
 export type EntityNarrativeDetail = { entity_name: string; text: string; source_event_count: number; generated_at: string; staleness_score: number };
 export type ChatSource = { event_id: string; provider_name: string; occurred_at: string; title: string; score: number };
 export type EntityCommunity = { id: string; title: string; summary: string; importance: number; member_count: number; member_names: string[] };

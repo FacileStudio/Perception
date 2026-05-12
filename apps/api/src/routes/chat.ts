@@ -6,6 +6,8 @@ import type { RetrievalResult, RetrievalMeta } from '../chat/retrieve';
 import { streamChat, streamChatComposite } from '../chat/stream';
 import { decomposeAndRetrieve, type DecomposedResult } from '../chat/decompose';
 import { getActiveWeights } from '../chat/lanes/merge';
+import { runCounterfactual } from '../chat/counterfactual';
+import { buildCounterfactualBlock, buildContextBlock } from '../chat/prompt';
 import { embedQuery } from '../embeddings/voyage';
 import {
   loadSessionSummaries,
@@ -107,6 +109,56 @@ chatRoutes.post('/', async (c) => {
   let stream: ReadableStream;
   let retrievalMeta: RetrievalMeta | null = null;
 
+  if (plan.intent === 'counterfactual' && plan.counterfactual) {
+    const [cfResult, retrievalResult] = await Promise.all([
+      runCounterfactual(plan.counterfactual),
+      retrieveWithCorrection(plan, queryEmbedding),
+    ]);
+    const context = retrievalResult;
+    retrievalMeta = retrievalResult.meta;
+
+    const cfBlock = buildCounterfactualBlock(cfResult);
+    const baseBlock = context.events.length > 0
+      ? buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults, context.narratives, context.memoryEpisodes, context.causalLinks, context.resourceChunks)
+      : '';
+    const fullBlock = cfBlock + (baseBlock ? '\n\n' + baseBlock : '');
+
+    const cfMeta = {
+      scenario: cfResult.scenario,
+      confidence: cfResult.confidence,
+      affected_count: cfResult.affectedEntities.length,
+      causal_chain: cfResult.causalChain.map((s) => ({
+        cause: s.cause,
+        effect: s.effect,
+        lag_days: s.lagDays,
+        p_value: s.pValue,
+        coefficient: s.coefficient,
+      })),
+      affected_entities: cfResult.affectedEntities.map((e) => ({
+        series: e.series,
+        direction: e.direction,
+        magnitude: e.magnitude,
+        probability: e.probability,
+        lag_days: e.lagDays,
+      })),
+      distribution: cfResult.distribution,
+    };
+
+    stream = streamChatComposite(sessionId, body.message, plan, context, fullBlock, (messageId) => {
+      if (retrievalMeta) {
+        const topIds = context.events.slice(0, 5).map((e) => e.id);
+        recordRetrievalOutcome(
+          messageId,
+          sessionId,
+          plan.intent,
+          retrievalMeta.laneWeights as Record<string, number>,
+          retrievalMeta.activeLanes as string[],
+          topIds,
+        ).catch(() => {});
+      }
+    }, undefined, cfMeta);
+  } else {
+
   let compositeResult: DecomposedResult | null = null;
   let compositeWeights: Record<string, number> = {};
 
@@ -156,6 +208,8 @@ chatRoutes.post('/', async (c) => {
       }
     });
   }
+
+  } // end counterfactual else
 
   return new Response(stream, {
     headers: {

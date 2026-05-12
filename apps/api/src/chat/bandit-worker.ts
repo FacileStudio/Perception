@@ -6,7 +6,7 @@ import type { RetrievalSource } from './lanes/types';
 type Intent = QueryPlan['intent'];
 type WeightMatrix = Record<Intent, Record<RetrievalSource, number>>;
 
-const ALL_INTENTS: Intent[] = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative'];
+const ALL_INTENTS: Intent[] = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative', 'counterfactual'];
 const ALL_LANES: RetrievalSource[] = ['entity', 'fts', 'concept', 'sql', 'vector', 'stats', 'graph', 'community', 'text_to_sql'];
 
 function sampleBeta(alpha: number, beta: number): number {

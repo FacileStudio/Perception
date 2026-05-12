@@ -132,6 +132,62 @@
         {/each}
       {/if}
 
+      {#if message?.counterfactual}
+        <div class="flex flex-col gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/50 p-3">
+          <div class="flex items-center gap-2">
+            <Icon icon="solar:flask-bold-duotone" class="size-4 text-rose-500" />
+            <span class="text-xs font-medium text-rose-700">Counterfactual simulation</span>
+          </div>
+          <p class="text-xs leading-relaxed text-rose-600">{message.counterfactual.scenario}</p>
+          <div class="flex items-center gap-2">
+            <span class="rounded-full border px-2 py-0.5 text-[10px] font-medium {message.counterfactual.confidence === 'high' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : message.counterfactual.confidence === 'medium' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-zinc-200 bg-zinc-50 text-zinc-600'}">
+              {message.counterfactual.confidence} confidence
+            </span>
+          </div>
+          {#if message.counterfactual.causal_chain.length > 0}
+            <div class="mt-1">
+              <span class="text-[10px] font-medium text-rose-500">Causal chain</span>
+              <div class="mt-1 flex flex-col gap-1">
+                {#each message.counterfactual.causal_chain as step}
+                  <div class="flex items-center gap-1 text-[10px] text-rose-600">
+                    <span class="font-medium">{step.cause}</span>
+                    <Icon icon="solar:arrow-right-linear" class="size-3 shrink-0" />
+                    <span class="font-medium">{step.effect}</span>
+                    <span class="text-rose-400">({step.lag_days}d lag)</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+          {#if message.counterfactual.affected_entities.length > 0}
+            <div class="mt-1">
+              <span class="text-[10px] font-medium text-rose-500">Affected entities</span>
+              <div class="mt-1 flex flex-wrap gap-1">
+                {#each message.counterfactual.affected_entities as entity}
+                  <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 px-2 py-0.5 text-[10px] font-medium {entity.direction === 'increase' ? 'text-emerald-700 bg-emerald-50' : entity.direction === 'decrease' ? 'text-red-600 bg-red-50' : 'text-zinc-600 bg-zinc-50'}">
+                    {entity.direction === 'increase' ? '↑' : entity.direction === 'decrease' ? '↓' : '—'} {entity.series}
+                    <span class="text-[9px] opacity-60">{Math.round(entity.probability * 100)}%</span>
+                  </span>
+                {/each}
+              </div>
+            </div>
+          {/if}
+          {#if message.counterfactual.distribution}
+            <div class="mt-1">
+              <span class="text-[10px] font-medium text-rose-500">Monte Carlo distribution</span>
+              <div class="mt-1 grid grid-cols-5 gap-1 text-center">
+                {#each [['p10', message.counterfactual.distribution.p10], ['p25', message.counterfactual.distribution.p25], ['p50', message.counterfactual.distribution.p50], ['p75', message.counterfactual.distribution.p75], ['p90', message.counterfactual.distribution.p90]] as [label, val]}
+                  <div class="flex flex-col rounded-lg bg-rose-100/60 px-1.5 py-1">
+                    <span class="text-[9px] text-rose-400">{label}</span>
+                    <span class="font-mono text-[10px] font-medium text-rose-700">{typeof val === 'number' ? val.toFixed(1) : val}</span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       {#each sources as src}
         <div class="flex flex-col gap-1 rounded-2xl border border-zinc-200/80 bg-zinc-50/70 p-3">
           <span class="text-xs font-medium text-zinc-900">{src.title}</span>

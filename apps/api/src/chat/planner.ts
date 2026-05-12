@@ -24,8 +24,14 @@ async function getCatalog(): Promise<{ providers: string[]; entityTypes: string[
   return catalogCache;
 }
 
+export type CounterfactualScenario = {
+  entity: string;
+  mutation: string;
+  timeScope: string | null;
+};
+
 export type QueryPlan = {
-  intent: 'lookup' | 'trend' | 'status_check' | 'comparison' | 'anomaly' | 'narrative';
+  intent: 'lookup' | 'trend' | 'status_check' | 'comparison' | 'anomaly' | 'narrative' | 'counterfactual';
   timeWindow: { from: string; to: string } | null;
   compareWindow: { from: string; to: string } | null;
   providerFilters: string[];
@@ -40,6 +46,7 @@ export type QueryPlan = {
   isComposite: boolean;
   subqueries: string[];
   rawMessage: string;
+  counterfactual: CounterfactualScenario | null;
 };
 
 function buildPlannerSystem(providers: string[], entityTypes: string[], capabilities: string[]): string {
@@ -53,7 +60,7 @@ Available ontology capabilities: ${capabilities.join(', ') || 'none'}
 Output a single JSON object — no markdown, no code fences, no explanation:
 
 {
-  "intent": "lookup" | "trend" | "status_check" | "comparison" | "anomaly" | "narrative",
+  "intent": "lookup" | "trend" | "status_check" | "comparison" | "anomaly" | "narrative" | "counterfactual",
   "retrievalMode": "full" | "history" | "light",
   "providerFilters": string[],
   "entityHints": string[],
@@ -65,7 +72,8 @@ Output a single JSON object — no markdown, no code fences, no explanation:
   "queryTerms": string[],
   "capabilities": string[],
   "isComposite": boolean,
-  "subqueries": string[]
+  "subqueries": string[],
+  "counterfactual": { "entity": string, "mutation": string, "timeScope": string | null } | null
 }
 
 Field rules:
@@ -93,12 +101,17 @@ Field rules:
 - isComposite: true when the question requires multiple independent data lookups that span different entities, providers, or time periods. False for simple questions.
 - subqueries: when isComposite is true, decompose into 2-6 focused sub-questions. Each sub-query must be independently retrievable with no references to other sub-queries. Empty array when isComposite is false.
 - intent: classify the user's information need.
-    "lookup"       → finding specific entities, facts, or events
-    "trend"        → patterns over time, growth, decline, cadence
-    "status_check" → current state, health, latest activity
-    "comparison"   → comparing two periods or entities
-    "anomaly"      → unusual patterns, spikes, drops, alerts
-    "narrative"    → broad context, "tell me about", "what happened with"`;
+    "lookup"          → finding specific entities, facts, or events
+    "trend"           → patterns over time, growth, decline, cadence
+    "status_check"    → current state, health, latest activity
+    "comparison"      → comparing two periods or entities
+    "anomaly"         → unusual patterns, spikes, drops, alerts
+    "narrative"       → broad context, "tell me about", "what happened with"
+    "counterfactual"  → hypothetical scenarios: "what if", "if X had", "suppose", "had we", "imagine", "what would happen if"
+- counterfactual: when intent is "counterfactual", extract the scenario details:
+    { "entity": "the entity being modified", "mutation": "what hypothetical change to apply", "timeScope": "ISO8601 or null" }
+    Example: "what if client Acme had gone silent 3 months ago?" → { "entity": "Acme", "mutation": "zero activity", "timeScope": "3 months ago" }
+    Null when intent is not counterfactual.`;
 }
 
 function fallbackPlan(message: string): QueryPlan {
@@ -118,6 +131,7 @@ function fallbackPlan(message: string): QueryPlan {
     isComposite: false,
     subqueries: [],
     rawMessage: message,
+    counterfactual: null,
   };
 }
 
@@ -145,7 +159,7 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       ? (raw.retrievalMode as 'full' | 'history' | 'light')
       : 'full';
 
-    const validIntents = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative'] as const;
+    const validIntents = ['lookup', 'trend', 'status_check', 'comparison', 'anomaly', 'narrative', 'counterfactual'] as const;
     const intent = validIntents.includes(raw.intent) ? raw.intent : 'narrative';
 
     const compareWindow = intent === 'comparison'
@@ -170,6 +184,9 @@ export async function buildQueryPlan(message: string): Promise<QueryPlan> {
       isComposite: Boolean(raw.isComposite) && Array.isArray(raw.subqueries) && raw.subqueries.length > 1,
       subqueries: Array.isArray(raw.subqueries) ? raw.subqueries.filter((s: unknown) => typeof s === 'string').slice(0, 6) : [],
       rawMessage: message,
+      counterfactual: intent === 'counterfactual' && raw.counterfactual && typeof raw.counterfactual === 'object' && typeof raw.counterfactual.entity === 'string'
+        ? { entity: raw.counterfactual.entity, mutation: raw.counterfactual.mutation ?? '', timeScope: raw.counterfactual.timeScope ?? null }
+        : null,
     };
   } catch {
     return fallbackPlan(message);

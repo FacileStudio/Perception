@@ -50,6 +50,15 @@ function trimLatestUserEcho(history: ChatMessageRow[], message: string): ChatMes
   return history;
 }
 
+export type CounterfactualMeta = {
+  scenario: string;
+  confidence: string;
+  affected_count: number;
+  causal_chain: Array<{ cause: string; effect: string; lag_days: number; p_value: number; coefficient: number }>;
+  affected_entities: Array<{ series: string; direction: string; magnitude: number; probability: number; lag_days: number }>;
+  distribution: { p10: number; p25: number; p50: number; p75: number; p90: number } | null;
+};
+
 export function streamChatComposite(
   sessionId: string,
   message: string,
@@ -58,8 +67,9 @@ export function streamChatComposite(
   prebuiltContextBlock: string,
   onMessagePersisted?: (messageId: string) => void,
   subQueries?: string[],
+  counterfactual?: CounterfactualMeta,
 ): ReadableStream {
-  return buildStream(sessionId, message, plan, context, prebuiltContextBlock, onMessagePersisted, subQueries);
+  return buildStream(sessionId, message, plan, context, prebuiltContextBlock, onMessagePersisted, subQueries, counterfactual);
 }
 
 export function streamChat(
@@ -85,6 +95,7 @@ function buildStream(
   contextBlock: string,
   onMessagePersisted?: (messageId: string) => void,
   subQueries?: string[],
+  counterfactual?: CounterfactualMeta,
 ): ReadableStream {
   const systemPrompt = buildSystemPrompt(plan.retrievalMode);
 
@@ -164,6 +175,7 @@ function buildStream(
         if (memoryMeta) donePayload.memory_episodes = memoryMeta;
         if (resourcesMeta) donePayload.resources = resourcesMeta;
         if (subQueries?.length) donePayload.sub_queries = subQueries;
+        if (counterfactual) donePayload.counterfactual = counterfactual;
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(donePayload)}\n\n`));
         controller.enqueue(new TextEncoder().encode(`data: [DONE]\n\n`));
         controller.close();

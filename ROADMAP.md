@@ -355,18 +355,18 @@ Research-grade capabilities. High effort, unique differentiation.
 
 | Status | # | Task | Effort | Depends On |
 |--------|---|------|--------|------------|
-| [ ] | 6.1 | Counterfactual / what-if simulation | High | 4.2, 5.2 |
+| [x] | 6.1 | Counterfactual / what-if simulation | High | 4.2, 5.2 |
 | [ ] | 6.2 | Topological knowledge gap detection (TDA) | High | 2.1, 4.3 |
 
 ---
 
 ### 6.1 Counterfactual Simulation
 
-- [ ] Counterfactual query parser: detect "what if", "if X had", "suppose", "had we" patterns in planner
-- [ ] Fact mutation engine: clone relevant fact rows in memory (no DB write), apply delta or substitution
-- [ ] Structural mode: re-evaluate causal rules from `causal_links` with mutated facts, flag shifted downstream events
-- [ ] Probabilistic mode: sample N replications from causal lag distributions, return outcome distribution
-- [ ] Response format: `[COUNTERFACTUAL scenario=... probability=... outcome=...]` block — clearly labeled as simulation, not evidence
+- [x] Counterfactual query parser: detect "what if", "if X had", "suppose", "had we" patterns in planner — new `counterfactual` intent with structured scenario extraction (entity, mutation, timeScope)
+- [x] Fact mutation engine: clone relevant fact rows in memory (no DB write), apply delta or substitution — on-the-fly OLS coefficient estimation from `event_counts_daily`
+- [x] Structural mode: re-evaluate causal rules from `causal_links` with mutated facts, flag shifted downstream events — BFS propagation through causal DAG up to 3 hops with decay
+- [x] Probabilistic mode: sample N replications from causal lag distributions, return outcome distribution — 500-sample Monte Carlo with per-step Gaussian noise from residual variance
+- [x] Response format: `[COUNTERFACTUAL scenario=... confidence=... affected_count=...]` block — clearly labeled as simulation, not evidence, with causal chain + affected entities + distribution percentiles
 
 ---
 

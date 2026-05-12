@@ -240,7 +240,7 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const alwaysSql = intent === 'lookup';
   const isComparison = intent === 'comparison' && Boolean(plan.compareWindow);
   const forceStats = intent === 'trend' || intent === 'status_check' || intent === 'anomaly' || isComparison;
-  const shouldGraph = intent === 'narrative' || intent === 'lookup' || intent === 'anomaly';
+  const shouldGraph = intent === 'narrative' || intent === 'lookup' || intent === 'anomaly' || intent === 'counterfactual';
 
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
     skipVector ? Promise.resolve([]) : vectorLane(queryEmbedding),
@@ -258,7 +258,7 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const shouldTextToSql = plan.requiresSqlFacts && (intent === 'lookup' || intent === 'comparison' || intent === 'trend');
 
   const shouldMemory = plan.retrievalMode === 'full';
-  const shouldCausal = intent === 'anomaly';
+  const shouldCausal = intent === 'anomaly' || intent === 'counterfactual';
   const shouldResources = plan.retrievalMode === 'full';
 
   const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes, causalLinks, resourceChunks] = await Promise.all([

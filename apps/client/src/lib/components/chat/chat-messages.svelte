@@ -98,6 +98,19 @@
                   </span>
                 </div>
               {/if}
+              {#if msg.counterfactual}
+                <div class="mt-2 flex flex-wrap gap-1.5">
+                  <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">
+                    <Icon icon="solar:flask-bold-duotone" class="size-3" />
+                    Simulation · {msg.counterfactual.confidence} confidence
+                  </span>
+                  {#if msg.counterfactual.affected_count > 0}
+                    <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-600">
+                      {msg.counterfactual.affected_count} affected {msg.counterfactual.affected_count === 1 ? 'entity' : 'entities'}
+                    </span>
+                  {/if}
+                </div>
+              {/if}
               {#if msg.memory_episodes && msg.memory_episodes.length > 0}
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each msg.memory_episodes as ep}

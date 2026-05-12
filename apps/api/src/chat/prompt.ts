@@ -7,6 +7,7 @@ import type { EntityNarrative } from '../narratives/retrieve';
 import type { MemoryEpisode } from '../memory/types';
 import type { CausalLink } from './lanes/types';
 import type { ResourceChunk } from '../resources/retrieve';
+import type { CounterfactualResult } from './counterfactual';
 
 export function buildSystemPrompt(mode: QueryPlan['retrievalMode']): string {
   const base = `You are Perception, an operational intelligence assistant for Facile.
@@ -41,7 +42,8 @@ Rules:
   }
 
   return `${base}
-- All evidence is from real business events ingested from Nook.`;
+- All evidence is from real business events ingested from Nook.
+- For counterfactual/what-if questions: present the simulation results clearly, distinguish simulation from evidence, express uncertainty honestly, and explain the causal chain that drives the prediction. Always label hypothetical outcomes as simulations, not facts.`;
 }
 
 export function buildContextBlock(
@@ -138,4 +140,46 @@ export function buildContextBlock(
     return joined.slice(0, 60_000) + '\n[CONTEXT_TRUNCATED]';
   }
   return joined;
+}
+
+export function buildCounterfactualBlock(result: CounterfactualResult): string {
+  const lines: string[] = [];
+
+  lines.push(`[COUNTERFACTUAL scenario="${result.scenario}" confidence=${result.confidence} affected_count=${result.affectedEntities.length} sample_size=${result.sampleSize}]`);
+  lines.push(`Hypothetical intervention on: ${result.interventionEntity}`);
+  lines.push('');
+
+  if (result.causalChain.length > 0) {
+    lines.push('Causal chain (Granger-causality based):');
+    for (const step of result.causalChain) {
+      const dir = step.coefficient > 0 ? '+' : '-';
+      lines.push(`  ${step.cause} → ${step.effect} (lag: ${step.lagDays}d, p=${step.pValue.toFixed(4)}, coef: ${dir}${Math.abs(step.coefficient).toFixed(3)})`);
+    }
+    lines.push('');
+  }
+
+  if (result.affectedEntities.length > 0) {
+    lines.push('Downstream effects:');
+    for (const entity of result.affectedEntities) {
+      const prob = Math.round(entity.probability * 100);
+      lines.push(`  - ${entity.series}: ${entity.direction} (magnitude: ${entity.magnitude.toFixed(2)}, confidence: ${prob}%, lag: ${entity.lagDays}d, hops: ${entity.hopDistance})`);
+    }
+    lines.push('');
+  }
+
+  if (result.distribution) {
+    const d = result.distribution;
+    lines.push(`Monte Carlo simulation (${500} samples):`);
+    lines.push(`  p10=${d.p10.toFixed(2)} p25=${d.p25.toFixed(2)} p50=${d.p50.toFixed(2)} p75=${d.p75.toFixed(2)} p90=${d.p90.toFixed(2)}`);
+    lines.push('');
+  }
+
+  if (result.affectedEntities.length === 0 && result.causalChain.length === 0) {
+    lines.push('No causal links found involving this entity. The system cannot simulate downstream effects without established causal relationships.');
+    lines.push('');
+  }
+
+  lines.push('[/COUNTERFACTUAL]');
+
+  return lines.join('\n');
 }

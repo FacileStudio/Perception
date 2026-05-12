@@ -1,4 +1,4 @@
-import { api, type ChatMessage, type ChatSessionSummary, type ChatSource, type SqlQueryMeta, type CommunitySummaryMeta, type NarrativeMeta, type MemoryEpisodeMeta, type ResourceMeta } from '$lib/api';
+import { api, type ChatMessage, type ChatSessionSummary, type ChatSource, type SqlQueryMeta, type CommunitySummaryMeta, type NarrativeMeta, type MemoryEpisodeMeta, type ResourceMeta, type CounterfactualMeta } from '$lib/api';
 
 export const chatState = $state({
   sessionId: null as string | null,
@@ -139,6 +139,7 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
               memory_episodes?: MemoryEpisodeMeta[];
               resources?: ResourceMeta[];
               sub_queries?: string[];
+              counterfactual?: CounterfactualMeta;
             };
             if (parsed.session_id && !sessionId) {
               sessionId = parsed.session_id;
@@ -173,6 +174,9 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
             }
             if (parsed.sub_queries?.length) {
               chatState.messages[idx].sub_queries = parsed.sub_queries;
+            }
+            if (parsed.counterfactual) {
+              chatState.messages[idx].counterfactual = parsed.counterfactual;
             }
           } catch (error) {
             if (error instanceof Error) throw error;
