@@ -25,22 +25,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     const method = event.request.method;
     const hasBody = method !== 'GET' && method !== 'HEAD';
+    const body = hasBody ? await event.request.arrayBuffer() : null;
 
-    let body: ArrayBuffer | null = null;
-    if (hasBody) {
-      console.log(`[proxy] ${method} ${path} — reading body...`);
-      body = await event.request.arrayBuffer();
-      console.log(`[proxy] ${method} ${path} — body read: ${body.byteLength} bytes`);
-    }
-
-    console.log(`[proxy] ${method} ${url}`);
     const res = await fetch(url, {
       method,
       headers,
       body,
       redirect: 'manual',
     });
-    console.log(`[proxy] ${method} ${path} — upstream responded ${res.status}`);
 
     const responseHeaders = new Headers();
     for (const [key, value] of res.headers) {

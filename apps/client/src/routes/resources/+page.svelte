@@ -18,7 +18,7 @@
   let deleting = $state<string | null>(null);
   let showUpload = $state(false);
   let fileInput: HTMLInputElement | undefined;
-  let pendingFiles = $state<File[]>([]);
+  let pendingFiles = $state.raw<File[]>([]);
   let detail = $state<ResourceDetail | null>(null);
   let detailLoading = $state(false);
 
