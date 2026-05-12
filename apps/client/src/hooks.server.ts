@@ -15,34 +15,50 @@ export const handle: Handle = async ({ event, resolve }) => {
   const path = event.url.pathname.slice(4);
   const url = `${API_UPSTREAM}${path}${event.url.search}`;
 
-  const headers = new Headers();
-  for (const [key, value] of event.request.headers) {
-    if (!HOP_HEADERS.has(key.toLowerCase()) && key.toLowerCase() !== 'host') {
-      headers.set(key, value);
+  try {
+    const headers = new Headers();
+    for (const [key, value] of event.request.headers) {
+      if (!HOP_HEADERS.has(key.toLowerCase()) && key.toLowerCase() !== 'host') {
+        headers.set(key, value);
+      }
     }
-  }
 
-  const method = event.request.method;
-  const hasBody = method !== 'GET' && method !== 'HEAD';
-  const body = hasBody ? await event.request.arrayBuffer() : null;
+    const method = event.request.method;
+    const hasBody = method !== 'GET' && method !== 'HEAD';
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body,
-    redirect: 'manual',
-  });
-
-  const responseHeaders = new Headers();
-  for (const [key, value] of res.headers) {
-    if (!HOP_HEADERS.has(key.toLowerCase())) {
-      responseHeaders.set(key, value);
+    let body: ArrayBuffer | null = null;
+    if (hasBody) {
+      console.log(`[proxy] ${method} ${path} — reading body...`);
+      body = await event.request.arrayBuffer();
+      console.log(`[proxy] ${method} ${path} — body read: ${body.byteLength} bytes`);
     }
-  }
 
-  return new Response(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers: responseHeaders,
-  });
+    console.log(`[proxy] ${method} ${url}`);
+    const res = await fetch(url, {
+      method,
+      headers,
+      body,
+      redirect: 'manual',
+    });
+    console.log(`[proxy] ${method} ${path} — upstream responded ${res.status}`);
+
+    const responseHeaders = new Headers();
+    for (const [key, value] of res.headers) {
+      if (!HOP_HEADERS.has(key.toLowerCase())) {
+        responseHeaders.set(key, value);
+      }
+    }
+
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: responseHeaders,
+    });
+  } catch (err) {
+    console.error(`[proxy] ${event.request.method} ${path} FAILED:`, err);
+    return new Response(JSON.stringify({ error: 'proxy_error' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 };
