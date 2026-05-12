@@ -107,6 +107,13 @@ export const api = {
     resolve: (id: string, body: { resolution_value: number; void?: boolean }) =>
       request<{ ok: boolean }>(`/forecasts/${id}/resolve`, { method: 'PATCH', body: JSON.stringify(body) }),
     void: (id: string) => request<{ ok: boolean }>(`/forecasts/${id}`, { method: 'DELETE' }),
+    beliefs: (id: string) => request<{ beliefs: BeliefState[] }>(`/forecasts/${id}/beliefs`),
+    intervals: (id: string) => request<{ intervals: ForecastInterval[] }>(`/forecasts/${id}/intervals`),
+    ensemble: (id: string) => request<{ ensemble: EnsembleResult | null }>(`/forecasts/${id}/ensemble`),
+    calibration: () => request<{ snapshot: CalibrationSnapshot | null }>('/forecasts/calibration'),
+    calibrationHistory: () => request<{ snapshots: CalibrationSnapshotSummary[] }>('/forecasts/calibration/history'),
+    strategies: () => request<{ strategies: StrategyScore[] }>('/forecasts/strategies'),
+    conformalState: () => request<{ state: ConformalState }>('/forecasts/conformal/state'),
   },
   admin: {
     reinferSchemas: () => request<{ queued: number }>('/admin/reinfer-schemas', { method: 'POST' }),
@@ -343,4 +350,81 @@ export type Forecast = {
   resolved_at: string | null;
   resolution_value: number | null;
   status: 'open' | 'resolved' | 'voided' | 'expired';
+};
+
+export type BeliefState = {
+  id: string;
+  forecast_id: string;
+  step: number;
+  probability: number;
+  confidence: 'low' | 'medium' | 'high';
+  evidence_for: string;
+  evidence_against: string;
+  open_questions: string;
+  update_reasoning: string;
+  created_at: string;
+};
+
+export type ForecastInterval = {
+  id: string;
+  forecast_id: string;
+  belief_step: number;
+  lower_bound: number;
+  upper_bound: number;
+  coverage_target: number;
+  nonconformity_score: number | null;
+};
+
+export type EnsembleResult = {
+  ensemble_probability: number;
+  strategy_predictions: Array<{
+    strategy_name: string;
+    strategy_type: string;
+    probability: number;
+    weight: number;
+  }>;
+};
+
+export type CalibrationSnapshot = {
+  id: string;
+  computed_at: string;
+  bin_edges: number[];
+  bin_counts: number[];
+  bin_actuals: number[];
+  brier_score: number;
+  log_score: number;
+  resolution_score: number;
+  reliability_score: number;
+  uncertainty_score: number;
+  sharpness_score: number;
+  domain_scores: Record<string, { brier: number; count: number }>;
+  forecast_count: number;
+};
+
+export type CalibrationSnapshotSummary = {
+  id: string;
+  computed_at: string;
+  brier_score: number;
+  log_score: number;
+  reliability_score: number;
+  resolution_score: number;
+  sharpness_score: number;
+  forecast_count: number;
+};
+
+export type StrategyScore = {
+  strategy_id: string;
+  strategy_name: string;
+  strategy_type: string;
+  brier_score: number | null;
+  forecast_count: number;
+  weight: number;
+  is_active: boolean;
+};
+
+export type ConformalState = {
+  calibration_scores: number[];
+  coverage_target: number;
+  empirical_coverage: number;
+  alpha_t: number;
 };

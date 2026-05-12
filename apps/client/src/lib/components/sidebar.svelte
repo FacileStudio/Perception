@@ -47,7 +47,7 @@
     { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
     { href: '/resources', label: 'Resources', icon: 'solar:documents-bold-duotone', match: (p: string) => p === '/resources' },
     { href: '/proposals', label: 'Proposals', icon: 'solar:hand-shake-bold-duotone', match: (p: string) => p === '/proposals' },
-    { href: '/forecasts', label: 'Forecasts', icon: 'solar:telescope-bold-duotone', match: (p: string) => p === '/forecasts' },
+    { href: '/forecasts', label: 'Forecasts', icon: 'solar:telescope-bold-duotone', match: (p: string) => p.startsWith('/forecasts') },
   ];
 
   const menuItems = [

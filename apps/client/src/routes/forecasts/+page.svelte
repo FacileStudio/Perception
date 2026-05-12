@@ -153,6 +153,13 @@
           </button>
         {/each}
       </div>
+      <a
+        href="/forecasts/calibration"
+        class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+      >
+        <Icon icon="solar:tuning-2-bold-duotone" class="size-3.5" />
+        Calibration
+      </a>
       <Button
         variant="default"
         size="sm"
@@ -261,52 +268,54 @@
       <div class="flex flex-col gap-3">
         {#each items as forecast (forecast.id)}
           {@const style = STATUS_STYLE[forecast.status] ?? STATUS_STYLE.open}
-          <Card
-            class="group relative rounded-[20px] border {style.borderClass} {style.bgClass} p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]"
-          >
-            <div class="flex items-start gap-3.5">
-              <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl {style.iconClass}">
-                <Icon icon={style.icon} class="size-4.5" />
-              </span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0">
-                    <h3 class="text-sm font-semibold text-zinc-900">{forecast.question}</h3>
+          <a href="/forecasts/{forecast.id}" class="block">
+            <Card
+              class="group relative rounded-[20px] border {style.borderClass} {style.bgClass} p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] hover:shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow"
+            >
+              <div class="flex items-start gap-3.5">
+                <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl {style.iconClass}">
+                  <Icon icon={style.icon} class="size-4.5" />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                      <h3 class="text-sm font-semibold text-zinc-900">{forecast.question}</h3>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-2">
+                      {#if forecast.status === 'open'}
+                        <span class="text-xs font-medium text-amber-600">{timeRemaining(forecast.resolves_at)}</span>
+                      {:else}
+                        <span class="text-xs text-zinc-400">{formatDate(forecast.resolved_at ?? forecast.resolves_at)}</span>
+                      {/if}
+                    </div>
                   </div>
-                  <div class="flex shrink-0 items-center gap-2">
-                    {#if forecast.status === 'open'}
-                      <span class="text-xs font-medium text-amber-600">{timeRemaining(forecast.resolves_at)}</span>
-                    {:else}
-                      <span class="text-xs text-zinc-400">{formatDate(forecast.resolved_at ?? forecast.resolves_at)}</span>
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                      {TYPE_LABELS[forecast.question_type] ?? forecast.question_type}
+                    </span>
+                    {#if forecast.entity_name}
+                      <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                        {forecast.entity_name}
+                      </span>
+                    {/if}
+                    {#if forecast.base_rate !== null}
+                      <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                        Base rate: {Math.round(forecast.base_rate * 100)}%
+                      </span>
+                    {/if}
+                    {#if forecast.status === 'resolved' && forecast.resolution_value !== null}
+                      <span class="rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+                        Resolved: {forecast.question_type === 'binary' ? (forecast.resolution_value >= 0.5 ? 'Yes' : 'No') : forecast.resolution_value}
+                      </span>
                     {/if}
                   </div>
-                </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-                    {TYPE_LABELS[forecast.question_type] ?? forecast.question_type}
-                  </span>
-                  {#if forecast.entity_name}
-                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-                      {forecast.entity_name}
-                    </span>
-                  {/if}
-                  {#if forecast.base_rate !== null}
-                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-                      Base rate: {Math.round(forecast.base_rate * 100)}%
-                    </span>
-                  {/if}
-                  {#if forecast.status === 'resolved' && forecast.resolution_value !== null}
-                    <span class="rounded-full border border-emerald-200/80 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
-                      Resolved: {forecast.question_type === 'binary' ? (forecast.resolution_value >= 0.5 ? 'Yes' : 'No') : forecast.resolution_value}
-                    </span>
+                  {#if forecast.resolution_criteria}
+                    <p class="mt-1.5 text-xs text-zinc-500">{forecast.resolution_criteria}</p>
                   {/if}
                 </div>
-                {#if forecast.resolution_criteria}
-                  <p class="mt-1.5 text-xs text-zinc-500">{forecast.resolution_criteria}</p>
-                {/if}
               </div>
-            </div>
-          </Card>
+            </Card>
+          </a>
         {/each}
       </div>
     {/if}
