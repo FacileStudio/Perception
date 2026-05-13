@@ -7,6 +7,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { buildTitle } from '$lib/head';
+  import CreateWorkspaceDrawer from '$lib/components/create-workspace-drawer.svelte';
   import Icon from '@iconify/svelte';
 
   type Member = { id: string; user_id: string; name: string; email: string; role: string; joined_at: string };
@@ -30,9 +31,6 @@
   let inviteSuccess = $state('');
 
   let showCreate = $state(false);
-  let newWsName = $state('');
-  let creating = $state(false);
-  let createError = $state('');
 
   let settings = $state<Record<string, string>>({});
   let sources = $state<Record<string, string>>({});
@@ -238,25 +236,6 @@
     }
   }
 
-  async function handleCreateWorkspace(e: Event) {
-    e.preventDefault();
-    if (!newWsName.trim()) return;
-    creating = true;
-    createError = '';
-    try {
-      const res = await api.workspaces.create(newWsName.trim());
-      await loadWorkspaces();
-      if (res.id) {
-        await switchWorkspace(res.id);
-        window.location.reload();
-      }
-    } catch (err: any) {
-      createError = err?.message ?? 'Failed to create workspace.';
-    } finally {
-      creating = false;
-    }
-  }
-
   async function handleRemoveMember(memberId: string, email: string) {
     if (!auth.workspace || !confirm(`Remove ${email} from this workspace?`)) return;
     try {
@@ -402,21 +381,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     <div class="mx-auto max-w-2xl space-y-6">
 
-      {#if showCreate}
-        <div class="rounded-lg border border-zinc-200 bg-white p-6">
-          <h2 class="text-lg font-semibold text-zinc-950">Create workspace</h2>
-          {#if createError}<p class="mt-2 text-sm text-destructive">{createError}</p>{/if}
-          <form onsubmit={handleCreateWorkspace} class="mt-4 flex items-end gap-3">
-            <div class="flex-1 space-y-1.5">
-              <Label for="ws-name">Workspace name</Label>
-              <Input id="ws-name" bind:value={newWsName} placeholder="My Team" disabled={creating} />
-            </div>
-            <Button type="submit" disabled={creating || !newWsName.trim()}>
-              {creating ? 'Creating...' : 'Create'}
-            </Button>
-          </form>
-        </div>
-      {/if}
+      <CreateWorkspaceDrawer bind:open={showCreate} />
 
       {#if tab === 'general'}
         <div class="rounded-lg border border-zinc-200 bg-white p-6">
@@ -425,13 +390,19 @@
           {#if saveSuccess}<p class="mb-3 text-sm text-emerald-600">{saveSuccess}</p>{/if}
           <form onsubmit={handleSaveGeneral} class="space-y-4">
             <div class="space-y-1.5">
-              <Label for="edit-name">Name</Label>
-              <Input id="edit-name" bind:value={editName} placeholder="Workspace name" disabled={saving} />
+              <Label for="edit-name">Workspace name</Label>
+              <Input id="edit-name" bind:value={editName} placeholder="My Team" disabled={saving} />
+              <p class="text-xs text-zinc-400">The display name shown in the sidebar and across the app.</p>
             </div>
             <div class="space-y-1.5">
-              <Label for="edit-slug">Slug</Label>
-              <Input id="edit-slug" bind:value={editSlug} placeholder="workspace-slug" disabled={saving} />
-              <p class="text-xs text-zinc-400">Used in URLs and API references.</p>
+              <Label for="edit-slug">Workspace slug</Label>
+              <Input id="edit-slug" bind:value={editSlug} placeholder="my-team" disabled={saving} />
+              <p class="text-xs text-zinc-400">URL-safe identifier used in API references and ingest targeting.</p>
+            </div>
+            <div class="space-y-1.5">
+              <Label for="ws-id">Workspace ID</Label>
+              <Input id="ws-id" value={auth.workspace?.id ?? ''} disabled class="font-mono text-xs opacity-70" />
+              <p class="text-xs text-zinc-400">Use this value for the <code class="rounded bg-zinc-100 px-1 py-0.5 font-mono text-[11px]">x-perception-workspace</code> ingest header.</p>
             </div>
             <Button type="submit" disabled={saving} size="sm">{saving ? 'Saving...' : 'Save'}</Button>
           </form>

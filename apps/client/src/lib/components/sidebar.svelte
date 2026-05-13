@@ -6,6 +6,7 @@
   import { ensureSolar } from '$lib/solar';
   import { auth, notifications } from '$lib/stores';
   import { switchWorkspace } from '$lib/stores/auth.svelte';
+  import CreateWorkspaceDrawer from '$lib/components/create-workspace-drawer.svelte';
   import { onMount } from 'svelte';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
@@ -23,6 +24,7 @@
 
   let userMenuOpen = $state(false);
   let wsMenuOpen = $state(false);
+  let showCreateWs = $state(false);
   let menuContainer: HTMLDivElement | undefined;
   let wsContainer: HTMLDivElement | undefined;
 
@@ -111,6 +113,14 @@
               <span class="text-xs text-zinc-400">{ws.role}</span>
             </button>
           {/each}
+          <div class="border-t border-zinc-100"></div>
+          <button
+            onclick={() => { wsMenuOpen = false; showCreateWs = true; }}
+            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
+          >
+            <Icon icon="solar:add-circle-linear" class="size-4 shrink-0 text-zinc-300" />
+            <span>Create workspace</span>
+          </button>
         </div>
       {/if}
     </div>
@@ -194,3 +204,5 @@
     {/if}
   </div>
 </aside>
+
+<CreateWorkspaceDrawer bind:open={showCreateWs} />
