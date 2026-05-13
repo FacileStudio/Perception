@@ -1,4 +1,5 @@
 import type { Context } from 'hono';
+import { getCookie } from 'hono/cookie';
 import { auth } from '../auth';
 import { config } from '../config';
 import { db } from '../db/client';
@@ -35,7 +36,8 @@ export async function getWorkspaceContext(c: Context): Promise<WorkspaceContext 
     userId = session.user.id;
     userName = session.user.name;
     userEmail = session.user.email;
-    activeOrgId = (session.session as any).activeOrganizationId as string | null;
+    activeOrgId = getCookie(c, 'perception_workspace')
+      ?? (session.session as any).activeOrganizationId as string | null;
   } else {
     const legacy = await getSession(c);
     if (!legacy) return null;
@@ -53,6 +55,7 @@ export async function getWorkspaceContext(c: Context): Promise<WorkspaceContext 
     userId = baUser.id;
     userName = baUser.name;
     userEmail = baUser.email;
+    activeOrgId = getCookie(c, 'perception_workspace') ?? null;
   }
 
   if (activeOrgId) {

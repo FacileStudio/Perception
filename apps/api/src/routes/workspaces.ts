@@ -1,8 +1,10 @@
 import { Hono } from 'hono';
 import { randomUUID } from 'crypto';
+import { setCookie } from 'hono/cookie';
 import { db } from '../db/client';
 import { requireWorkspace } from '../security/workspace';
 import { getAllEffectiveSettings, setWorkspaceSetting, getSettingSource } from '../db/settings';
+import { config } from '../config';
 
 const WS_SETTINGS_KEYS = [
   'anthropic_api_key',
@@ -89,6 +91,30 @@ workspaceRoutes.post('/', async (c) => {
     role: 'owner',
     created_at: now,
   }, 201);
+});
+
+workspaceRoutes.post('/switch', async (c) => {
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
+
+  const body = await c.req.json<{ workspaceId: string }>();
+  if (!body.workspaceId) return c.json({ error: 'workspace_id_required' }, 400);
+
+  const member = await db.execute({
+    sql: 'SELECT id FROM member WHERE userId = ? AND organizationId = ?',
+    args: [ws.userId, body.workspaceId],
+  });
+  if (member.rows.length === 0) return c.json({ error: 'not_a_member' }, 403);
+
+  setCookie(c, 'perception_workspace', body.workspaceId, {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'Lax',
+    secure: !config.localDevAuthDisabled,
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  return c.json({ ok: true });
 });
 
 workspaceRoutes.patch('/:id', async (c) => {

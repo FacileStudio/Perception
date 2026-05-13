@@ -29,6 +29,7 @@ export const api = {
     updateMemberRole: (wsId: string, memberId: string, role: string) => request<{ ok: boolean }>(`/workspaces/${wsId}/members/${memberId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
     settings: (id: string) => request<{ settings: Record<string, string>; sources: Record<string, string> }>(`/workspaces/${id}/settings`),
     updateSettings: (id: string, body: Record<string, string | null>) => request<{ ok: boolean }>(`/workspaces/${id}/settings`, { method: 'PUT', body: JSON.stringify(body) }),
+    switchTo: (workspaceId: string) => request<{ ok: boolean }>('/workspaces/switch', { method: 'POST', body: JSON.stringify({ workspaceId }) }),
   },
   users: {
     list: () => request<{ users: AuthUser[] }>('/users'),

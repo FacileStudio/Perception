@@ -59,7 +59,7 @@ export async function loadWorkspaces() {
 
 export async function switchWorkspace(workspaceId: string) {
   try {
-    await authClient.organization.setActive({ organizationId: workspaceId });
+    await api.workspaces.switchTo(workspaceId);
     auth.workspace = auth.workspaces.find(w => w.id === workspaceId) ?? null;
   } catch {
   }
