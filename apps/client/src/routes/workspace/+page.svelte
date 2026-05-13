@@ -274,8 +274,8 @@
     } catch {}
   }
 
-  function handleSwitchWorkspace(id: string) {
-    switchWorkspace(id);
+  async function handleSwitchWorkspace(id: string) {
+    await switchWorkspace(id);
     window.location.reload();
   }
 
