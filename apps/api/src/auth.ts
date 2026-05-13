@@ -1,28 +1,30 @@
 import { config } from './config';
+import { Database } from 'bun:sqlite';
+import { betterAuth } from 'better-auth';
+import { organization } from 'better-auth/plugins';
 
-let _auth: any = null;
+let _auth: ReturnType<typeof betterAuth> | null = null;
 let _authError: string | null = null;
 
-function getAuth() {
+function resolveDatabasePath(): string {
+  const url = config.databaseUrl;
+  if (url.startsWith('file:')) return url.slice(5);
+  return url;
+}
+
+function getAuth(): ReturnType<typeof betterAuth> {
   if (_auth) return _auth;
   if (_authError) throw new Error(_authError);
 
   try {
-    const { betterAuth } = require('better-auth');
-    const { organization } = require('better-auth/plugins');
-    const { LibsqlDialect } = require('@libsql/kysely-libsql');
+    const dbPath = resolveDatabasePath();
+    const sqliteDb = new Database(dbPath);
 
     _auth = betterAuth({
       basePath: '/auth',
       secret: config.sessionSecret || config.adminPassword || 'perception-dev-secret-change-me',
       baseURL: `http://localhost:${config.port}`,
-      database: {
-        dialect: new LibsqlDialect({
-          url: config.databaseUrl,
-          authToken: config.databaseAuthToken || undefined,
-        }),
-        type: 'sqlite' as const,
-      },
+      database: sqliteDb,
       emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,

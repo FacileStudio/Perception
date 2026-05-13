@@ -49,6 +49,86 @@ app.get('/ready', async (c) => {
   }
 });
 
+app.get('/auth/config', (c) => {
+  return c.json({
+    sso_only: config.ssoOnly,
+    oidc_enabled: !!(config.oidcIssuer && config.oidcClientId && config.oidcClientSecret && config.oidcRedirectUrl),
+  });
+});
+
+app.get('/auth/status', async (c) => {
+  if (config.localDevAuthDisabled) {
+    return c.json({ authenticated: true, user: { id: 'dev', email: 'dev@local', name: 'Dev User', color: '#818cf8', source: 'local' } });
+  }
+  try {
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (session?.user) {
+      return c.json({
+        authenticated: true,
+        user: {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          color: '#818cf8',
+          source: 'better-auth',
+        },
+      });
+    }
+  } catch {}
+
+  const oldSession = await getOldSession(c);
+  if (oldSession) return c.json({ authenticated: true, user: oldSession });
+
+  return c.json({ authenticated: false, user: null });
+});
+
+app.post('/auth/login', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body?.password || body.password !== config.adminPassword) {
+    return c.json({ error: 'unauthorized' }, 401);
+  }
+  const { createSession, upsertUser } = await import('./security/session');
+  const userId = await upsertUser(config.adminUsername, 'local');
+  await createSession(c, userId);
+  return c.json({ ok: true });
+});
+
+if (config.oidcIssuer && config.oidcClientId) {
+  app.get('/auth/oidc', async (c) => {
+    try {
+      const { initiateOIDCLogin } = await import('./security/oidc');
+      return await initiateOIDCLogin(c);
+    } catch (err) {
+      console.error('[oidc] login initiation failed', err);
+      return c.json({ error: 'oidc_unavailable' }, 503);
+    }
+  });
+
+  app.get('/auth/oidc/callback', async (c) => {
+    try {
+      const { handleOIDCCallback } = await import('./security/oidc');
+      const { createSession, upsertUser } = await import('./security/session');
+      const { email, name } = await handleOIDCCallback(c);
+      const userId = await upsertUser(email, 'oidc', name);
+      await createSession(c, userId);
+      const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
+      return c.redirect(`${successUrl}/chat`);
+    } catch (err) {
+      console.error('[oidc] callback failed', err);
+      const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
+      return c.redirect(`${successUrl}/login?error=oidc_failed`);
+    }
+  });
+}
+
+app.post('/auth/logout', async (c) => {
+  try {
+    const { destroySession } = await import('./security/session');
+    await destroySession(c);
+  } catch {}
+  return c.json({ ok: true });
+});
+
 app.on(['POST', 'GET'], '/auth/*', (c) => {
   try {
     return auth.handler(c.req.raw);
@@ -89,6 +169,15 @@ app.onError((err, c) => {
   }
   return c.json({ error: 'internal_error' }, 500);
 });
+
+async function getOldSession(c: any): Promise<{ id: string; email: string; name: string | null; color: string; source: string } | null> {
+  try {
+    const { getSessionWithUser } = await import('./security/session');
+    return await getSessionWithUser(c);
+  } catch {
+    return null;
+  }
+}
 
 export default {
   port: config.port,
