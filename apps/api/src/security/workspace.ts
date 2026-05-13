@@ -62,12 +62,28 @@ async function getDefaultWorkspace(userId: string): Promise<{ id: string; slug: 
     sql: 'SELECT m.organizationId, m.role, o.slug FROM member m JOIN organization o ON o.id = m.organizationId WHERE m.userId = ? ORDER BY m.createdAt ASC LIMIT 1',
     args: [userId],
   });
-  if (result.rows.length === 0) return null;
-  return {
-    id: result.rows[0].organizationId as string,
-    slug: result.rows[0].slug as string,
-    role: result.rows[0].role as string,
-  };
+  if (result.rows.length > 0) {
+    return {
+      id: result.rows[0].organizationId as string,
+      slug: result.rows[0].slug as string,
+      role: result.rows[0].role as string,
+    };
+  }
+
+  const defaultOrg = await db.execute({
+    sql: "SELECT id, slug FROM organization ORDER BY createdAt ASC LIMIT 1",
+    args: [],
+  });
+  if (defaultOrg.rows.length === 0) return null;
+
+  const orgId = defaultOrg.rows[0].id as string;
+  const orgSlug = defaultOrg.rows[0].slug as string;
+  await db.execute({
+    sql: "INSERT INTO member (id, userId, organizationId, role, createdAt) VALUES (?, ?, ?, 'member', ?)",
+    args: [crypto.randomUUID(), userId, orgId, new Date().toISOString()],
+  });
+
+  return { id: orgId, slug: orgSlug, role: 'member' };
 }
 
 export async function requireWorkspace(c: Context): Promise<WorkspaceContext | null> {

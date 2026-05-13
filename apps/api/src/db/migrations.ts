@@ -743,6 +743,13 @@ CREATE INDEX IF NOT EXISTS stats_snapshots_ws_idx ON stats_snapshots(workspace_i
 CREATE INDEX IF NOT EXISTS event_counts_daily_ws_idx ON event_counts_daily(workspace_id, series_key, day)
       `,
     },
+    {
+      name: '032_chat_user_id',
+      sql: `
+ALTER TABLE chat_sessions ADD COLUMN user_id TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS chat_sessions_user_idx ON chat_sessions(workspace_id, user_id, updated_at DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {

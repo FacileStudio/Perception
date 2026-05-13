@@ -105,7 +105,7 @@ forecastRoutes.get('/conformal/state', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const state = await getConformalState();
+  const state = await getConformalState(ws.workspaceId);
   return c.json({ state });
 });
 
@@ -113,7 +113,7 @@ forecastRoutes.get('/strategies', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const leaderboard = await getStrategyLeaderboard();
+  const leaderboard = await getStrategyLeaderboard(ws.workspaceId);
   return c.json({ strategies: leaderboard });
 });
 
@@ -230,7 +230,7 @@ forecastRoutes.get('/:id/beliefs', async (c) => {
   const forecast = await db.execute({ sql: 'SELECT id FROM forecasts WHERE id = ? AND workspace_id = ?', args: [id, ws.workspaceId] });
   if (forecast.rows.length === 0) return c.json({ error: 'not_found' }, 404);
 
-  const beliefs = await getAllBeliefs(id);
+  const beliefs = await getAllBeliefs(id, ws.workspaceId);
   return c.json({ beliefs });
 });
 

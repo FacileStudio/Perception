@@ -13,17 +13,17 @@ statsRoutes.get('/', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const forceRefresh = c.req.query('refresh') === '1';
-  const latestGeneratedAt = await getLatestSnapshotGeneratedAt();
+  const latestGeneratedAt = await getLatestSnapshotGeneratedAt(ws.workspaceId);
   const shouldBootstrap = latestGeneratedAt === null;
   const isStale = latestGeneratedAt !== null && Date.now() - new Date(latestGeneratedAt).getTime() > STATS_STALE_MS;
-  const missingKinds = !shouldBootstrap && !(await hasAllExpectedKinds());
+  const missingKinds = !shouldBootstrap && !(await hasAllExpectedKinds(ws.workspaceId));
 
   if (forceRefresh || shouldBootstrap || isStale || missingKinds) {
-    await refreshSnapshots();
+    await refreshSnapshots(ws.workspaceId);
   }
 
   const [snapshots, graphHealthRow] = await Promise.all([
-    getLatestSnapshots(),
+    getLatestSnapshots(ws.workspaceId),
     db.execute({ sql: `SELECT * FROM graph_health_snapshots WHERE workspace_id = ? ORDER BY computed_at DESC LIMIT 1`, args: [ws.workspaceId] }).catch(() => ({ rows: [] })),
   ]);
 

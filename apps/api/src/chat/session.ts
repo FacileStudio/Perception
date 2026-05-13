@@ -38,26 +38,6 @@ function buildSessionPreview(value: string | null): string {
   return truncateText(normalizeChatText(value), 110);
 }
 
-export async function upsertSession(sessionId: string | undefined, workspaceId: string = ''): Promise<string> {
-  if (sessionId) {
-    const result = await db.execute({
-      sql: workspaceId
-        ? `SELECT id FROM chat_sessions WHERE id = ? AND workspace_id = ?`
-        : `SELECT id FROM chat_sessions WHERE id = ?`,
-      args: workspaceId ? [sessionId, workspaceId] : [sessionId],
-    });
-    if (result.rows.length > 0) return sessionId;
-  }
-
-  const id = sessionId ?? randomUUID();
-  const now = new Date().toISOString();
-  await db.execute({
-    sql: `INSERT INTO chat_sessions (id, workspace_id, title, created_at, updated_at) VALUES (?, ?, NULL, ?, ?)`,
-    args: [id, workspaceId, now, now],
-  });
-  return id;
-}
-
 function parseSources(value: unknown): ChatSource[] {
   if (typeof value !== 'string' || value.length === 0) {
     return [];
@@ -70,8 +50,37 @@ function parseSources(value: unknown): ChatSource[] {
   }
 }
 
-export async function loadSessionSummaries(workspaceId: string = ''): Promise<ChatSessionSummary[]> {
-  const wsFilter = workspaceId ? `AND cs.workspace_id = ?` : '';
+export async function upsertSession(sessionId: string | undefined, workspaceId: string = '', userId: string = ''): Promise<string> {
+  if (sessionId) {
+    const conditions = ['id = ?'];
+    const args: (string | number)[] = [sessionId];
+    if (workspaceId) { conditions.push('workspace_id = ?'); args.push(workspaceId); }
+    if (userId) { conditions.push('user_id = ?'); args.push(userId); }
+
+    const result = await db.execute({
+      sql: `SELECT id FROM chat_sessions WHERE ${conditions.join(' AND ')}`,
+      args,
+    });
+    if (result.rows.length > 0) return sessionId;
+  }
+
+  const id = sessionId ?? randomUUID();
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: `INSERT INTO chat_sessions (id, workspace_id, user_id, title, created_at, updated_at) VALUES (?, ?, ?, NULL, ?, ?)`,
+    args: [id, workspaceId, userId, now, now],
+  });
+  return id;
+}
+
+export async function loadSessionSummaries(workspaceId: string = '', userId: string = ''): Promise<ChatSessionSummary[]> {
+  const conditions: string[] = [];
+  const args: string[] = [];
+  if (workspaceId) { conditions.push('cs.workspace_id = ?'); args.push(workspaceId); }
+  if (userId) { conditions.push('cs.user_id = ?'); args.push(userId); }
+
+  const whereBase = conditions.length > 0 ? conditions.join(' AND ') + ' AND' : '';
+
   const result = await db.execute({
     sql: `
     SELECT
@@ -99,16 +108,15 @@ export async function loadSessionSummaries(workspaceId: string = ''): Promise<Ch
         WHERE session_id = cs.id
       ) AS message_count
     FROM chat_sessions cs
-    WHERE EXISTS (
+    WHERE ${whereBase} EXISTS (
       SELECT 1
       FROM chat_messages
       WHERE session_id = cs.id
     )
-    ${wsFilter}
     ORDER BY cs.updated_at DESC
     LIMIT 100
   `,
-    args: workspaceId ? [workspaceId] : [],
+    args,
   });
 
   return result.rows.map((row) => ({
@@ -121,12 +129,15 @@ export async function loadSessionSummaries(workspaceId: string = ''): Promise<Ch
   }));
 }
 
-export async function loadSessionDetail(sessionId: string, workspaceId: string = ''): Promise<ChatSessionDetail | null> {
+export async function loadSessionDetail(sessionId: string, workspaceId: string = '', userId: string = ''): Promise<ChatSessionDetail | null> {
+  const conditions = ['id = ?'];
+  const args: string[] = [sessionId];
+  if (workspaceId) { conditions.push('workspace_id = ?'); args.push(workspaceId); }
+  if (userId) { conditions.push('user_id = ?'); args.push(userId); }
+
   const sessionResult = await db.execute({
-    sql: workspaceId
-      ? `SELECT id, title, created_at, updated_at FROM chat_sessions WHERE id = ? AND workspace_id = ?`
-      : `SELECT id, title, created_at, updated_at FROM chat_sessions WHERE id = ?`,
-    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
+    sql: `SELECT id, title, created_at, updated_at FROM chat_sessions WHERE ${conditions.join(' AND ')}`,
+    args,
   });
 
   const sessionRow = sessionResult.rows[0];
@@ -170,12 +181,15 @@ export async function loadSessionDetail(sessionId: string, workspaceId: string =
   };
 }
 
-export async function deleteSession(sessionId: string, workspaceId: string = ''): Promise<boolean> {
+export async function deleteSession(sessionId: string, workspaceId: string = '', userId: string = ''): Promise<boolean> {
+  const conditions = ['id = ?'];
+  const args: string[] = [sessionId];
+  if (workspaceId) { conditions.push('workspace_id = ?'); args.push(workspaceId); }
+  if (userId) { conditions.push('user_id = ?'); args.push(userId); }
+
   const existing = await db.execute({
-    sql: workspaceId
-      ? `SELECT id FROM chat_sessions WHERE id = ? AND workspace_id = ?`
-      : `SELECT id FROM chat_sessions WHERE id = ?`,
-    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
+    sql: `SELECT id FROM chat_sessions WHERE ${conditions.join(' AND ')}`,
+    args,
   });
 
   if (existing.rows.length === 0) {
@@ -183,16 +197,12 @@ export async function deleteSession(sessionId: string, workspaceId: string = '')
   }
 
   await db.execute({
-    sql: workspaceId
-      ? `DELETE FROM chat_messages WHERE session_id = ? AND workspace_id = ?`
-      : `DELETE FROM chat_messages WHERE session_id = ?`,
-    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
+    sql: `DELETE FROM chat_messages WHERE session_id = ?`,
+    args: [sessionId],
   });
   await db.execute({
-    sql: workspaceId
-      ? `DELETE FROM chat_sessions WHERE id = ? AND workspace_id = ?`
-      : `DELETE FROM chat_sessions WHERE id = ?`,
-    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
+    sql: `DELETE FROM chat_sessions WHERE id = ?`,
+    args: [sessionId],
   });
 
   return true;
@@ -203,10 +213,9 @@ export async function setMessageFeedback(
   feedback: 'up' | 'down' | null,
   workspaceId: string = '',
 ): Promise<'ok' | 'not_found' | 'invalid_role'> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   const existing = await db.execute({
-    sql: workspaceId
-      ? `SELECT id, role FROM chat_messages WHERE id = ? AND workspace_id = ?`
-      : `SELECT id, role FROM chat_messages WHERE id = ?`,
+    sql: `SELECT id, role FROM chat_messages WHERE id = ?${wsAnd}`,
     args: workspaceId ? [messageId, workspaceId] : [messageId],
   });
 
@@ -219,9 +228,7 @@ export async function setMessageFeedback(
   }
 
   await db.execute({
-    sql: workspaceId
-      ? `UPDATE chat_messages SET feedback = ? WHERE id = ? AND workspace_id = ?`
-      : `UPDATE chat_messages SET feedback = ? WHERE id = ?`,
+    sql: `UPDATE chat_messages SET feedback = ? WHERE id = ?${wsAnd}`,
     args: workspaceId ? [feedback, messageId, workspaceId] : [feedback, messageId],
   });
 
@@ -240,10 +247,9 @@ export async function saveUserMessage(sessionId: string, message: string, worksp
     sql: `INSERT INTO chat_messages (id, session_id, workspace_id, role, content, sources_json, created_at) VALUES (?, ?, ?, 'user', ?, '[]', ?)`,
     args: [randomUUID(), sessionId, workspaceId, message, now],
   });
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   await db.execute({
-    sql: workspaceId
-      ? `UPDATE chat_sessions SET title = COALESCE(NULLIF(title, ''), ?), updated_at = ? WHERE id = ? AND workspace_id = ?`
-      : `UPDATE chat_sessions SET title = COALESCE(NULLIF(title, ''), ?), updated_at = ? WHERE id = ?`,
+    sql: `UPDATE chat_sessions SET title = COALESCE(NULLIF(title, ''), ?), updated_at = ? WHERE id = ?${wsAnd}`,
     args: workspaceId ? [buildSessionTitle(message), now, sessionId, workspaceId] : [buildSessionTitle(message), now, sessionId],
   });
 }

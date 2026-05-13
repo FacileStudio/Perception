@@ -26,7 +26,7 @@ chatRoutes.get('/sessions', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const sessions = await loadSessionSummaries();
+  const sessions = await loadSessionSummaries(ws.workspaceId, ws.userId);
   return c.json({ sessions });
 });
 
@@ -34,7 +34,7 @@ chatRoutes.get('/sessions/:sessionId', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const session = await loadSessionDetail(c.req.param('sessionId'));
+  const session = await loadSessionDetail(c.req.param('sessionId'), ws.workspaceId, ws.userId);
   if (!session) {
     return c.json({ error: 'not_found' }, 404);
   }
@@ -47,7 +47,7 @@ chatRoutes.delete('/sessions/:sessionId', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const sessionId = c.req.param('sessionId');
-  const deleted = await deleteSession(sessionId);
+  const deleted = await deleteSession(sessionId, ws.workspaceId, ws.userId);
   if (!deleted) {
     return c.json({ error: 'not_found' }, 404);
   }
@@ -71,7 +71,7 @@ chatRoutes.patch('/messages/:messageId/feedback', async (c) => {
     return c.json({ error: 'invalid_feedback' }, 400);
   }
 
-  const result = await setMessageFeedback(messageId, body.feedback);
+  const result = await setMessageFeedback(messageId, body.feedback, ws.workspaceId);
   if (result === 'not_found') {
     return c.json({ error: 'not_found' }, 404);
   }
@@ -97,9 +97,9 @@ chatRoutes.post('/', async (c) => {
     return c.json({ error: 'message_required' }, 400);
   }
 
-  const sessionId = await upsertSession(body.session_id);
+  const sessionId = await upsertSession(body.session_id, ws.workspaceId, ws.userId);
   detectImplicitNegative(sessionId).catch(() => {});
-  await saveUserMessage(sessionId, body.message);
+  await saveUserMessage(sessionId, body.message, ws.workspaceId);
 
   const [plan, queryEmbedding] = await Promise.all([
     buildQueryPlan(body.message),
@@ -112,7 +112,7 @@ chatRoutes.post('/', async (c) => {
   if (plan.intent === 'counterfactual' && plan.counterfactual) {
     const [cfResult, retrievalResult] = await Promise.all([
       runCounterfactual(plan.counterfactual),
-      retrieveWithCorrection(plan, queryEmbedding),
+      retrieveWithCorrection(plan, queryEmbedding, ws.workspaceId),
     ]);
     const context = retrievalResult;
     retrievalMeta = retrievalResult.meta;
@@ -144,7 +144,7 @@ chatRoutes.post('/', async (c) => {
       distribution: cfResult.distribution,
     };
 
-    stream = streamChatComposite(sessionId, body.message, plan, context, fullBlock, (messageId) => {
+    stream = streamChatComposite(sessionId, body.message, plan, context, fullBlock, ws.workspaceId, (messageId) => {
       if (retrievalMeta) {
         const topIds = context.events.slice(0, 5).map((e) => e.id);
         recordRetrievalOutcome(
@@ -166,14 +166,14 @@ chatRoutes.post('/', async (c) => {
     try {
       const { weights } = await getActiveWeights();
       compositeWeights = (weights[plan.intent] ?? {}) as Record<string, number>;
-      compositeResult = await decomposeAndRetrieve(plan.subqueries);
+      compositeResult = await decomposeAndRetrieve(plan.subqueries, ws.workspaceId);
     } catch (err) {
       console.warn('[chat] composite decomposition failed, falling back to simple retrieval', err);
     }
   }
 
   if (compositeResult) {
-    stream = streamChatComposite(sessionId, body.message, plan, compositeResult.mergedContext, compositeResult.contextBlock, (messageId) => {
+    stream = streamChatComposite(sessionId, body.message, plan, compositeResult.mergedContext, compositeResult.contextBlock, ws.workspaceId, (messageId) => {
       const topIds = compositeResult!.mergedContext.events.slice(0, 5).map((e) => e.id);
       const activeLanes = [...new Set(compositeResult!.mergedContext.events.flatMap((e) => e.lanes))];
       recordRetrievalOutcome(
@@ -189,12 +189,12 @@ chatRoutes.post('/', async (c) => {
     let context: RetrievalResult = { events: [], stats: [], comparisons: [], communitySummaries: [], sqlResults: [], narratives: [], memoryEpisodes: [], causalLinks: [], resourceChunks: [] };
     let corrected = false;
     if (plan.requiresRetrieval) {
-      const result = await retrieveWithCorrection(plan, queryEmbedding);
+      const result = await retrieveWithCorrection(plan, queryEmbedding, ws.workspaceId);
       context = result;
       corrected = result.corrected;
       retrievalMeta = result.meta;
     }
-    stream = streamChat(sessionId, body.message, plan, context, corrected, (messageId) => {
+    stream = streamChat(sessionId, body.message, plan, context, corrected, ws.workspaceId, (messageId) => {
       if (retrievalMeta) {
         const topIds = context.events.slice(0, 5).map((e) => e.id);
         recordRetrievalOutcome(

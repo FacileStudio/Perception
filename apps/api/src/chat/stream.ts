@@ -14,10 +14,11 @@ interface ChatMessageRow {
   content: string;
 }
 
-async function loadHistory(sessionId: string): Promise<ChatMessageRow[]> {
+async function loadHistory(sessionId: string, workspaceId: string = ''): Promise<ChatMessageRow[]> {
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   const result = await db.execute({
-    sql: `SELECT role, content FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT 40`,
-    args: [sessionId],
+    sql: `SELECT role, content FROM chat_messages WHERE session_id = ?${wsAnd} ORDER BY created_at DESC LIMIT 40`,
+    args: workspaceId ? [sessionId, workspaceId] : [sessionId],
   });
   return result.rows.map((r) => ({
     role: r.role as 'user' | 'assistant',
@@ -29,15 +30,17 @@ async function persistAssistantMessage(
   sessionId: string,
   content: string,
   sources: ChatSource[],
+  workspaceId: string = '',
 ): Promise<string> {
   const messageId = randomUUID();
   await db.execute({
-    sql: `INSERT INTO chat_messages (id, session_id, role, content, sources_json, created_at) VALUES (?, ?, 'assistant', ?, ?, ?)`,
-    args: [messageId, sessionId, content, JSON.stringify(sources), new Date().toISOString()],
+    sql: `INSERT INTO chat_messages (id, session_id, workspace_id, role, content, sources_json, created_at) VALUES (?, ?, ?, 'assistant', ?, ?, ?)`,
+    args: [messageId, sessionId, workspaceId, content, JSON.stringify(sources), new Date().toISOString()],
   });
+  const wsAnd = workspaceId ? ' AND workspace_id = ?' : '';
   await db.execute({
-    sql: `UPDATE chat_sessions SET updated_at = ? WHERE id = ?`,
-    args: [new Date().toISOString(), sessionId],
+    sql: `UPDATE chat_sessions SET updated_at = ? WHERE id = ?${wsAnd}`,
+    args: workspaceId ? [new Date().toISOString(), sessionId, workspaceId] : [new Date().toISOString(), sessionId],
   });
   return messageId;
 }
@@ -65,11 +68,12 @@ export function streamChatComposite(
   plan: QueryPlan,
   context: RetrievalResult,
   prebuiltContextBlock: string,
+  workspaceId: string = '',
   onMessagePersisted?: (messageId: string) => void,
   subQueries?: string[],
   counterfactual?: CounterfactualMeta,
 ): ReadableStream {
-  return buildStream(sessionId, message, plan, context, prebuiltContextBlock, onMessagePersisted, subQueries, counterfactual);
+  return buildStream(sessionId, message, plan, context, prebuiltContextBlock, workspaceId, onMessagePersisted, subQueries, counterfactual);
 }
 
 export function streamChat(
@@ -78,13 +82,14 @@ export function streamChat(
   plan: QueryPlan,
   context: RetrievalResult,
   corrected = false,
+  workspaceId: string = '',
   onMessagePersisted?: (messageId: string) => void,
 ): ReadableStream {
   let contextBlock = buildContextBlock(context.events, context.stats, context.comparisons, context.communitySummaries, context.sqlResults, context.narratives, context.memoryEpisodes, context.causalLinks, context.resourceChunks);
   if (corrected) {
     contextBlock = '[CONTEXT_NOTE] Context was sparse — search was widened to find more relevant evidence. Some results may be from a broader scope than requested. [/CONTEXT_NOTE]\n\n' + contextBlock;
   }
-  return buildStream(sessionId, message, plan, context, contextBlock, onMessagePersisted);
+  return buildStream(sessionId, message, plan, context, contextBlock, workspaceId, onMessagePersisted);
 }
 
 function buildStream(
@@ -93,6 +98,7 @@ function buildStream(
   plan: QueryPlan,
   context: RetrievalResult,
   contextBlock: string,
+  workspaceId: string = '',
   onMessagePersisted?: (messageId: string) => void,
   subQueries?: string[],
   counterfactual?: CounterfactualMeta,
@@ -134,8 +140,8 @@ function buildStream(
       try {
         controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ session_id: sessionId })}\n\n`));
         const [history, systemSummary] = await Promise.all([
-          loadHistory(sessionId).then((h) => trimLatestUserEcho(h, message)),
-          plan.requiresRetrieval ? fetchSystemSummary() : Promise.resolve(''),
+          loadHistory(sessionId, workspaceId).then((h) => trimLatestUserEcho(h, message)),
+          plan.requiresRetrieval ? fetchSystemSummary(workspaceId) : Promise.resolve(''),
         ]);
         const promptMessage = plan.requiresRetrieval
           ? `${systemSummary}\n\n${contextBlock}\n\nUser question: ${message}`
@@ -166,7 +172,7 @@ function buildStream(
           controller.enqueue(encoded);
         }
 
-        const messageId = await persistAssistantMessage(sessionId, fullText, sources);
+        const messageId = await persistAssistantMessage(sessionId, fullText, sources, workspaceId);
         if (onMessagePersisted) onMessagePersisted(messageId);
         const donePayload: Record<string, unknown> = { done: true, sources, message_id: messageId };
         if (sqlQueryMeta) donePayload.sql_query = sqlQueryMeta;
@@ -183,8 +189,8 @@ function buildStream(
         try {
           const usage = await result.usage;
           await db.execute({
-            sql: `INSERT INTO token_usage (id, kind, model, session_id, input_tokens, output_tokens, occurred_at) VALUES (?, 'llm', ?, ?, ?, ?, ?)`,
-            args: [randomUUID(), llmModel, sessionId, usage.promptTokens, usage.completionTokens, new Date().toISOString()],
+            sql: `INSERT INTO token_usage (id, workspace_id, kind, model, session_id, input_tokens, output_tokens, occurred_at) VALUES (?, ?, 'llm', ?, ?, ?, ?, ?)`,
+            args: [randomUUID(), workspaceId, llmModel, sessionId, usage.promptTokens, usage.completionTokens, new Date().toISOString()],
           });
         } catch {
         }

@@ -34,7 +34,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-async function runSubquery(subquery: string): Promise<SubqueryResult> {
+async function runSubquery(subquery: string, workspaceId: string = ''): Promise<SubqueryResult> {
   const { weights } = await getActiveWeights();
   const [plan, embedding] = await Promise.all([
     buildQueryPlan(subquery),
@@ -45,7 +45,7 @@ async function runSubquery(subquery: string): Promise<SubqueryResult> {
   plan.isComposite = false;
   plan.subqueries = [];
 
-  const context = await retrieveContext(plan, embedding, weights);
+  const context = await retrieveContext(plan, embedding, weights, workspaceId);
   return { subquery, plan, context };
 }
 
@@ -168,11 +168,12 @@ function buildLabeledContextBlock(subResults: SubqueryResult[], merged: Retrieva
 
 export async function decomposeAndRetrieve(
   subqueries: string[],
+  workspaceId: string = '',
 ): Promise<DecomposedResult> {
   const capped = subqueries.slice(0, MAX_SUBQUERIES);
 
   const settled = await Promise.allSettled(
-    capped.map((sq) => withTimeout(runSubquery(sq), SUBQUERY_TIMEOUT_MS)),
+    capped.map((sq) => withTimeout(runSubquery(sq, workspaceId), SUBQUERY_TIMEOUT_MS)),
   );
 
   const subResults: SubqueryResult[] = [];

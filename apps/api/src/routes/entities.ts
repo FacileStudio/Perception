@@ -195,6 +195,6 @@ entitiesRoutes.post('/relations/resolve-all', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const created = await extractAllMissingRelations();
+  const created = await extractAllMissingRelations(ws.workspaceId);
   return c.json({ created });
 });
