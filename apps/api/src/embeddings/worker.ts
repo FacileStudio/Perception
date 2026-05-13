@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import { rowToEvent } from '../db/row';
-import { config } from '../config';
+import { getEffectiveSetting } from '../db/settings';
 import { buildEmbeddingInput, hashInput } from './input';
 import { embedDocuments } from './voyage';
 import { forEachWorkspace } from '../db/workspaces';
@@ -62,13 +62,13 @@ async function processEvent(eventId: string, workspaceId: string): Promise<void>
 
   const input = buildEmbeddingInput(event, facts);
   const inputHash = hashInput(input);
-  const embeddings = await embedDocuments([input]);
+  const embeddings = await embedDocuments([input], workspaceId);
   const embedding = embeddings[0];
   const vecJson = JSON.stringify(embedding);
 
   await db.execute({
     sql: `UPDATE event_embeddings SET embedding = vector32(?), status = 'ready', embedded_at = ?, attempts = attempts + 1, input_hash = ?, model = ?, dimensions = ? WHERE event_id = ? AND workspace_id = ?`,
-    args: [vecJson, new Date().toISOString(), inputHash, config.embeddingModel, config.embeddingDimensions, eventId, workspaceId],
+    args: [vecJson, new Date().toISOString(), inputHash, await getEffectiveSetting('embedding_model', workspaceId), await getEffectiveSetting('embedding_dimensions', workspaceId), eventId, workspaceId],
   });
 }
 

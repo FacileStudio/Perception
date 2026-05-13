@@ -57,7 +57,7 @@ async function run(): Promise<void> {
       }
 
       try {
-        const embeddings = await embedDocuments(summaries);
+        const embeddings = await embedDocuments(summaries, workspaceId);
         for (let i = 0; i < ids.length; i++) {
           const buf = new Float32Array(embeddings[i]);
           await db.execute({

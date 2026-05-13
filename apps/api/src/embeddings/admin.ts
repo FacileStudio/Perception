@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { config } from '../config';
+import { getEffectiveSetting } from '../db/settings';
 
 export async function retryFailedEmbeddings(workspaceId: string = ''): Promise<number> {
   const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
@@ -14,7 +14,7 @@ export async function retryFailedEmbeddings(workspaceId: string = ''): Promise<n
 
 export async function backfillMissingEmbeddings(workspaceId: string = ''): Promise<number> {
   const wsFilter = workspaceId ? ' AND workspace_id = ?' : '';
-  const args: (string | number | null)[] = [config.embeddingModel, config.embeddingDimensions];
+  const args: (string | number | null)[] = [await getEffectiveSetting('embedding_model', workspaceId), await getEffectiveSetting('embedding_dimensions', workspaceId)];
   if (workspaceId) args.push(workspaceId);
   const result = await db.execute({
     sql: `INSERT OR IGNORE INTO event_embeddings (event_id, model, dimensions, input_hash, status, workspace_id) SELECT id, ?, ?, '', 'pending', workspace_id FROM events WHERE id NOT IN (SELECT event_id FROM event_embeddings)${wsFilter}`,

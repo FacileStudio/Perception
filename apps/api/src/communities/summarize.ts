@@ -132,7 +132,7 @@ export async function generateCommunitySummary(
     return { title: 'Empty cluster', summary: 'No entity data available.', importance: 0 };
   }
 
-  const apiKey = await getEffectiveSetting('anthropic_api_key');
+  const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
 
   const { text } = await generateText({

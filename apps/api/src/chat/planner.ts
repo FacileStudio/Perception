@@ -142,7 +142,7 @@ function fallbackPlan(message: string): QueryPlan {
 export async function buildQueryPlan(message: string, workspaceId: string = ''): Promise<QueryPlan> {
   try {
     const [apiKey, catalog] = await Promise.all([
-      getEffectiveSetting('anthropic_api_key'),
+      getEffectiveSetting('anthropic_api_key', workspaceId),
       getCatalog(workspaceId),
     ]);
     const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });

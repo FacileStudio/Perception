@@ -153,8 +153,8 @@ function buildStream(
         ];
 
         const [apiKey, llmModel] = await Promise.all([
-          getEffectiveSetting('anthropic_api_key'),
-          getEffectiveSetting('llm_model'),
+          getEffectiveSetting('anthropic_api_key', workspaceId),
+          getEffectiveSetting('llm_model', workspaceId),
         ]);
 
         const anthropic = createAnthropic({ apiKey });

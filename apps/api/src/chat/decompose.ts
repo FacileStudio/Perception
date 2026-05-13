@@ -38,7 +38,7 @@ async function runSubquery(subquery: string, workspaceId: string = ''): Promise<
   const { weights } = await getActiveWeights(workspaceId);
   const [plan, embedding] = await Promise.all([
     buildQueryPlan(subquery),
-    embedQuery(subquery).catch(() => [] as number[]),
+    embedQuery(subquery, workspaceId).catch(() => [] as number[]),
   ]);
   plan.requiresRetrieval = true;
   plan.retrievalMode = 'full';

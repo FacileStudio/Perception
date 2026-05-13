@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { db } from '../db/client';
-import { config } from '../config';
+import { getEffectiveSetting } from '../db/settings';
 import { redactPayload } from './redact';
 import { extractEnvelope } from './envelope';
 import { mapPayload } from './mapper';
@@ -145,6 +145,11 @@ export async function processIngestEvent(
 
   const inputHash = createHash('sha256').update(embeddingInput).digest('hex');
 
+  const [embModel, embDims] = await Promise.all([
+    getEffectiveSetting('embedding_model', workspaceId),
+    getEffectiveSetting('embedding_dimensions', workspaceId),
+  ]);
+
   const now = new Date().toISOString();
   const conceptIds = [
     ...labeling.eventConceptIds,
@@ -198,8 +203,8 @@ export async function processIngestEvent(
       sql: 'INSERT INTO event_embeddings (event_id, model, dimensions, input_hash, status) VALUES (?, ?, ?, ?, ?)',
       args: [
         envelope.id,
-        config.embeddingModel,
-        config.embeddingDimensions,
+        embModel,
+        embDims,
         inputHash,
         'pending',
       ],

@@ -102,8 +102,8 @@ chatRoutes.post('/', async (c) => {
   await saveUserMessage(sessionId, body.message, ws.workspaceId);
 
   const [plan, queryEmbedding] = await Promise.all([
-    buildQueryPlan(body.message),
-    embedQuery(body.message).catch(() => [] as number[]),
+    buildQueryPlan(body.message, ws.workspaceId),
+    embedQuery(body.message, ws.workspaceId).catch(() => [] as number[]),
   ]);
 
   let stream: ReadableStream;

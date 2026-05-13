@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { requireWorkspace } from '../security/workspace';
 import { db } from '../db/client';
-import { getAllEffectiveSettings, setSetting, deleteSetting, getSettingSource } from '../db/settings';
+import { getAllEffectiveSettings, setWorkspaceSetting, getSettingSource } from '../db/settings';
 
 export const settingsRoutes = new Hono();
 
@@ -14,7 +14,6 @@ const ALLOWED_KEYS = [
   'retention_days',
   'store_raw_payloads',
   'email_body_indexing',
-  'workers_paused',
   'notification_webhook_url',
 ];
 
@@ -29,14 +28,14 @@ settingsRoutes.get('/', async (c) => {
   const ws = await requireWorkspace(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
-  const all = await getAllEffectiveSettings();
+  const all = await getAllEffectiveSettings(ws.workspaceId);
   const settings: Record<string, string> = {};
   const sources: Record<string, string> = {};
 
   for (const key of ALLOWED_KEYS) {
     const value = all[key] ?? '';
     settings[key] = maskValue(key, value);
-    sources[key] = await getSettingSource(key);
+    sources[key] = await getSettingSource(key, ws.workspaceId);
   }
 
   return c.json({ settings, sources });
@@ -55,11 +54,7 @@ settingsRoutes.put('/', async (c) => {
 
   for (const [key, value] of Object.entries(body)) {
     if (!ALLOWED_KEYS.includes(key)) continue;
-    if (value === null || value === '') {
-      await deleteSetting(key);
-    } else {
-      await setSetting(key, value);
-    }
+    await setWorkspaceSetting(ws.workspaceId, key, value);
   }
 
   return c.json({ ok: true });

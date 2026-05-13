@@ -3,7 +3,7 @@ import { db } from '../db/client';
 import { getAdapter } from './adapters';
 import type { ActionProposal } from './types';
 
-export async function executeProposal(proposal: ActionProposal): Promise<void> {
+export async function executeProposal(proposal: ActionProposal, workspaceId: string = ''): Promise<void> {
   const adapter = getAdapter(proposal.action_type);
   const now = new Date().toISOString();
 
@@ -16,7 +16,7 @@ export async function executeProposal(proposal: ActionProposal): Promise<void> {
   }
 
   try {
-    const result = await adapter.execute(proposal);
+    const result = await adapter.execute(proposal, workspaceId);
 
     await db.execute({
       sql: `UPDATE action_proposals SET status = 'executed', resolved_at = ?, executed_result = ? WHERE id = ?`,

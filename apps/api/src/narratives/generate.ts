@@ -165,7 +165,7 @@ export async function generateNarrative(entityId: string, workspaceId: string = 
   const ctx = await loadEntityContext(entityId, workspaceId);
   if (!ctx || ctx.eventCount === 0) return null;
 
-  const apiKey = await getEffectiveSetting('anthropic_api_key');
+  const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
 
   const text = await callLLMWithRetry(anthropic, buildNarrativePrompt(ctx));

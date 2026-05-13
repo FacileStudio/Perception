@@ -26,7 +26,7 @@ async function run(): Promise<void> {
     const candidates = await generateCandidateQuestions(workspaceId);
     if (candidates.length === 0) return;
 
-    const passed = await filterByQuality(candidates);
+    const passed = await filterByQuality(candidates, workspaceId);
     const toInsert = passed.slice(0, MAX_PER_RUN);
 
     let inserted = 0;

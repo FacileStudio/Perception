@@ -2,14 +2,14 @@ import { getEffectiveSetting } from '../db/settings';
 import type { ActionProposal, ActionType } from './types';
 
 export type WriteAdapter = {
-  execute: (proposal: ActionProposal) => Promise<string>;
+  execute: (proposal: ActionProposal, workspaceId?: string) => Promise<string>;
 };
 
 const vikunjaAdapter: WriteAdapter = {
-  async execute(proposal) {
-    const baseUrl = await getEffectiveSetting('vikunja_api_url');
-    const token = await getEffectiveSetting('vikunja_api_token');
-    const projectId = proposal.payload.project_id ?? await getEffectiveSetting('vikunja_default_project_id');
+  async execute(proposal, workspaceId = '') {
+    const baseUrl = await getEffectiveSetting('vikunja_api_url', workspaceId);
+    const token = await getEffectiveSetting('vikunja_api_token', workspaceId);
+    const projectId = proposal.payload.project_id ?? await getEffectiveSetting('vikunja_default_project_id', workspaceId);
 
     if (!baseUrl || !token || !projectId) {
       throw new Error('Vikunja not configured: missing vikunja_api_url, vikunja_api_token, or project_id');

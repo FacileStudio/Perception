@@ -63,7 +63,6 @@
   ];
 
   const menuItems = [
-    { href: '/settings', label: 'Settings', icon: 'solar:settings-bold-duotone' },
     { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-bold-duotone' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone' },
   ];

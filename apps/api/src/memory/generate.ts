@@ -74,7 +74,7 @@ export async function extractMemoryEpisodes(sessionId: string, workspaceId: stri
   const ctx = await loadSessionContext(sessionId, workspaceId);
   if (!ctx) return [];
 
-  const apiKey = await getEffectiveSetting('anthropic_api_key');
+  const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
 
   const { text } = await generateText({

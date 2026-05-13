@@ -46,7 +46,7 @@ async function processChunk(chunkId: string, workspaceId: string): Promise<void>
   const content = row.content as string;
   const input = `${title}: ${content}`;
   const inputHash = hashChunkInput(input);
-  const embeddings = await embedDocuments([input]);
+  const embeddings = await embedDocuments([input], workspaceId);
   const vecJson = JSON.stringify(embeddings[0]);
 
   await db.execute({

@@ -2,7 +2,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 import { randomUUID } from 'crypto';
 import { db } from '../db/client';
-import { config } from '../config';
+import { getEffectiveSetting } from '../db/settings';
 import type { InferredFieldMapping } from '../types';
 
 const FIELD_MAPPING_TYPE_DEF = `
@@ -34,7 +34,11 @@ export async function inferSchema(
   eventType: string,
   normalizedSample: Record<string, unknown>,
 ): Promise<InferredFieldMapping[]> {
-  const anthropic = createAnthropic({ apiKey: config.anthropicApiKey });
+  const [apiKey, llmModel] = await Promise.all([
+    getEffectiveSetting('anthropic_api_key'),
+    getEffectiveSetting('llm_model'),
+  ]);
+  const anthropic = createAnthropic({ apiKey });
 
   const userPrompt = [
     `Provider type: ${providerType}`,
@@ -50,7 +54,7 @@ export async function inferSchema(
   ].join('\n');
 
   const { text, usage } = await generateText({
-    model: anthropic(config.llmModel),
+    model: anthropic(llmModel),
     system:
       'You are a schema inference engine. Map provider event payload fields to a structured field mapping schema. Return valid JSON only.\n' +
       'Role guidance: use "actor" for fields that identify the human or system who triggered/initiated the event (e.g. triggered_by, user, initiator, created_by, actor, sender, author). ' +
@@ -61,7 +65,7 @@ export async function inferSchema(
   if (usage?.promptTokens || usage?.completionTokens) {
     db.execute({
       sql: `INSERT INTO token_usage (id, kind, model, session_id, input_tokens, output_tokens, occurred_at) VALUES (?, 'llm', ?, NULL, ?, ?, ?)`,
-      args: [randomUUID(), config.llmModel, usage.promptTokens ?? 0, usage.completionTokens ?? 0, new Date().toISOString()],
+      args: [randomUUID(), llmModel, usage.promptTokens ?? 0, usage.completionTokens ?? 0, new Date().toISOString()],
     }).catch(() => {});
   }
 

@@ -175,7 +175,7 @@ function ensureLimit(sql: string, maxRows = 100): string {
 
 export async function textToSqlLane(plan: QueryPlan, workspaceId: string = ''): Promise<SqlQueryResult | null> {
   try {
-    const apiKey = await getEffectiveSetting('anthropic_api_key');
+    const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
     const anthropic = createAnthropic({ apiKey: apiKey ?? undefined });
 
     const { text } = await generateText({

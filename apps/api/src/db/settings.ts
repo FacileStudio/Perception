@@ -1,19 +1,37 @@
 import { db } from './client';
-import { config } from '../config';
 
 const DEFAULTS: Record<string, string> = {
-  anthropic_api_key: config.anthropicApiKey,
-  voyage_api_key: config.voyageApiKey,
-  llm_model: config.llmModel,
-  embedding_model: config.embeddingModel,
-  embedding_dimensions: String(config.embeddingDimensions),
-  retention_days: String(config.retentionDays),
-  store_raw_payloads: String(config.storeRawPayloads),
-  email_body_indexing: String(config.emailBodyIndexing),
+  llm_model: 'claude-sonnet-4-6',
+  embedding_model: 'voyage-4-lite',
+  embedding_dimensions: '1024',
+  retention_days: '365',
+  store_raw_payloads: 'false',
+  email_body_indexing: 'false',
   workers_paused: 'false',
 };
 
-export async function getEffectiveSetting(key: string): Promise<string> {
+async function getWorkspaceOverride(key: string, workspaceId: string): Promise<string | null> {
+  try {
+    const result = await db.execute({
+      sql: 'SELECT metadata FROM organization WHERE id = ?',
+      args: [workspaceId],
+    });
+    if (result.rows.length === 0) return null;
+    const raw = result.rows[0].metadata as string | null;
+    if (!raw) return null;
+    const meta = JSON.parse(raw) as Record<string, string>;
+    return meta[key] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getEffectiveSetting(key: string, workspaceId: string = ''): Promise<string> {
+  if (workspaceId) {
+    const wsOverride = await getWorkspaceOverride(key, workspaceId);
+    if (wsOverride !== null && wsOverride !== '') return wsOverride;
+  }
+
   const result = await db.execute({
     sql: 'SELECT value FROM app_settings WHERE key = ?',
     args: [key],
@@ -24,13 +42,33 @@ export async function getEffectiveSetting(key: string): Promise<string> {
   return DEFAULTS[key] ?? '';
 }
 
-export async function getAllEffectiveSettings(): Promise<Record<string, string>> {
+export async function getAllEffectiveSettings(workspaceId: string = ''): Promise<Record<string, string>> {
   const result = await db.execute('SELECT key, value FROM app_settings');
   const dbSettings: Record<string, string> = {};
   for (const row of result.rows) {
     dbSettings[row.key as string] = row.value as string;
   }
-  return { ...DEFAULTS, ...dbSettings };
+  const merged = { ...DEFAULTS, ...dbSettings };
+
+  if (workspaceId) {
+    try {
+      const orgResult = await db.execute({
+        sql: 'SELECT metadata FROM organization WHERE id = ?',
+        args: [workspaceId],
+      });
+      if (orgResult.rows.length > 0) {
+        const raw = orgResult.rows[0].metadata as string | null;
+        if (raw) {
+          const meta = JSON.parse(raw) as Record<string, string>;
+          for (const [k, v] of Object.entries(meta)) {
+            if (v !== '') merged[k] = v;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return merged;
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
@@ -41,6 +79,28 @@ export async function setSetting(key: string, value: string): Promise<void> {
   });
 }
 
+export async function setWorkspaceSetting(workspaceId: string, key: string, value: string | null): Promise<void> {
+  const orgResult = await db.execute({
+    sql: 'SELECT metadata FROM organization WHERE id = ?',
+    args: [workspaceId],
+  });
+  if (orgResult.rows.length === 0) return;
+
+  const raw = orgResult.rows[0].metadata as string | null;
+  const meta: Record<string, string> = raw ? JSON.parse(raw) : {};
+
+  if (value === null || value === '') {
+    delete meta[key];
+  } else {
+    meta[key] = value;
+  }
+
+  await db.execute({
+    sql: 'UPDATE organization SET metadata = ? WHERE id = ?',
+    args: [JSON.stringify(meta), workspaceId],
+  });
+}
+
 export async function deleteSetting(key: string): Promise<void> {
   await db.execute({
     sql: 'DELETE FROM app_settings WHERE key = ?',
@@ -48,7 +108,12 @@ export async function deleteSetting(key: string): Promise<void> {
   });
 }
 
-export async function getSettingSource(key: string): Promise<'db' | 'env' | 'default'> {
+export async function getSettingSource(key: string, workspaceId: string = ''): Promise<'workspace' | 'db' | 'env' | 'default'> {
+  if (workspaceId) {
+    const wsOverride = await getWorkspaceOverride(key, workspaceId);
+    if (wsOverride !== null && wsOverride !== '') return 'workspace';
+  }
+
   const result = await db.execute({
     sql: 'SELECT value FROM app_settings WHERE key = ?',
     args: [key],

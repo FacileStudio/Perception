@@ -78,7 +78,7 @@ proposalRoutes.patch('/:id/approve', async (c) => {
   const result = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   const proposal = rowToProposal(result.rows[0] as Record<string, unknown>);
 
-  await executeProposal(proposal);
+  await executeProposal(proposal, ws.workspaceId);
 
   const updated = await db.execute({ sql: `SELECT * FROM action_proposals WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
   const final = rowToProposal(updated.rows[0] as Record<string, unknown>);

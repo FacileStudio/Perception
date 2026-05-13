@@ -242,7 +242,7 @@ export async function updateBelief(forecastId: string, wideSearch: boolean = fal
 
   if (current.step >= MAX_STEPS) return current;
 
-  const apiKey = await getEffectiveSetting('anthropic_api_key');
+  const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   if (!apiKey) {
     console.warn('[belief-updater] no anthropic_api_key configured, skipping update');
     return current;

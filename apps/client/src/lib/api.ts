@@ -20,8 +20,15 @@ export const api = {
   },
   workspaces: {
     list: () => request<{ workspaces: Array<{ id: string; name: string; slug: string; role: string; created_at: string }>; active_workspace_id: string | null }>('/workspaces'),
+    create: (name: string, slug?: string) => request<{ id: string; name: string; slug: string; role: string; created_at: string }>('/workspaces', { method: 'POST', body: JSON.stringify({ name, slug }) }),
+    update: (id: string, body: { name?: string; slug?: string }) => request<{ id: string; name: string; slug: string }>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
     members: (id: string) => request<{ members: Array<{ id: string; user_id: string; name: string; email: string; role: string; joined_at: string }> }>(`/workspaces/${id}/members`),
     stats: (id: string) => request<{ event_count: number; entity_count: number; session_count: number; open_forecast_count: number }>(`/workspaces/${id}/stats`),
+    invite: (id: string, email: string, role?: string) => request<{ ok: boolean }>(`/workspaces/${id}/invite`, { method: 'POST', body: JSON.stringify({ email, role }) }),
+    removeMember: (wsId: string, memberId: string) => request<{ ok: boolean }>(`/workspaces/${wsId}/members/${memberId}`, { method: 'DELETE' }),
+    updateMemberRole: (wsId: string, memberId: string, role: string) => request<{ ok: boolean }>(`/workspaces/${wsId}/members/${memberId}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+    settings: (id: string) => request<{ settings: Record<string, string>; sources: Record<string, string> }>(`/workspaces/${id}/settings`),
+    updateSettings: (id: string, body: Record<string, string | null>) => request<{ ok: boolean }>(`/workspaces/${id}/settings`, { method: 'PUT', body: JSON.stringify(body) }),
   },
   users: {
     list: () => request<{ users: AuthUser[] }>('/users'),

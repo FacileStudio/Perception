@@ -31,8 +31,8 @@ async function evaluateCandidate(
   }
 }
 
-export async function filterByQuality(candidates: CandidateQuestion[]): Promise<CandidateQuestion[]> {
-  const apiKey = await getEffectiveSetting('anthropic_api_key');
+export async function filterByQuality(candidates: CandidateQuestion[], workspaceId: string = ''): Promise<CandidateQuestion[]> {
+  const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   if (!apiKey) return candidates;
 
   const passed: CandidateQuestion[] = [];

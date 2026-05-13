@@ -4,11 +4,11 @@ import { getEffectiveSetting } from '../db/settings';
 
 const VOYAGE_API = 'https://api.voyageai.com/v1';
 
-async function callEmbeddings(input: string[], inputType: 'document' | 'query'): Promise<number[][]> {
+async function callEmbeddings(input: string[], inputType: 'document' | 'query', workspaceId: string = ''): Promise<number[][]> {
   const [apiKey, model, dimensionsStr] = await Promise.all([
-    getEffectiveSetting('voyage_api_key'),
-    getEffectiveSetting('embedding_model'),
-    getEffectiveSetting('embedding_dimensions'),
+    getEffectiveSetting('voyage_api_key', workspaceId),
+    getEffectiveSetting('embedding_model', workspaceId),
+    getEffectiveSetting('embedding_dimensions', workspaceId),
   ]);
 
   const dimensions = parseInt(dimensionsStr, 10) || 1024;
@@ -44,11 +44,11 @@ async function callEmbeddings(input: string[], inputType: 'document' | 'query'):
   return json.data.map((d) => d.embedding);
 }
 
-export async function embedDocuments(texts: string[]): Promise<number[][]> {
-  return callEmbeddings(texts, 'document');
+export async function embedDocuments(texts: string[], workspaceId: string = ''): Promise<number[][]> {
+  return callEmbeddings(texts, 'document', workspaceId);
 }
 
-export async function embedQuery(text: string): Promise<number[]> {
-  const results = await callEmbeddings([text], 'query');
+export async function embedQuery(text: string, workspaceId: string = ''): Promise<number[]> {
+  const results = await callEmbeddings([text], 'query', workspaceId);
   return results[0];
 }

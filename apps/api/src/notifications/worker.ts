@@ -36,8 +36,8 @@ async function insertNotification(alert: AnomalyAlert, workspaceId: string): Pro
   return id;
 }
 
-async function fireWebhook(alerts: AnomalyAlert[]): Promise<void> {
-  const url = await getEffectiveSetting('notification_webhook_url');
+async function fireWebhook(alerts: AnomalyAlert[], workspaceId: string): Promise<void> {
+  const url = await getEffectiveSetting('notification_webhook_url', workspaceId);
   if (!url) return;
 
   try {
@@ -85,7 +85,7 @@ async function run(): Promise<void> {
     }
 
     if (newAlerts.length > 0) {
-      await fireWebhook(newAlerts);
+      await fireWebhook(newAlerts, workspaceId);
       console.log(`[notifications] generated ${newAlerts.length} new alert(s) for workspace ${workspaceId}`);
     }
   });

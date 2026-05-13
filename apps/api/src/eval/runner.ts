@@ -73,9 +73,9 @@ async function loadFixtures(workspaceId: string = ''): Promise<EvalFixture[]> {
   }));
 }
 
-async function evaluateFixture(fixture: EvalFixture): Promise<FixtureResult> {
-  const plan = await buildQueryPlan(fixture.question);
-  const queryEmbedding = await embedQuery(fixture.question);
+async function evaluateFixture(fixture: EvalFixture, workspaceId: string = ''): Promise<FixtureResult> {
+  const plan = await buildQueryPlan(fixture.question, workspaceId);
+  const queryEmbedding = await embedQuery(fixture.question, workspaceId);
   const result = await retrieveWithCorrection(plan, queryEmbedding);
 
   const retrievedIds = result.events.map((e) => e.id);
@@ -127,7 +127,7 @@ export async function runEvaluation(workspaceId: string = ''): Promise<RunResult
 
   for (const fixture of fixtures) {
     try {
-      const result = await evaluateFixture(fixture);
+      const result = await evaluateFixture(fixture, workspaceId);
       results.push(result);
     } catch {
       results.push({
