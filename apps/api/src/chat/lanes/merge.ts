@@ -20,15 +20,17 @@ let weightCache: {
   fetchedAt: number;
 } | null = null;
 
-async function loadBanditWeights(): Promise<Record<QueryPlan['intent'], Record<RetrievalSource, number>> | null> {
+async function loadBanditWeights(workspaceId: string = ''): Promise<Record<QueryPlan['intent'], Record<RetrievalSource, number>> | null> {
   if (weightCache && Date.now() - weightCache.fetchedAt < WEIGHT_CACHE_TTL) {
     return weightCache.weights;
   }
 
   try {
-    const result = await db.execute(
-      `SELECT weights FROM retrieval_weight_versions ORDER BY version DESC LIMIT 1`,
-    );
+    const wsAnd = workspaceId ? ' WHERE workspace_id = ?' : '';
+    const result = await db.execute({
+      sql: `SELECT weights FROM retrieval_weight_versions${wsAnd} ORDER BY version DESC LIMIT 1`,
+      args: workspaceId ? [workspaceId] : [],
+    });
     if (result.rows.length === 0) return null;
 
     const weights = JSON.parse(result.rows[0].weights as string);
@@ -39,7 +41,7 @@ async function loadBanditWeights(): Promise<Record<QueryPlan['intent'], Record<R
   }
 }
 
-export async function getActiveWeights(): Promise<{
+export async function getActiveWeights(workspaceId: string = ''): Promise<{
   weights: Record<QueryPlan['intent'], Record<RetrievalSource, number>>;
   exploring: boolean;
 }> {
@@ -47,7 +49,7 @@ export async function getActiveWeights(): Promise<{
     return { weights: BASE_WEIGHTS, exploring: true };
   }
 
-  const bandit = await loadBanditWeights();
+  const bandit = await loadBanditWeights(workspaceId);
   if (bandit) {
     return { weights: bandit, exploring: false };
   }

@@ -164,7 +164,7 @@ chatRoutes.post('/', async (c) => {
 
   if (plan.isComposite && plan.subqueries.length > 1) {
     try {
-      const { weights } = await getActiveWeights();
+      const { weights } = await getActiveWeights(ws.workspaceId);
       compositeWeights = (weights[plan.intent] ?? {}) as Record<string, number>;
       compositeResult = await decomposeAndRetrieve(plan.subqueries, ws.workspaceId);
     } catch (err) {

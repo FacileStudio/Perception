@@ -110,7 +110,7 @@ export async function retrieveWithCorrection(
   queryEmbedding: number[],
   workspaceId: string = '',
 ): Promise<RetrievalResult & { corrected: boolean; confidence: ContextConfidence; meta: RetrievalMeta }> {
-  const { weights, exploring } = await getActiveWeights();
+  const { weights, exploring } = await getActiveWeights(workspaceId);
   const initial = await retrieveContext(plan, queryEmbedding, weights, workspaceId);
   const confidence = scoreContextQuality(initial, plan);
 
@@ -249,8 +249,8 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const shouldGraph = intent === 'narrative' || intent === 'lookup' || intent === 'anomaly' || intent === 'counterfactual';
 
   const [vectorEvents, ftsEvents, sqlEvents, recentEvents, entityEvents, conceptEvents, stats] = await Promise.all([
-    skipVector ? Promise.resolve([]) : vectorLane(queryEmbedding),
-    ftsLane(plan.queryTerms),
+    skipVector ? Promise.resolve([]) : vectorLane(queryEmbedding, workspaceId),
+    ftsLane(plan.queryTerms, workspaceId),
     (plan.requiresSqlFacts || alwaysSql || isComparison) ? sqlLane(plan, workspaceId) : Promise.resolve([]),
     shouldRunRecentLane ? recentLane(plan, workspaceId) : Promise.resolve([]),
     (alwaysEntity || plan.queryTerms.length > 0) ? entityLane(plan, workspaceId) : Promise.resolve([]),
@@ -270,11 +270,11 @@ export async function retrieveContext(plan: QueryPlan, queryEmbedding: number[],
   const [graphEvents, communitySummaries, narratives, sqlResult, memoryEpisodes, causalLinks, resourceChunks] = await Promise.all([
     shouldGraph && seedEntityIds.length > 0 ? graphLane(seedEntityIds, workspaceId) : Promise.resolve([]),
     shouldCommunity && seedEntityIds.length > 0 ? communityLane(seedEntityIds, workspaceId) : Promise.resolve([]),
-    shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds) : Promise.resolve([]),
+    shouldNarrative && seedEntityIds.length > 0 ? fetchNarratives(seedEntityIds, workspaceId) : Promise.resolve([]),
     shouldTextToSql ? textToSqlLane(plan, workspaceId) : Promise.resolve(null),
-    shouldMemory ? fetchMemoryEpisodes(queryEmbedding) : Promise.resolve([]),
+    shouldMemory ? fetchMemoryEpisodes(queryEmbedding, workspaceId) : Promise.resolve([]),
     shouldCausal ? fetchCausalLinks(workspaceId) : Promise.resolve([] as CausalLink[]),
-    shouldResources ? fetchResourceChunks(queryEmbedding) : Promise.resolve([]),
+    shouldResources ? fetchResourceChunks(queryEmbedding, workspaceId) : Promise.resolve([]),
   ]);
 
   let events = mergeAndRank([entityEvents, conceptEvents, vectorEvents, ftsEvents, sqlEvents, recentEvents, graphEvents], plan, intentWeights);

@@ -51,41 +51,41 @@ adminRoutes.post('/workers/:name/run', async (c) => {
 adminRoutes.post('/embedding-jobs/retry', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  const reset = await retryFailedEmbeddings();
+  const reset = await retryFailedEmbeddings(ws.workspaceId);
   return c.json({ reset });
 });
 
 adminRoutes.post('/backfill-embeddings', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  const enqueued = await backfillMissingEmbeddings();
+  const enqueued = await backfillMissingEmbeddings(ws.workspaceId);
   return c.json({ enqueued });
 });
 
 adminRoutes.post('/reinfer-schemas', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  const queued = await reinferAllSchemas();
+  const queued = await reinferAllSchemas(ws.workspaceId);
   return c.json({ queued });
 });
 
 adminRoutes.get('/embedding-stats', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  return c.json(await getEmbeddingStats());
+  return c.json(await getEmbeddingStats(ws.workspaceId));
 });
 
 adminRoutes.post('/reembed-all', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  const reset = await reembedAll();
+  const reset = await reembedAll(ws.workspaceId);
   return c.json({ reset });
 });
 
 adminRoutes.post('/reprocess-entities', async (c) => {
   const ws = await requireAdmin(c);
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
-  return c.json(await reprocessActorEntities());
+  return c.json(await reprocessActorEntities(ws.workspaceId));
 });
 
 adminRoutes.get('/graph-health', async (c) => {
@@ -199,7 +199,7 @@ adminRoutes.post('/eval/run', async (c) => {
   if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   try {
-    const result = await runEvaluation();
+    const result = await runEvaluation(ws.workspaceId);
     return c.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -338,7 +338,7 @@ adminRoutes.post('/eval/promote/:messageId', async (c) => {
 
   const messageId = c.req.param('messageId');
   const body = await c.req.json<{ notes?: string }>().catch(() => ({}));
-  const fixtureId = await promoteToFixture(messageId, (body as { notes?: string }).notes);
+  const fixtureId = await promoteToFixture(messageId, (body as { notes?: string }).notes, ws.workspaceId);
 
   if (!fixtureId) return c.json({ error: 'message_not_found_or_not_upvoted' }, 404);
   return c.json({ fixture_id: fixtureId }, 201);

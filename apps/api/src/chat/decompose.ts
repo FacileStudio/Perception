@@ -35,7 +35,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 async function runSubquery(subquery: string, workspaceId: string = ''): Promise<SubqueryResult> {
-  const { weights } = await getActiveWeights();
+  const { weights } = await getActiveWeights(workspaceId);
   const [plan, embedding] = await Promise.all([
     buildQueryPlan(subquery),
     embedQuery(subquery).catch(() => [] as number[]),
