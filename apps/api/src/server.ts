@@ -4,7 +4,7 @@ import { logger } from 'hono/logger';
 import { bodyLimit } from 'hono/body-limit';
 import { runMigrations } from './db/migrations';
 import { db } from './db/client';
-import { auth } from './auth';
+import { auth, getAuthError } from './auth';
 import { ingestRoutes } from './routes/ingest';
 import { chatRoutes } from './routes/chat';
 import { eventsRoutes } from './routes/events';
@@ -21,6 +21,7 @@ import { workspaceRoutes } from './routes/workspaces';
 import { config } from './config';
 
 let ready = false;
+let startupError: string | null = null;
 
 const app = new Hono();
 
@@ -34,7 +35,10 @@ app.use('*', cors({
 app.use('/ingest', bodyLimit({ maxSize: 1 * 1024 * 1024 }));
 app.use('/resources', bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 
-app.get('/health', (c) => c.json({ ok: true }));
+app.get('/health', (c) => {
+  const authErr = getAuthError();
+  return c.json({ ok: true, ready, startupError: startupError ?? undefined, authError: authErr ?? undefined });
+});
 app.get('/ready', async (c) => {
   if (!ready) return c.json({ ok: false, error: 'initializing' }, 503);
   try {
@@ -46,7 +50,12 @@ app.get('/ready', async (c) => {
 });
 
 app.on(['POST', 'GET'], '/auth/*', (c) => {
-  return auth.handler(c.req.raw);
+  try {
+    return auth.handler(c.req.raw);
+  } catch (e) {
+    console.error('[auth] handler error:', e);
+    return c.json({ error: 'auth_unavailable', detail: e instanceof Error ? e.message : String(e) }, 503);
+  }
 });
 
 app.route('/ingest', ingestRoutes);
@@ -103,6 +112,7 @@ console.log(`[perception] HTTP server listening on :${config.port}`);
 
     await startWorkers();
   } catch (e) {
+    startupError = e instanceof Error ? e.message : String(e);
     console.error('[startup] FATAL:', e);
     ready = true;
   }
