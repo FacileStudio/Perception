@@ -94,13 +94,18 @@
   </div>
 
   <div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
+    {#if !auth.configLoaded}
+      <div class="flex items-center justify-center py-16">
+        <span class="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    {:else}
     <div class="w-full max-w-sm">
       <div class="mb-8">
         <h1 class="font-[Goga] text-2xl tracking-tight text-foreground">
-          {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+          {auth.config.sso_only ? 'Welcome' : mode === 'signin' ? 'Welcome back' : 'Create your account'}
         </h1>
         <p class="mt-1.5 text-sm text-muted-foreground">
-          {mode === 'signin' ? 'Sign in with your email and password.' : 'Fill in your details to get started.'}
+          {auth.config.sso_only ? 'Sign in with your organization account.' : mode === 'signin' ? 'Sign in with your email and password.' : 'Fill in your details to get started.'}
         </p>
       </div>
 
@@ -108,109 +113,120 @@
         <p class="mb-4 text-sm text-destructive">{error}</p>
       {/if}
 
-      {#if mode === 'signin'}
-        <form onsubmit={handleSignIn} class="space-y-4">
-          <div class="space-y-1.5">
-            <Label for="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              bind:value={email}
-              disabled={loading}
-              autocomplete="email"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <Label for="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              bind:value={password}
-              disabled={loading}
-              autocomplete="current-password"
-            />
-          </div>
-
-          <Button type="submit" class="w-full" disabled={loading || !email.trim() || !password.trim()}>
-            {loading ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </form>
-
-        <p class="mt-4 text-center text-sm text-muted-foreground">
-          No account?
-          <button class="underline text-foreground hover:text-foreground/80" onclick={() => { mode = 'signup'; error = ''; }}>
-            Sign up
-          </button>
-        </p>
-      {:else}
-        <form onsubmit={handleSignUp} class="space-y-4">
-          <div class="space-y-1.5">
-            <Label for="name">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              bind:value={name}
-              disabled={loading}
-              autocomplete="name"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <Label for="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              bind:value={email}
-              disabled={loading}
-              autocomplete="email"
-            />
-          </div>
-
-          <div class="space-y-1.5">
-            <Label for="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              bind:value={password}
-              disabled={loading}
-              autocomplete="new-password"
-            />
-          </div>
-
-          <Button type="submit" class="w-full" disabled={loading || !email.trim() || !password.trim() || !name.trim()}>
-            {loading ? 'Creating account...' : 'Sign up'}
-          </Button>
-        </form>
-
-        <p class="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?
-          <button class="underline text-foreground hover:text-foreground/80" onclick={() => { mode = 'signin'; error = ''; }}>
-            Sign in
-          </button>
-        </p>
-      {/if}
-
-      {#if auth.config.oidc_enabled}
-        <div class="my-6 flex items-center gap-3">
-          <div class="h-px flex-1 bg-zinc-200"></div>
-          <span class="text-xs text-zinc-400">or continue with</span>
-          <div class="h-px flex-1 bg-zinc-200"></div>
-        </div>
-
+      {#if auth.config.sso_only && auth.config.oidc_enabled}
         <a
           href="{API_BASE}/auth/oidc"
-          class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-50"
+          class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
         >
           <Icon icon="solar:key-bold-duotone" class="size-4" />
           Sign in with SSO
         </a>
+      {:else}
+        {#if mode === 'signin'}
+          <form onsubmit={handleSignIn} class="space-y-4">
+            <div class="space-y-1.5">
+              <Label for="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                bind:value={email}
+                disabled={loading}
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                bind:value={password}
+                disabled={loading}
+                autocomplete="current-password"
+              />
+            </div>
+
+            <Button type="submit" class="w-full" disabled={loading || !email.trim() || !password.trim()}>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </Button>
+          </form>
+
+          <p class="mt-4 text-center text-sm text-muted-foreground">
+            No account?
+            <button class="underline text-foreground hover:text-foreground/80" onclick={() => { mode = 'signup'; error = ''; }}>
+              Sign up
+            </button>
+          </p>
+        {:else}
+          <form onsubmit={handleSignUp} class="space-y-4">
+            <div class="space-y-1.5">
+              <Label for="name">Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Your name"
+                bind:value={name}
+                disabled={loading}
+                autocomplete="name"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                bind:value={email}
+                disabled={loading}
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="space-y-1.5">
+              <Label for="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                bind:value={password}
+                disabled={loading}
+                autocomplete="new-password"
+              />
+            </div>
+
+            <Button type="submit" class="w-full" disabled={loading || !email.trim() || !password.trim() || !name.trim()}>
+              {loading ? 'Creating account...' : 'Sign up'}
+            </Button>
+          </form>
+
+          <p class="mt-4 text-center text-sm text-muted-foreground">
+            Already have an account?
+            <button class="underline text-foreground hover:text-foreground/80" onclick={() => { mode = 'signin'; error = ''; }}>
+              Sign in
+            </button>
+          </p>
+        {/if}
+
+        {#if auth.config.oidc_enabled}
+          <div class="my-6 flex items-center gap-3">
+            <div class="h-px flex-1 bg-zinc-200"></div>
+            <span class="text-xs text-zinc-400">or continue with</span>
+            <div class="h-px flex-1 bg-zinc-200"></div>
+          </div>
+
+          <a
+            href="{API_BASE}/auth/oidc"
+            class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-50"
+          >
+            <Icon icon="solar:key-bold-duotone" class="size-4" />
+            Sign in with SSO
+          </a>
+        {/if}
       {/if}
     </div>
+    {/if}
   </div>
 </div>
