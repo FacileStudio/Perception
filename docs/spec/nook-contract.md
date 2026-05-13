@@ -74,8 +74,7 @@ Signature payload:
 
 Verification:
 
-- HMAC-SHA256 with `PERCEPTION_INGEST_SECRET_CURRENT`.
-- Also accept `PERCEPTION_INGEST_SECRET_PREVIOUS` during rotation.
+- HMAC-SHA256 with the workspace's `ingest_secret` setting.
 - Use constant-time compare.
 - Reject timestamps older than 5 minutes.
 - Reject duplicate event IDs.

@@ -11,8 +11,6 @@ export const config = {
   port: parseInt(process.env.PORT ?? '8787', 10),
   databaseUrl: process.env.PERCEPTION_DATABASE_URL ?? 'file:./data/perception.db',
   databaseAuthToken: process.env.PERCEPTION_DATABASE_AUTH_TOKEN ?? '',
-  ingestSecretCurrent: process.env.PERCEPTION_INGEST_SECRET_CURRENT ?? '',
-  ingestSecretPrevious: process.env.PERCEPTION_INGEST_SECRET_PREVIOUS ?? '',
   ingestMaxSkewSeconds: parseInt(process.env.PERCEPTION_INGEST_MAX_SKEW_SECONDS ?? '300', 10),
   adminUsername: process.env.PERCEPTION_ADMIN_USERNAME ?? 'admin',
   adminPassword: process.env.PERCEPTION_ADMIN_PASSWORD ?? '',

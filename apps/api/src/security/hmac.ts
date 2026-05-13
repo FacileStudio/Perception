@@ -28,7 +28,12 @@ export type HmacResult =
 export async function verifyNookSignature(
   rawBody: string,
   headers: { eventId: string; timestamp: string; schemaVersion: string; signature: string },
+  secrets: string[],
 ): Promise<HmacResult> {
+  if (secrets.length === 0) {
+    return { ok: false, reason: 'no_ingest_secret_configured' };
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const ts = parseInt(headers.timestamp, 10);
   if (isNaN(ts) || Math.abs(now - ts) > config.ingestMaxSkewSeconds) {
@@ -42,7 +47,6 @@ export async function verifyNookSignature(
   const sigHex = headers.signature.replace(/^sha256=/, '');
   const message = `${headers.timestamp}.${headers.eventId}.${rawBody}`;
 
-  const secrets = [config.ingestSecretCurrent, config.ingestSecretPrevious].filter(Boolean);
   for (const secret of secrets) {
     const expected = await computeHmac(secret, message);
     if (timingSafeEqual(expected, sigHex)) return { ok: true };

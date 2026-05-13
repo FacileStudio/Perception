@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { createHash, randomUUID } from 'node:crypto';
 import { db } from '../db/client';
 import { verifyNookSignature } from '../security/hmac';
+import { getEffectiveSetting } from '../db/settings';
 import { processIngestEvent } from '../ingest/pipeline';
 import type { NookEventEnvelope } from '../types';
 
@@ -29,12 +30,15 @@ ingestRoutes.post('/', async (c) => {
     return c.json({ error: 'Workspace not found' }, 400);
   }
 
+  const ingestSecret = await getEffectiveSetting('ingest_secret', workspaceId);
+  const secrets = [ingestSecret].filter(Boolean);
+
   const hmacResult = await verifyNookSignature(rawBody, {
     eventId,
     timestamp,
     schemaVersion,
     signature,
-  });
+  }, secrets);
 
   if (!hmacResult.ok) {
     const ip = c.req.header('x-forwarded-for') ?? '';

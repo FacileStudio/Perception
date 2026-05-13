@@ -41,9 +41,10 @@
   let edits = $state<Record<string, string>>({});
   let showSensitive = $state<Record<string, boolean>>({});
 
-  const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);
+  const SENSITIVE_KEYS = new Set(['ingest_secret', 'anthropic_api_key', 'voyage_api_key']);
 
   const KEY_LABELS: Record<string, string> = {
+    ingest_secret: 'Ingest Signing Secret',
     anthropic_api_key: 'Anthropic API Key',
     voyage_api_key: 'Voyage AI API Key',
     llm_model: 'LLM Model',
@@ -56,6 +57,7 @@
   };
 
   const KEY_DESCRIPTIONS: Record<string, string> = {
+    ingest_secret: 'HMAC-SHA256 secret used to verify ingest requests targeting this workspace',
     anthropic_api_key: 'Used for chat completions',
     voyage_api_key: 'Used for semantic search embeddings',
     llm_model: 'Claude model for chat (e.g. claude-sonnet-4-6)',
@@ -67,6 +69,7 @@
     notification_webhook_url: 'POST alerts to this URL',
   };
 
+  const ingestSection = ['ingest_secret'];
   const apiKeySection = ['anthropic_api_key', 'voyage_api_key'];
   const modelSection = ['llm_model', 'embedding_model', 'embedding_dimensions'];
   const systemSection = ['retention_days', 'store_raw_payloads', 'email_body_indexing'];
@@ -524,6 +527,7 @@
           {#if settingsError}<p class="mb-4 text-sm text-destructive">{settingsError}</p>{/if}
 
           {#each [
+            { title: 'Ingest', keys: ingestSection },
             { title: 'API Keys', keys: apiKeySection },
             { title: 'Models', keys: modelSection },
             { title: 'System', keys: systemSection },

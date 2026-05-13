@@ -7,6 +7,7 @@ import { getAllEffectiveSettings, setWorkspaceSetting, getSettingSource } from '
 import { config } from '../config';
 
 const WS_SETTINGS_KEYS = [
+  'ingest_secret',
   'anthropic_api_key',
   'voyage_api_key',
   'llm_model',
@@ -18,7 +19,7 @@ const WS_SETTINGS_KEYS = [
   'notification_webhook_url',
 ];
 
-const SENSITIVE_KEYS = new Set(['anthropic_api_key', 'voyage_api_key']);
+const SENSITIVE_KEYS = new Set(['ingest_secret', 'anthropic_api_key', 'voyage_api_key']);
 
 function maskValue(key: string, value: string): string {
   if (!SENSITIVE_KEYS.has(key) || value.length <= 8) return value;
