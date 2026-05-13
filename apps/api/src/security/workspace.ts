@@ -1,7 +1,8 @@
 import type { Context } from 'hono';
-import { auth, type Session } from '../auth';
+import { auth } from '../auth';
 import { config } from '../config';
 import { db } from '../db/client';
+import { getSession } from './session';
 
 export interface WorkspaceContext {
   userId: string;
@@ -24,37 +25,85 @@ const DEV_CONTEXT: WorkspaceContext = {
 export async function getWorkspaceContext(c: Context): Promise<WorkspaceContext | null> {
   if (config.localDevAuthDisabled) return DEV_CONTEXT;
 
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) return null;
+  let userId: string;
+  let userName: string;
+  let userEmail: string;
+  let activeOrgId: string | null = null;
 
-  const wsId = (session.session as any).activeOrganizationId as string | null;
-  if (!wsId) {
-    const fallback = await getDefaultWorkspace(session.user.id);
-    if (!fallback) return null;
+  const session = await auth.api.getSession({ headers: c.req.raw.headers }).catch(() => null);
+  if (session?.user) {
+    userId = session.user.id;
+    userName = session.user.name;
+    userEmail = session.user.email;
+    activeOrgId = (session.session as any).activeOrganizationId as string | null;
+  } else {
+    const legacy = await getSession(c);
+    if (!legacy) return null;
+
+    const userRow = await db.execute({
+      sql: 'SELECT id, email, name FROM users WHERE id = ?',
+      args: [legacy.userId],
+    });
+    if (userRow.rows.length === 0) return null;
+
+    const email = userRow.rows[0].email as string;
+    const name = userRow.rows[0].name as string | null;
+
+    const baUser = await ensureBetterAuthUser(email, name);
+    userId = baUser.id;
+    userName = baUser.name;
+    userEmail = baUser.email;
+  }
+
+  if (activeOrgId) {
+    const member = await db.execute({
+      sql: 'SELECT m.role, o.slug FROM member m JOIN organization o ON o.id = m.organizationId WHERE m.userId = ? AND m.organizationId = ?',
+      args: [userId, activeOrgId],
+    });
+    if (member.rows.length > 0) {
+      return {
+        userId,
+        userName,
+        userEmail,
+        workspaceId: activeOrgId,
+        workspaceSlug: member.rows[0].slug as string,
+        role: member.rows[0].role as string,
+      };
+    }
+  }
+
+  const fallback = await getDefaultWorkspace(userId);
+  if (!fallback) return null;
+  return {
+    userId,
+    userName,
+    userEmail,
+    workspaceId: fallback.id,
+    workspaceSlug: fallback.slug,
+    role: fallback.role,
+  };
+}
+
+async function ensureBetterAuthUser(email: string, name: string | null): Promise<{ id: string; name: string; email: string }> {
+  const existing = await db.execute({
+    sql: 'SELECT id, name, email FROM user WHERE email = ?',
+    args: [email],
+  });
+  if (existing.rows.length > 0) {
     return {
-      userId: session.user.id,
-      userName: session.user.name,
-      userEmail: session.user.email,
-      workspaceId: fallback.id,
-      workspaceSlug: fallback.slug,
-      role: fallback.role,
+      id: existing.rows[0].id as string,
+      name: (existing.rows[0].name as string) ?? email,
+      email: existing.rows[0].email as string,
     };
   }
 
-  const member = await db.execute({
-    sql: 'SELECT m.role, o.slug FROM member m JOIN organization o ON o.id = m.organizationId WHERE m.userId = ? AND m.organizationId = ?',
-    args: [session.user.id, wsId],
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db.execute({
+    sql: 'INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [id, name ?? email, email, 0, now, now],
   });
-  if (member.rows.length === 0) return null;
-
-  return {
-    userId: session.user.id,
-    userName: session.user.name,
-    userEmail: session.user.email,
-    workspaceId: wsId,
-    workspaceSlug: member.rows[0].slug as string,
-    role: member.rows[0].role as string,
-  };
+  return { id, name: name ?? email, email };
 }
 
 async function getDefaultWorkspace(userId: string): Promise<{ id: string; slug: string; role: string } | null> {

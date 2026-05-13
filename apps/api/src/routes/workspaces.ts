@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
-import { auth } from '../auth';
 import { db } from '../db/client';
+import { requireWorkspace } from '../security/workspace';
 
 export const workspaceRoutes = new Hono();
 
 workspaceRoutes.get('/', async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const result = await db.execute({
     sql: `SELECT o.id, o.name, o.slug, o.logo, o.createdAt, m.role
@@ -14,7 +14,7 @@ workspaceRoutes.get('/', async (c) => {
           JOIN organization o ON o.id = m.organizationId
           WHERE m.userId = ?
           ORDER BY o.createdAt ASC`,
-    args: [session.user.id],
+    args: [ws.userId],
   });
 
   const workspaces = result.rows.map(r => ({
@@ -26,19 +26,17 @@ workspaceRoutes.get('/', async (c) => {
     created_at: r.createdAt as string,
   }));
 
-  const activeId = (session.session as any).activeOrganizationId as string | null;
-
-  return c.json({ workspaces, active_workspace_id: activeId });
+  return c.json({ workspaces, active_workspace_id: ws.workspaceId });
 });
 
 workspaceRoutes.get('/:id/members', async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const wsId = c.req.param('id');
   const isMember = await db.execute({
     sql: 'SELECT id FROM member WHERE userId = ? AND organizationId = ?',
-    args: [session.user.id, wsId],
+    args: [ws.userId, wsId],
   });
   if (isMember.rows.length === 0) return c.json({ error: 'forbidden' }, 403);
 
@@ -65,13 +63,13 @@ workspaceRoutes.get('/:id/members', async (c) => {
 });
 
 workspaceRoutes.get('/:id/stats', async (c) => {
-  const session = await auth.api.getSession({ headers: c.req.raw.headers });
-  if (!session) return c.json({ error: 'unauthorized' }, 401);
+  const ws = await requireWorkspace(c);
+  if (!ws) return c.json({ error: 'unauthorized' }, 401);
 
   const wsId = c.req.param('id');
   const isMember = await db.execute({
     sql: 'SELECT id FROM member WHERE userId = ? AND organizationId = ?',
-    args: [session.user.id, wsId],
+    args: [ws.userId, wsId],
   });
   if (isMember.rows.length === 0) return c.json({ error: 'forbidden' }, 403);
 
