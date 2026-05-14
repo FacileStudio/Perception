@@ -25,7 +25,7 @@
 
 <div class={`flex items-center gap-3 ${className}`}>
   <span class={`flex items-center justify-center text-zinc-950 ${iconFrameClass}`}>
-    <Icon icon="solar:eye-linear" class={iconSizeClass} />
+    <Icon icon="solar:eye-bold-duotone" class={iconSizeClass} />
   </span>
   {#if showWordmark}
     <div class={`flex flex-col ${textClass}`}>
