@@ -118,7 +118,7 @@
             onclick={() => { wsMenuOpen = false; showCreateWs = true; }}
             class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
           >
-            <Icon icon="solar:add-circle-linear" class="size-4 shrink-0 text-zinc-300" />
+            <Icon icon="mdi:plus" class="size-4 shrink-0 text-zinc-300" />
             <span>Create workspace</span>
           </button>
         </div>

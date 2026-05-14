@@ -166,7 +166,7 @@
         class="rounded-full text-xs"
         onclick={() => (showForm = !showForm)}
       >
-        <Icon icon="solar:add-circle-bold-duotone" class="mr-1.5 size-3.5" />
+        <Icon icon="mdi:plus" class="mr-1.5 size-3.5" />
         New Forecast
       </Button>
     </div>

@@ -376,7 +376,7 @@
       </div>
     </div>
     <Button onclick={() => (showCreate = !showCreate)} variant="outline" size="sm">
-      <Icon icon="solar:add-circle-bold-duotone" class="mr-1.5 size-4" />
+      <Icon icon="mdi:plus" class="mr-1.5 size-4" />
       New workspace
     </Button>
   </div>

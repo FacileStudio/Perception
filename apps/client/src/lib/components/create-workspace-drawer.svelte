@@ -89,7 +89,7 @@
           <Icon icon="solar:refresh-bold-duotone" class="mr-1.5 size-4 animate-spin" />
           Creating...
         {:else}
-          <Icon icon="solar:add-circle-bold-duotone" class="mr-1.5 size-4" />
+          <Icon icon="mdi:plus" class="mr-1.5 size-4" />
           Create workspace
         {/if}
       </Button>
