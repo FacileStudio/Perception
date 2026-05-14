@@ -93,25 +93,25 @@
         class="mt-0.5 shrink-0 rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
         aria-label="Close"
       >
-        <Icon icon="solar:close-circle-bold-duotone" class="size-4" />
+        <Icon icon="solar:close-circle-linear" class="size-4" />
       </button>
     </div>
 
     <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
       <div class="space-y-2">
         <div class="flex items-center gap-2 text-xs">
-          <Icon icon="solar:calendar-bold-duotone" class="size-3.5 shrink-0 text-zinc-400" />
+          <Icon icon="solar:calendar-linear" class="size-3.5 shrink-0 text-zinc-400" />
           <span class="text-zinc-500">{formatDate(event.occurred_at)}</span>
         </div>
         {#if event.actor_name}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:user-bold-duotone" class="size-3.5 shrink-0 text-zinc-400" />
+            <Icon icon="solar:user-linear" class="size-3.5 shrink-0 text-zinc-400" />
             <span class="text-zinc-500">{event.actor_name}</span>
           </div>
         {/if}
         {#if event.entity_name}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:box-bold-duotone" class="size-3.5 shrink-0 text-zinc-400" />
+            <Icon icon="solar:box-linear" class="size-3.5 shrink-0 text-zinc-400" />
             <span class="font-mono text-zinc-500">{event.entity_name}</span>
             {#if event.entity_type}
               <span class="text-zinc-400">· {event.entity_type}</span>
@@ -120,7 +120,7 @@
         {/if}
         {#if event.status}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:flag-bold-duotone" class="size-3.5 shrink-0 text-zinc-400" />
+            <Icon icon="solar:flag-linear" class="size-3.5 shrink-0 text-zinc-400" />
             <span class="text-zinc-500">{event.status}</span>
           </div>
         {/if}
@@ -179,7 +179,7 @@
           rel="noopener noreferrer"
           class="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-800"
         >
-          <Icon icon="solar:square-top-down-bold-duotone" class="size-4 shrink-0" />
+          <Icon icon="solar:square-top-down-linear" class="size-4 shrink-0" />
           Open source
         </a>
       {/if}
@@ -191,7 +191,7 @@
         disabled={deleting}
         class="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
       >
-        <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
+        <Icon icon="solar:trash-bin-trash-linear" class="size-4" />
         {deleting ? 'Deleting…' : 'Delete event'}
       </button>
     </div>

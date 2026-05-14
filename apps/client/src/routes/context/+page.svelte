@@ -97,7 +97,7 @@
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
       <label class="relative block w-full max-w-sm">
         <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-zinc-400">
-          <Icon icon="solar:magnifer-bold-duotone" class="size-4" />
+          <Icon icon="solar:magnifer-linear" class="size-4" />
         </span>
         <Input
           placeholder="Search events..."
@@ -117,7 +117,7 @@
         <option value="degraded">Degraded</option>
       </select>
       <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-zinc-400 lg:ml-auto">
-        <Icon icon="solar:database-bold-duotone" class="size-4" />
+        <Icon icon="solar:database-linear" class="size-4" />
         {eventsState.total} event{eventsState.total !== 1 ? 's' : ''}
       </span>
     </div>
@@ -176,7 +176,7 @@
                     rel="noopener noreferrer"
                     class="inline-flex items-center gap-1 rounded-full border border-zinc-200 px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700"
                   >
-                    <Icon icon="solar:square-top-down-bold-duotone" class="size-3.5" />
+                    <Icon icon="solar:square-top-down-linear" class="size-3.5" />
                     Open
                   </a>
                 {/if}
@@ -185,7 +185,7 @@
                   disabled={deletingIds.has(event.id)}
                   class="inline-flex items-center rounded-full border border-transparent p-1.5 text-zinc-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                 >
-                  <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-3.5" />
+                  <Icon icon="solar:trash-bin-trash-linear" class="size-3.5" />
                 </button>
               </div>
             </div>

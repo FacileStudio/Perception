@@ -30,7 +30,7 @@
     <div class="flex h-full items-center justify-center">
       <div class="flex flex-col items-center gap-3 text-center">
         <span class="flex size-12 items-center justify-center rounded-3xl bg-white text-zinc-400 shadow-[0_18px_40px_-28px_rgba(24,24,27,0.32)]">
-          <Icon icon="solar:refresh-bold-duotone" class="size-5 animate-spin" />
+          <Icon icon="solar:refresh-linear" class="size-5 animate-spin" />
         </span>
         <p class="text-sm text-zinc-400">Loading conversation...</p>
       </div>
@@ -62,7 +62,7 @@
                     class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {expandedSql === msg.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
                     onclick={() => expandedSql = expandedSql === msg.id ? null : (msg.id ?? null)}
                   >
-                    <Icon icon="solar:database-bold-duotone" class="size-3.5" />
+                    <Icon icon="solar:database-linear" class="size-3.5" />
                     SQL query · {msg.sql_query.row_count} {msg.sql_query.row_count === 1 ? 'row' : 'rows'}
                   </button>
                   {#if expandedSql === msg.id && msg.sql_query}
@@ -74,7 +74,7 @@
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each msg.community_summaries as cs}
                     <span class="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-700" title={cs.summary}>
-                      <Icon icon="solar:graph-bold-duotone" class="size-3" />
+                      <Icon icon="solar:graph-linear" class="size-3" />
                       {cs.title}
                     </span>
                   {/each}
@@ -84,7 +84,7 @@
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each msg.narratives as n}
                     <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700" title={n.narrative}>
-                      <Icon icon="solar:document-text-bold-duotone" class="size-3" />
+                      <Icon icon="solar:document-text-linear" class="size-3" />
                       {n.entity_name} narrative
                     </span>
                   {/each}
@@ -93,7 +93,7 @@
               {#if msg.sub_queries && msg.sub_queries.length > 0}
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                    <Icon icon="solar:branching-paths-up-bold-duotone" class="size-3" />
+                    <Icon icon="solar:branching-paths-up-linear" class="size-3" />
                     {msg.sub_queries.length} sub-queries
                   </span>
                 </div>
@@ -101,7 +101,7 @@
               {#if msg.counterfactual}
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">
-                    <Icon icon="solar:flask-bold-duotone" class="size-3" />
+                    <Icon icon="solar:flask-linear" class="size-3" />
                     Simulation · {msg.counterfactual.confidence} confidence
                   </span>
                   {#if msg.counterfactual.affected_count > 0}
@@ -115,7 +115,7 @@
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each msg.memory_episodes as ep}
                     <span class="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700" title={ep.summary}>
-                      <Icon icon="solar:brain-bold-duotone" class="size-3" />
+                      <Icon icon="solar:brain-linear" class="size-3" />
                       Memory · {ep.occurred.slice(0, 10)}
                     </span>
                   {/each}
@@ -125,7 +125,7 @@
                 <div class="mt-2 flex flex-wrap gap-1.5">
                   {#each msg.resources as r}
                     <span class="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-700" title={r.content}>
-                      <Icon icon="solar:file-text-bold-duotone" class="size-3" />
+                      <Icon icon="solar:file-text-linear" class="size-3" />
                       {r.title}
                     </span>
                   {/each}
@@ -143,7 +143,7 @@
                     class="inline-flex min-h-8 items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
                     onclick={() => onopensources(msg)}
                   >
-                    <Icon icon="solar:document-text-bold-duotone" class="size-3.5" />
+                    <Icon icon="solar:document-text-linear" class="size-3.5" />
                     {sourcesOpen ? 'Sources open' : 'Open sources'}
                   </button>
                 </div>
@@ -159,7 +159,7 @@
                       await api.chat.feedback(msg.id!, newFeedback);
                     }}
                   >
-                    <Icon icon="solar:like-bold-duotone" class="size-4" />
+                    <Icon icon="solar:like-linear" class="size-4" />
                   </button>
                   <button
                     type="button"
@@ -170,7 +170,7 @@
                       await api.chat.feedback(msg.id!, newFeedback);
                     }}
                   >
-                    <Icon icon="solar:dislike-bold-duotone" class="size-4" />
+                    <Icon icon="solar:dislike-linear" class="size-4" />
                   </button>
                 </div>
               {/if}

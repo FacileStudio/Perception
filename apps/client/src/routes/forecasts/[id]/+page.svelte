@@ -18,10 +18,10 @@
   let error = $state('');
 
   const STATUS_STYLE: Record<string, { icon: string; iconClass: string; label: string }> = {
-    open: { icon: 'solar:clock-circle-bold-duotone', iconClass: 'text-amber-500 bg-amber-50', label: 'Open' },
-    resolved: { icon: 'solar:check-circle-bold-duotone', iconClass: 'text-emerald-500 bg-emerald-50', label: 'Resolved' },
-    expired: { icon: 'solar:alarm-bold-duotone', iconClass: 'text-zinc-400 bg-zinc-100', label: 'Expired' },
-    voided: { icon: 'solar:close-circle-bold-duotone', iconClass: 'text-red-400 bg-red-50', label: 'Voided' },
+    open: { icon: 'solar:clock-circle-linear', iconClass: 'text-amber-500 bg-amber-50', label: 'Open' },
+    resolved: { icon: 'solar:check-circle-linear', iconClass: 'text-emerald-500 bg-emerald-50', label: 'Resolved' },
+    expired: { icon: 'solar:alarm-linear', iconClass: 'text-zinc-400 bg-zinc-100', label: 'Expired' },
+    voided: { icon: 'solar:close-circle-linear', iconClass: 'text-red-400 bg-red-50', label: 'Voided' },
   };
 
   const TYPE_LABELS: Record<string, string> = { binary: 'Yes / No', numeric: 'Numeric', date: 'Date' };
@@ -159,7 +159,7 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else if forecast}

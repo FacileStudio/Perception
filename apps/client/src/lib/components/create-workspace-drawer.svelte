@@ -62,7 +62,7 @@
 <Drawer bind:open title="Create workspace">
   {#if error}
     <div class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-      <Icon icon="solar:danger-triangle-bold-duotone" class="size-4 shrink-0" />
+      <Icon icon="solar:danger-triangle-linear" class="size-4 shrink-0" />
       {error}
     </div>
   {/if}
@@ -86,7 +86,7 @@
       </Button>
       <Button type="submit" disabled={creating || !name.trim()}>
         {#if creating}
-          <Icon icon="solar:refresh-bold-duotone" class="mr-1.5 size-4 animate-spin" />
+          <Icon icon="solar:refresh-linear" class="mr-1.5 size-4 animate-spin" />
           Creating...
         {:else}
           <Icon icon="mdi:plus" class="mr-1.5 size-4" />

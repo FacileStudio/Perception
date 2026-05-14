@@ -24,7 +24,7 @@
         <p class="text-sm text-zinc-500">Reopen an older thread, or delete the dead weight.</p>
       </div>
       {#if chatState.loadingSessions}
-        <Icon icon="solar:refresh-bold-duotone" class="size-4 animate-spin text-zinc-300" />
+        <Icon icon="solar:refresh-linear" class="size-4 animate-spin text-zinc-300" />
       {/if}
     </div>
     <div class="grid gap-3">

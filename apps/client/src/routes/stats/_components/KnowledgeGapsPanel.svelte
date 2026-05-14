@@ -8,14 +8,14 @@
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:link-broken-bold-duotone" class="size-4 text-zinc-500" />
+  <Icon icon="solar:link-broken-linear" class="size-4 text-zinc-500" />
   <span class="text-sm font-semibold text-zinc-900">Knowledge Gaps</span>
   <span class="text-xs text-zinc-400 ml-auto">{entities.length} isolated</span>
 </div>
 
 {#if entities.length === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:check-circle-bold-duotone" class="size-6 text-emerald-300" />
+    <Icon icon="solar:check-circle-linear" class="size-6 text-emerald-300" />
     <span class="text-xs text-zinc-400">All active entities have relationships. No gaps detected.</span>
   </div>
 {:else}
@@ -23,7 +23,7 @@
     {#each entities as entity}
       <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-zinc-50">
         <div class="flex size-7 shrink-0 items-center justify-center rounded-lg text-amber-600 bg-amber-50">
-          <Icon icon="solar:danger-triangle-bold-duotone" class="size-3.5" />
+          <Icon icon="solar:danger-triangle-linear" class="size-3.5" />
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">

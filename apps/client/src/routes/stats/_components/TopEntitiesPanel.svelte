@@ -43,7 +43,7 @@
 
 <div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
-    <Icon icon="solar:buildings-2-bold-duotone" class="size-4 text-zinc-500" />
+    <Icon icon="solar:buildings-2-linear" class="size-4 text-zinc-500" />
     <span class="text-sm font-semibold text-zinc-900">Top Entities</span>
     <Badge variant="secondary" class="text-xs">{entities.length}</Badge>
     {#if !snap.min_sample_met}

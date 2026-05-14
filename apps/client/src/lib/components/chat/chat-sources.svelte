@@ -23,7 +23,7 @@
 <div class="fixed inset-x-4 bottom-24 top-24 z-20 flex flex-col rounded-[28px] border border-zinc-200/80 bg-white/95 shadow-[0_32px_80px_-48px_rgba(24,24,27,0.55)] xl:static xl:inset-auto xl:bottom-auto xl:top-auto xl:w-80 xl:rounded-none xl:border-0 xl:border-l xl:shadow-none">
   <div class="flex items-center justify-between px-4 py-3">
     <span class="inline-flex items-center gap-2 text-xs font-medium text-zinc-500">
-      <Icon icon="solar:document-text-bold-duotone" class="size-4" />
+      <Icon icon="solar:document-text-linear" class="size-4" />
       Sources
     </span>
     <button
@@ -31,7 +31,7 @@
       class="rounded-full p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
       aria-label="Close sources"
     >
-      <Icon icon="solar:close-circle-bold-duotone" class="size-4" />
+      <Icon icon="solar:close-circle-linear" class="size-4" />
     </button>
   </div>
   <Separator />
@@ -40,7 +40,7 @@
       {#if message?.sql_query}
         <div class="flex flex-col gap-1.5 rounded-2xl border border-indigo-200/80 bg-indigo-50/50 p-3">
           <div class="flex items-center gap-2">
-            <Icon icon="solar:database-bold-duotone" class="size-4 text-indigo-500" />
+            <Icon icon="solar:database-linear" class="size-4 text-indigo-500" />
             <span class="text-xs font-medium text-indigo-700">Generated SQL query</span>
           </div>
           <pre class="overflow-x-auto rounded-lg bg-zinc-950 px-2.5 py-2 font-mono text-[11px] leading-relaxed text-zinc-300">{message.sql_query.query}</pre>
@@ -54,7 +54,7 @@
         {#each message.community_summaries as cs}
           <div class="flex flex-col gap-1.5 rounded-2xl border border-violet-200/80 bg-violet-50/50 p-3">
             <div class="flex items-center gap-2">
-              <Icon icon="solar:graph-bold-duotone" class="size-4 text-violet-500" />
+              <Icon icon="solar:graph-linear" class="size-4 text-violet-500" />
               <span class="text-xs font-medium text-violet-700">{cs.title}</span>
             </div>
             <p class="text-xs leading-relaxed text-violet-600">{cs.summary}</p>
@@ -74,7 +74,7 @@
         {#each message.narratives as n}
           <div class="flex flex-col gap-1.5 rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-3">
             <div class="flex items-center gap-2">
-              <Icon icon="solar:document-text-bold-duotone" class="size-4 text-emerald-500" />
+              <Icon icon="solar:document-text-linear" class="size-4 text-emerald-500" />
               <span class="text-xs font-medium text-emerald-700">{n.entity_name}</span>
             </div>
             <p class="text-xs leading-relaxed text-emerald-600">{n.narrative}</p>
@@ -86,7 +86,7 @@
       {#if message?.sub_queries && message.sub_queries.length > 0}
         <div class="flex flex-col gap-1.5 rounded-2xl border border-amber-200/80 bg-amber-50/50 p-3">
           <div class="flex items-center gap-2">
-            <Icon icon="solar:branching-paths-up-bold-duotone" class="size-4 text-amber-500" />
+            <Icon icon="solar:branching-paths-up-linear" class="size-4 text-amber-500" />
             <span class="text-xs font-medium text-amber-700">Composite query</span>
           </div>
           <ol class="ml-4 list-decimal text-xs leading-relaxed text-amber-600">
@@ -101,7 +101,7 @@
         {#each message.memory_episodes as ep}
           <div class="flex flex-col gap-1.5 rounded-2xl border border-sky-200/80 bg-sky-50/50 p-3">
             <div class="flex items-center gap-2">
-              <Icon icon="solar:brain-bold-duotone" class="size-4 text-sky-500" />
+              <Icon icon="solar:brain-linear" class="size-4 text-sky-500" />
               <span class="text-xs font-medium text-sky-700">Memory episode</span>
             </div>
             <p class="text-xs leading-relaxed text-sky-600">{ep.summary}</p>
@@ -123,7 +123,7 @@
         {#each message.resources as r}
           <div class="flex flex-col gap-1.5 rounded-2xl border border-orange-200/80 bg-orange-50/50 p-3">
             <div class="flex items-center gap-2">
-              <Icon icon="solar:file-text-bold-duotone" class="size-4 text-orange-500" />
+              <Icon icon="solar:file-text-linear" class="size-4 text-orange-500" />
               <span class="text-xs font-medium text-orange-700">{r.title}</span>
             </div>
             <p class="text-xs leading-relaxed text-orange-600">{r.content}</p>
@@ -135,7 +135,7 @@
       {#if message?.counterfactual}
         <div class="flex flex-col gap-2 rounded-2xl border border-rose-200/80 bg-rose-50/50 p-3">
           <div class="flex items-center gap-2">
-            <Icon icon="solar:flask-bold-duotone" class="size-4 text-rose-500" />
+            <Icon icon="solar:flask-linear" class="size-4 text-rose-500" />
             <span class="text-xs font-medium text-rose-700">Counterfactual simulation</span>
           </div>
           <p class="text-xs leading-relaxed text-rose-600">{message.counterfactual.scenario}</p>

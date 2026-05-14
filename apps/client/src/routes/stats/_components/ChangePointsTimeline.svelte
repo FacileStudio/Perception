@@ -14,20 +14,20 @@
   }
 
   function direction(pre: number, post: number): { label: string; icon: string; cls: string } {
-    if (post < pre) return { label: 'accelerated', icon: 'solar:double-alt-arrow-up-bold-duotone', cls: 'text-emerald-600 bg-emerald-50' };
-    return { label: 'slowed down', icon: 'solar:double-alt-arrow-down-bold-duotone', cls: 'text-amber-600 bg-amber-50' };
+    if (post < pre) return { label: 'accelerated', icon: 'solar:double-alt-arrow-up-linear', cls: 'text-emerald-600 bg-emerald-50' };
+    return { label: 'slowed down', icon: 'solar:double-alt-arrow-down-linear', cls: 'text-amber-600 bg-amber-50' };
   }
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:pulse-2-bold-duotone" class="size-4 text-zinc-500" />
+  <Icon icon="solar:pulse-2-linear" class="size-4 text-zinc-500" />
   <span class="text-sm font-semibold text-zinc-900">Regime Changes</span>
   <span class="text-xs text-zinc-400 ml-auto">last 30 days</span>
 </div>
 
 {#if points.length === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:check-circle-bold-duotone" class="size-6 text-emerald-300" />
+    <Icon icon="solar:check-circle-linear" class="size-6 text-emerald-300" />
     <span class="text-xs text-zinc-400">No regime changes detected. All entities stable.</span>
   </div>
 {:else}

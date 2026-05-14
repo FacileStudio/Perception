@@ -55,18 +55,18 @@
   }
 
   const navLinks = [
-    { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-bold-duotone', match: (p: string) => p.startsWith('/chat') },
-    { href: '/context', label: 'Context', icon: 'solar:folder-with-files-bold-duotone', match: (p: string) => p === '/context' },
-    { href: '/entities', label: 'Entities', icon: 'solar:bill-list-bold-duotone', match: (p: string) => p === '/entities' },
-    { href: '/stats', label: 'Stats', icon: 'solar:chart-square-bold-duotone', match: (p: string) => p === '/stats' },
-    { href: '/resources', label: 'Resources', icon: 'solar:documents-bold-duotone', match: (p: string) => p === '/resources' },
-    { href: '/proposals', label: 'Proposals', icon: 'solar:hand-shake-bold-duotone', match: (p: string) => p === '/proposals' },
-    { href: '/forecasts', label: 'Forecasts', icon: 'solar:telescope-bold-duotone', match: (p: string) => p.startsWith('/forecasts') },
+    { href: '/chat', label: 'Chat', icon: 'solar:chat-dots-linear', match: (p: string) => p.startsWith('/chat') },
+    { href: '/context', label: 'Context', icon: 'solar:folder-with-files-linear', match: (p: string) => p === '/context' },
+    { href: '/entities', label: 'Entities', icon: 'solar:bill-list-linear', match: (p: string) => p === '/entities' },
+    { href: '/stats', label: 'Stats', icon: 'solar:chart-square-linear', match: (p: string) => p === '/stats' },
+    { href: '/resources', label: 'Resources', icon: 'solar:documents-linear', match: (p: string) => p === '/resources' },
+    { href: '/proposals', label: 'Proposals', icon: 'solar:hand-shake-linear', match: (p: string) => p === '/proposals' },
+    { href: '/forecasts', label: 'Forecasts', icon: 'solar:telescope-linear', match: (p: string) => p.startsWith('/forecasts') },
   ];
 
   const menuItems = [
-    { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-bold-duotone' },
-    { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-bold-duotone' },
+    { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-linear' },
+    { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-linear' },
   ];
 </script>
 
@@ -87,12 +87,12 @@
         onclick={() => (wsMenuOpen = !wsMenuOpen)}
         class="flex w-full items-center gap-2 rounded-lg border border-zinc-200/70 bg-zinc-50/60 px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-100"
       >
-        <Icon icon="solar:buildings-bold-duotone" class="size-4 shrink-0 text-zinc-400" />
+        <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-zinc-400" />
         <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">
           {auth.workspace?.name ?? 'Select workspace'}
         </span>
         <Icon
-          icon="solar:alt-arrow-down-bold"
+          icon="solar:alt-arrow-down-linear"
           class="size-3 shrink-0 text-zinc-400 transition-transform {wsMenuOpen ? 'rotate-180' : ''}"
         />
       </button>
@@ -106,7 +106,7 @@
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors {active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50'}"
             >
               <Icon
-                icon={active ? 'solar:check-circle-bold' : 'solar:buildings-linear'}
+                icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'}
                 class="size-4 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}"
               />
               <span class="min-w-0 flex-1 truncate">{ws.name}</span>
@@ -162,7 +162,7 @@
               onclick={() => { userMenuOpen = false; onLogout(); }}
               class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
             >
-              <Icon icon="solar:logout-3-bold-duotone" class="size-4 shrink-0" />
+              <Icon icon="solar:logout-3-linear" class="size-4 shrink-0" />
               Logout
             </button>
           </div>
@@ -183,7 +183,7 @@
               <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name || auth.user.email}</p>
             </div>
             <Icon
-              icon="solar:alt-arrow-up-bold-duotone"
+              icon="solar:alt-arrow-up-linear"
               class="size-3.5 shrink-0 text-zinc-400 transition-transform {userMenuOpen ? '' : 'rotate-180'}"
             />
           </button>
@@ -192,7 +192,7 @@
             href="/notifications"
             class="relative flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors {$page.url.pathname === '/notifications' ? 'border-zinc-950 bg-zinc-950 text-white hover:bg-zinc-800' : 'border-zinc-200/70 bg-zinc-50/60 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950'}"
           >
-            <Icon icon="solar:bell-bold-duotone" class="size-4" />
+            <Icon icon="solar:bell-linear" class="size-4" />
             {#if notifications.unreadCount > 0}
               <span class="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
                 {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}

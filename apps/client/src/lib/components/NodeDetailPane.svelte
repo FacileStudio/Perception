@@ -100,7 +100,7 @@
         class="mt-0.5 shrink-0 rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
         aria-label="Close"
       >
-        <Icon icon="solar:close-circle-bold-duotone" class="size-4" />
+        <Icon icon="solar:close-circle-linear" class="size-4" />
       </button>
     </div>
 
@@ -122,7 +122,7 @@
 
       {#if loadingNarrative}
         <div class="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50/50 px-4 py-3">
-          <Icon icon="solar:refresh-bold-duotone" class="size-4 animate-spin text-emerald-400" />
+          <Icon icon="solar:refresh-linear" class="size-4 animate-spin text-emerald-400" />
           <span class="text-xs text-emerald-400">Loading narrative...</span>
         </div>
       {:else if narrative}
@@ -145,7 +145,7 @@
 
       {#if loadingCommunity}
         <div class="flex items-center gap-2 rounded-xl border border-violet-100 bg-violet-50/50 px-4 py-3">
-          <Icon icon="solar:refresh-bold-duotone" class="size-4 animate-spin text-violet-400" />
+          <Icon icon="solar:refresh-linear" class="size-4 animate-spin text-violet-400" />
           <span class="text-xs text-violet-400">Loading community...</span>
         </div>
       {:else if community}
@@ -155,7 +155,7 @@
           </p>
           <div class="rounded-xl border border-violet-200/80 bg-violet-50/50 px-4 py-3">
             <div class="flex items-center gap-2">
-              <Icon icon="solar:graph-bold-duotone" class="size-4 text-violet-500" />
+              <Icon icon="solar:graph-linear" class="size-4 text-violet-500" />
               <span class="text-sm font-medium text-violet-800">{community.title}</span>
             </div>
             <p class="mt-1.5 text-xs leading-relaxed text-violet-600">{community.summary}</p>

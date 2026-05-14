@@ -54,7 +54,7 @@
             class="h-[52px] shrink-0 rounded-full px-6"
           >
             <span class="inline-flex items-center gap-2">
-              <Icon icon="solar:plain-2-bold-duotone" class="size-4" />
+              <Icon icon="solar:plain-2-linear" class="size-4" />
               Send
             </span>
           </Button>

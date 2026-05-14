@@ -37,8 +37,8 @@
       <span class="inline-flex items-center gap-2">
         <Icon
           icon={chatState.pending || chatState.streaming
-            ? 'solar:hourglass-bold-duotone'
-            : 'solar:plain-2-bold-duotone'}
+            ? 'solar:hourglass-linear'
+            : 'solar:plain-2-linear'}
           class="size-4"
         />
         {chatState.pending || chatState.streaming ? 'Thinking' : 'Send'}

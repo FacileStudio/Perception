@@ -194,10 +194,10 @@
   }
 
   function sourceLabel(src: string) {
-    if (src === 'workspace') return { label: 'workspace', icon: 'solar:buildings-bold-duotone', cls: 'text-violet-600 bg-violet-50' };
-    if (src === 'db') return { label: 'system', icon: 'solar:database-bold-duotone', cls: 'text-blue-600 bg-blue-50' };
-    if (src === 'env') return { label: 'env var', icon: 'solar:server-bold-duotone', cls: 'text-emerald-600 bg-emerald-50' };
-    return { label: 'default', icon: 'solar:info-circle-bold-duotone', cls: 'text-zinc-500 bg-zinc-100' };
+    if (src === 'workspace') return { label: 'workspace', icon: 'solar:buildings-linear', cls: 'text-violet-600 bg-violet-50' };
+    if (src === 'db') return { label: 'system', icon: 'solar:database-linear', cls: 'text-blue-600 bg-blue-50' };
+    if (src === 'env') return { label: 'env var', icon: 'solar:server-linear', cls: 'text-emerald-600 bg-emerald-50' };
+    return { label: 'default', icon: 'solar:info-circle-linear', cls: 'text-zinc-500 bg-zinc-100' };
   }
 
   async function handleSaveGeneral(e: Event) {
@@ -355,15 +355,15 @@
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
     <div class="flex items-center gap-4">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:buildings-bold-duotone" class="size-4" />
+        <Icon icon="solar:buildings-linear" class="size-4" />
         {auth.workspace?.name ?? 'Workspace'}
       </span>
       <div class="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
         {#each [
-          { key: 'general', label: 'General', icon: 'solar:settings-bold-duotone' },
-          { key: 'settings', label: 'Config', icon: 'solar:tuning-2-bold-duotone' },
-          { key: 'workers', label: 'Workers', icon: 'solar:bolt-bold-duotone' },
-          { key: 'health', label: 'Health', icon: 'solar:heart-pulse-bold-duotone' },
+          { key: 'general', label: 'General', icon: 'solar:settings-linear' },
+          { key: 'settings', label: 'Config', icon: 'solar:tuning-2-linear' },
+          { key: 'workers', label: 'Workers', icon: 'solar:bolt-linear' },
+          { key: 'health', label: 'Health', icon: 'solar:heart-pulse-linear' },
         ] as item}
           <button
             onclick={() => tab = item.key as typeof tab}
@@ -431,7 +431,7 @@
           <div class="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
             <h2 class="text-lg font-semibold text-zinc-950">Members</h2>
             <Button onclick={() => (showInvite = !showInvite)} variant="outline" size="sm">
-              <Icon icon="solar:user-plus-bold-duotone" class="mr-1.5 size-4" />
+              <Icon icon="solar:user-plus-linear" class="mr-1.5 size-4" />
               Invite
             </Button>
           </div>
@@ -478,10 +478,10 @@
                   {#if member.role !== 'owner' && member.user_id !== auth.user?.id}
                     <div class="flex gap-1">
                       <button onclick={() => handleChangeRole(member.id, member.role)} class="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700" title="Toggle admin">
-                        <Icon icon="solar:shield-bold-duotone" class="size-4" />
+                        <Icon icon="solar:shield-linear" class="size-4" />
                       </button>
                       <button onclick={() => handleRemoveMember(member.id, member.email)} class="rounded p-1 text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-600" title="Remove member">
-                        <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
+                        <Icon icon="solar:trash-bin-trash-linear" class="size-4" />
                       </button>
                     </div>
                   {/if}
@@ -500,7 +500,7 @@
               {#each auth.workspaces as ws}
                 {@const active = ws.id === auth.workspace?.id}
                 <button onclick={() => { if (!active) handleSwitchWorkspace(ws.id); }} class="flex w-full items-center gap-4 px-6 py-3 text-left transition-colors {active ? 'bg-zinc-50' : 'hover:bg-zinc-50'}" disabled={active}>
-                  <Icon icon={active ? 'solar:check-circle-bold' : 'solar:buildings-linear'} class="size-5 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}" />
+                  <Icon icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'} class="size-5 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}" />
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium text-zinc-950">{ws.name}</p>
                     <p class="text-xs text-zinc-500">{ws.slug}</p>
@@ -519,7 +519,7 @@
           <div class="flex items-center justify-between mb-4">
             <p class="text-xs text-zinc-400">Settings cascade: <strong>workspace</strong> overrides <strong>system</strong> overrides <strong>env</strong> overrides <strong>defaults</strong>.</p>
             <Button variant="default" size="sm" onclick={saveSettings} disabled={settingsSaving} class="rounded-xl gap-2">
-              <Icon icon={settingsSaved ? 'solar:check-circle-bold-duotone' : 'solar:diskette-bold-duotone'} class="size-4" />
+              <Icon icon={settingsSaved ? 'solar:check-circle-linear' : 'solar:diskette-linear'} class="size-4" />
               {settingsSaving ? 'Saving...' : settingsSaved ? 'Saved!' : 'Save'}
             </Button>
           </div>
@@ -558,12 +558,12 @@
                       />
                       {#if SENSITIVE_KEYS.has(key)}
                         <Button variant="outline" size="icon" onclick={() => (showSensitive[key] = !showSensitive[key])} class="shrink-0 rounded-xl" title={showSensitive[key] ? 'Hide' : 'Show'}>
-                          <Icon icon={showSensitive[key] ? 'solar:eye-closed-bold-duotone' : 'solar:eye-bold-duotone'} class="size-4" />
+                          <Icon icon={showSensitive[key] ? 'solar:eye-closed-linear' : 'solar:eye-linear'} class="size-4" />
                         </Button>
                       {/if}
                       {#if sources[key] === 'workspace'}
                         <Button variant="ghost" size="sm" onclick={() => clearSetting(key)} class="shrink-0 rounded-xl text-zinc-400 hover:text-red-500" title="Clear workspace override">
-                          <Icon icon="solar:trash-bin-minimalistic-bold-duotone" class="size-4" />
+                          <Icon icon="solar:trash-bin-minimalistic-linear" class="size-4" />
                         </Button>
                       {/if}
                     </div>
@@ -584,7 +584,7 @@
                   <p class="text-xs text-zinc-400 mt-0.5">Reset all embeddings and re-generate.</p>
                 </div>
                 <Button variant="outline" size="sm" onclick={() => { confirmAction = 'reembed'; }} disabled={reembedding} class="shrink-0 rounded-xl gap-1.5">
-                  <Icon icon="solar:refresh-bold-duotone" class="size-3.5" />
+                  <Icon icon="solar:refresh-linear" class="size-3.5" />
                   {reembedding ? 'Processing...' : 'Re-embed'}
                 </Button>
               </div>
@@ -608,7 +608,7 @@
                   <p class="text-xs text-zinc-400 mt-0.5">Re-extract actors, re-run ontology labeling, rebuild relations.</p>
                 </div>
                 <Button variant="outline" size="sm" onclick={() => { confirmAction = 'reprocess'; }} disabled={reprocessing} class="shrink-0 rounded-xl gap-1.5">
-                  <Icon icon="solar:graph-new-bold-duotone" class="size-3.5" />
+                  <Icon icon="solar:graph-new-linear" class="size-3.5" />
                   {reprocessing ? 'Processing...' : 'Reprocess'}
                 </Button>
               </div>
@@ -619,11 +619,11 @@
           <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Background Workers</h2>
-              {#if workersPaused}<span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600"><Icon icon="solar:pause-bold" class="size-2.5" />paused</span>{/if}
+              {#if workersPaused}<span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600"><Icon icon="solar:pause-linear" class="size-2.5" />paused</span>{/if}
             </div>
             <div class="flex items-center gap-2">
               <button onclick={toggleWorkersPaused} disabled={togglingPause} class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors {workersPaused ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}">
-                <Icon icon={workersPaused ? 'solar:play-bold' : 'solar:pause-bold'} class="size-3" />
+                <Icon icon={workersPaused ? 'solar:play-linear' : 'solar:pause-linear'} class="size-3" />
                 {togglingPause ? '...' : workersPaused ? 'Resume' : 'Pause'}
               </button>
             </div>
@@ -637,7 +637,7 @@
                   <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                       <div class="flex size-7 shrink-0 items-center justify-center rounded-lg {worker.status === 'running' ? 'bg-amber-50 text-amber-500' : worker.lastRun?.status === 'error' ? 'bg-red-50 text-red-400' : 'bg-emerald-50 text-emerald-500'}">
-                        <Icon icon="solar:bolt-bold-duotone" class="size-3.5" />
+                        <Icon icon="solar:bolt-linear" class="size-3.5" />
                       </div>
                       <div class="min-w-0">
                         <div class="flex items-center gap-2">
@@ -654,7 +654,7 @@
                       </div>
                     </div>
                     <Button variant="outline" size="sm" onclick={() => triggerWorker(worker.name)} disabled={worker.status === 'running' || triggeringWorker === worker.name} class="shrink-0 rounded-xl gap-1.5">
-                      <Icon icon="solar:play-bold-duotone" class="size-3.5" />
+                      <Icon icon="solar:play-linear" class="size-3.5" />
                       {triggeringWorker === worker.name ? '...' : 'Run'}
                     </Button>
                   </div>
@@ -713,7 +713,7 @@
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
-                        <Icon icon="solar:danger-triangle-bold-duotone" class="size-4 text-amber-500 shrink-0" />
+                        <Icon icon="solar:danger-triangle-linear" class="size-4 text-amber-500 shrink-0" />
                         <span class="text-sm font-medium text-zinc-900">{alert.provider_type}</span>
                         <span class="text-[10px] text-zinc-400">· {alert.field_name}</span>
                       </div>

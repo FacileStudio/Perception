@@ -33,7 +33,7 @@
       <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-6" titleClass="text-xl font-bold" class="gap-2" />
       <Button href="/login">
         Sign in
-        <Icon icon="solar:login-3-bold" class="ml-1.5 size-4" />
+        <Icon icon="solar:login-3-linear" class="ml-1.5 size-4" />
       </Button>
     </div>
   </header>
@@ -42,7 +42,7 @@
 
     <section class="mx-auto max-w-5xl px-6 py-28 md:py-36">
       <p class="mb-5 inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1 text-xs text-muted-foreground">
-        <Icon icon="solar:lock-keyhole-bold-duotone" class="size-3" />
+        <Icon icon="solar:lock-keyhole-linear" class="size-3" />
         Self-hosted &middot; Zero telemetry
       </p>
       <h1 class="max-w-3xl font-[Goga] text-5xl leading-[1.08] tracking-tight md:text-6xl">
@@ -54,16 +54,16 @@
       </p>
       <Button class="mt-10" size="lg" href="/login">
         Get started
-        <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
+        <Icon icon="solar:arrow-right-linear" class="ml-2 size-4" />
       </Button>
     </section>
 
     <section class="border-y border-border bg-zinc-50/60">
       <div class="mx-auto grid max-w-5xl divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
         {#each [
-          { icon: 'solar:chat-round-dots-bold-duotone', title: 'Ask anything', text: 'Hybrid retrieval across twelve lanes — vector, full-text, SQL, entity graph, knowledge communities — so answers cite real evidence.' },
-          { icon: 'solar:graph-new-bold-duotone', title: 'See connections', text: 'Automatic entity resolution and community detection build a knowledge graph that links clients, projects, contracts, and services across providers.' },
-          { icon: 'solar:telescope-bold-duotone', title: 'Predict outcomes', text: 'Bayesian forecasting with calibrated confidence, conformal prediction intervals, and ensemble strategies that score themselves and improve.' },
+          { icon: 'solar:chat-round-dots-linear', title: 'Ask anything', text: 'Hybrid retrieval across twelve lanes — vector, full-text, SQL, entity graph, knowledge communities — so answers cite real evidence.' },
+          { icon: 'solar:graph-new-linear', title: 'See connections', text: 'Automatic entity resolution and community detection build a knowledge graph that links clients, projects, contracts, and services across providers.' },
+          { icon: 'solar:telescope-linear', title: 'Predict outcomes', text: 'Bayesian forecasting with calibrated confidence, conformal prediction intervals, and ensemble strategies that score themselves and improve.' },
         ] as pillar}
           <div class="px-6 py-10 md:py-14">
             <Icon icon={pillar.icon} class="mb-4 size-6 text-zinc-400" />
@@ -105,14 +105,14 @@
         <h2 class="mb-10 font-[Goga] text-3xl tracking-tight">And the rest.</h2>
         <div class="grid gap-x-16 gap-y-5 sm:grid-cols-2">
           {#each [
-            { icon: 'solar:bell-bing-bold-duotone', label: 'Proactive anomaly alerts' },
-            { icon: 'solar:branching-paths-up-bold-duotone', label: 'Counterfactual what-if simulation' },
-            { icon: 'solar:documents-bold-duotone', label: 'Document knowledge base' },
-            { icon: 'solar:hand-shake-bold-duotone', label: 'Write-back action proposals' },
-            { icon: 'solar:shield-check-bold-duotone', label: 'Self-correcting retrieval (CRAG)' },
-            { icon: 'solar:database-bold-duotone', label: 'Natural language to SQL' },
-            { icon: 'solar:history-bold-duotone', label: 'Persistent conversational memory' },
-            { icon: 'solar:code-scan-bold-duotone', label: 'Temporal diff queries' },
+            { icon: 'solar:bell-bing-linear', label: 'Proactive anomaly alerts' },
+            { icon: 'solar:branching-paths-up-linear', label: 'Counterfactual what-if simulation' },
+            { icon: 'solar:documents-linear', label: 'Document knowledge base' },
+            { icon: 'solar:hand-shake-linear', label: 'Write-back action proposals' },
+            { icon: 'solar:shield-check-linear', label: 'Self-correcting retrieval (CRAG)' },
+            { icon: 'solar:database-linear', label: 'Natural language to SQL' },
+            { icon: 'solar:history-linear', label: 'Persistent conversational memory' },
+            { icon: 'solar:code-scan-linear', label: 'Temporal diff queries' },
           ] as feat}
             <div class="flex items-center gap-3 py-1.5">
               <Icon icon={feat.icon} class="size-4 shrink-0 text-zinc-400" />
@@ -130,7 +130,7 @@
       </p>
       <Button class="mt-8" size="lg" href="/login">
         Sign in
-        <Icon icon="solar:arrow-right-bold" class="ml-2 size-4" />
+        <Icon icon="solar:arrow-right-linear" class="ml-2 size-4" />
       </Button>
     </section>
   </main>

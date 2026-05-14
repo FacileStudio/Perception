@@ -41,7 +41,7 @@
   }
 
   function usageIcon(kind: TokenUsageRow['kind']) {
-    return kind === 'llm' ? 'solar:magic-stick-2-bold-duotone' : 'solar:layers-bold-duotone';
+    return kind === 'llm' ? 'solar:magic-stick-2-linear' : 'solar:layers-linear';
   }
 
   function usageIconClass(kind: TokenUsageRow['kind']) {
@@ -118,7 +118,7 @@
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:chart-square-bold-duotone" class="size-4" />
+        <Icon icon="solar:chart-square-linear" class="size-4" />
         Stats
       </span>
       {#if generatedAt}
@@ -131,7 +131,7 @@
         disabled={loading}
         class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-40"
       >
-        <Icon icon="solar:refresh-bold-duotone" class="size-3.5 {loading ? 'animate-spin' : ''}" />
+        <Icon icon="solar:refresh-linear" class="size-3.5 {loading ? 'animate-spin' : ''}" />
         Refresh
       </button>
       <WindowToggle window={activeWindow} onchange={(w) => (activeWindow = w)} />
@@ -145,14 +145,14 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else}
       <div class="flex flex-col gap-5">
         {#if snapshots.length === 0}
           <div class="flex flex-col items-center justify-center gap-2 py-16">
-            <Icon icon="solar:chart-square-bold-duotone" class="size-8 text-zinc-300" />
+            <Icon icon="solar:chart-square-linear" class="size-8 text-zinc-300" />
             <span class="text-sm text-zinc-400">No stats yet. Ingest some events first.</span>
           </div>
         {:else}
@@ -221,12 +221,12 @@
 
         <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
           <div class="mb-4 flex items-center gap-2">
-            <Icon icon="solar:chart-2-bold-duotone" class="size-4 text-zinc-500" />
+            <Icon icon="solar:chart-2-linear" class="size-4 text-zinc-500" />
             <span class="text-sm font-semibold text-zinc-900">Token Usage</span>
           </div>
           {#if usage.length === 0}
             <div class="flex flex-col items-center gap-2 py-8 text-center">
-              <Icon icon="solar:chart-2-bold-duotone" class="size-8 text-zinc-300" />
+              <Icon icon="solar:chart-2-linear" class="size-8 text-zinc-300" />
               <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
             </div>
           {:else}

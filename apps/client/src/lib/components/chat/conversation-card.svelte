@@ -48,9 +48,9 @@
     aria-label={`Delete ${session.title}`}
   >
     {#if chatState.deletingSessionId === session.id}
-      <Icon icon="solar:hourglass-bold-duotone" class="size-4" />
+      <Icon icon="solar:hourglass-linear" class="size-4" />
     {:else}
-      <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
+      <Icon icon="solar:trash-bin-trash-linear" class="size-4" />
     {/if}
   </button>
 </div>

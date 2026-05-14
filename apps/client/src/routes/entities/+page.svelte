@@ -215,7 +215,7 @@
         </button>
       </div>
       <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-zinc-400 lg:ml-auto">
-        <Icon icon="solar:bill-list-bold-duotone" class="size-4" />
+        <Icon icon="solar:bill-list-linear" class="size-4" />
         {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
         {#if relationCount > 0}
           · {relationCount} {relationCount === 1 ? 'relation' : 'relations'}

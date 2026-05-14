@@ -13,14 +13,14 @@
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:server-square-bold-duotone" class="size-4 text-zinc-500" />
+  <Icon icon="solar:server-square-linear" class="size-4 text-zinc-500" />
   <span class="text-sm font-semibold text-zinc-900">Provider Health</span>
   <span class="text-xs text-zinc-400 ml-auto">30-day window</span>
 </div>
 
 {#if providers.length === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:server-square-bold-duotone" class="size-6 text-zinc-300" />
+    <Icon icon="solar:server-square-linear" class="size-6 text-zinc-300" />
     <span class="text-xs text-zinc-400">No provider activity in the last 30 days.</span>
   </div>
 {:else}
@@ -28,7 +28,7 @@
     {#each providers as provider}
       <div class="flex items-center gap-3 px-3.5 py-3">
         <div class="flex size-8 shrink-0 items-center justify-center rounded-xl {provider.drifted ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'}">
-          <Icon icon={provider.drifted ? 'solar:shield-warning-bold-duotone' : 'solar:shield-check-bold-duotone'} class="size-4" />
+          <Icon icon={provider.drifted ? 'solar:shield-warning-linear' : 'solar:shield-check-linear'} class="size-4" />
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
@@ -53,12 +53,12 @@
         <div class="shrink-0">
           {#if provider.schema_confirmed && !provider.drifted}
             <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
-              <Icon icon="solar:check-circle-bold" class="size-3" />
+              <Icon icon="solar:check-circle-linear" class="size-3" />
               healthy
             </span>
           {:else if provider.drifted}
             <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600">
-              <Icon icon="solar:danger-triangle-bold" class="size-3" />
+              <Icon icon="solar:danger-triangle-linear" class="size-3" />
               review
             </span>
           {:else}

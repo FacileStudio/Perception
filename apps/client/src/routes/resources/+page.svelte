@@ -25,11 +25,11 @@
   let pollTimer: ReturnType<typeof setInterval> | undefined;
 
   const MIME_ICONS: Record<string, string> = {
-    'application/pdf': 'solar:document-bold-duotone',
-    'text/plain': 'solar:text-bold-duotone',
-    'text/markdown': 'solar:text-bold-duotone',
-    'text/csv': 'solar:chart-bold-duotone',
-    'application/json': 'solar:code-bold-duotone',
+    'application/pdf': 'solar:document-linear',
+    'text/plain': 'solar:text-linear',
+    'text/markdown': 'solar:text-linear',
+    'text/csv': 'solar:chart-linear',
+    'application/json': 'solar:code-linear',
   };
 
   const STATUS_STYLE: Record<string, { label: string; class: string }> = {
@@ -183,7 +183,7 @@
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:documents-bold-duotone" class="size-4" />
+        <Icon icon="solar:documents-linear" class="size-4" />
         Resources
       </span>
       {#if resources.length > 0}
@@ -198,7 +198,7 @@
         onclick={() => load()}
         disabled={loading}
       >
-        <Icon icon="solar:refresh-bold-duotone" class="mr-1.5 size-3.5" />
+        <Icon icon="solar:refresh-linear" class="mr-1.5 size-3.5" />
         Refresh
       </Button>
       <Button
@@ -206,7 +206,7 @@
         class="rounded-full text-xs bg-zinc-950 text-white hover:bg-zinc-800"
         onclick={() => (showUpload = !showUpload)}
       >
-        <Icon icon="solar:upload-bold-duotone" class="mr-1.5 size-3.5" />
+        <Icon icon="solar:upload-linear" class="mr-1.5 size-3.5" />
         Upload
       </Button>
     </div>
@@ -219,7 +219,7 @@
           onclick={() => fileInput?.click()}
           class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
         >
-          <Icon icon="solar:file-download-bold-duotone" class="size-5" />
+          <Icon icon="solar:file-download-linear" class="size-5" />
           {#if pendingFiles.length > 1}
             {pendingFiles.length} files selected ({formatSize(pendingFiles.reduce((s, f) => s + f.size, 0))})
           {:else if pendingFiles.length === 1}
@@ -267,13 +267,13 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else if resources.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
         <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:documents-bold-duotone" class="size-7 text-zinc-300" />
+          <Icon icon="solar:documents-linear" class="size-7 text-zinc-300" />
         </div>
         <span class="text-sm text-zinc-400">No resources yet</span>
         <span class="text-xs text-zinc-300">Upload documents to add them to Perception's knowledge base</span>
@@ -282,7 +282,7 @@
       <div class="flex flex-col gap-3">
         {#each resources as resource (resource.id)}
           {@const statusStyle = STATUS_STYLE[resource.status] ?? STATUS_STYLE.ready}
-          {@const mimeIcon = MIME_ICONS[resource.mime_type] ?? 'solar:document-bold-duotone'}
+          {@const mimeIcon = MIME_ICONS[resource.mime_type] ?? 'solar:document-linear'}
           <Card
             class="group relative cursor-pointer rounded-[20px] border border-zinc-200/60 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] transition-all hover:shadow-[0_12px_32px_-12px_rgba(24,24,27,0.2)]"
           >
@@ -325,7 +325,7 @@
                 title="Delete resource"
                 disabled={deleting === resource.id}
               >
-                <Icon icon="solar:trash-bin-trash-bold-duotone" class="size-4" />
+                <Icon icon="solar:trash-bin-trash-linear" class="size-4" />
               </button>
             {/if}
 
@@ -386,7 +386,7 @@
     <div class="flex items-center justify-between border-b border-zinc-200/80 px-5 py-4">
       <div class="flex items-center gap-3 min-w-0">
         <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
-          <Icon icon={MIME_ICONS[detail.mime_type] ?? 'solar:document-bold-duotone'} class="size-4.5 text-zinc-500" />
+          <Icon icon={MIME_ICONS[detail.mime_type] ?? 'solar:document-linear'} class="size-4.5 text-zinc-500" />
         </span>
         <div class="min-w-0">
           <h2 class="truncate text-sm font-semibold text-zinc-900">{detail.title}</h2>
@@ -397,7 +397,7 @@
         onclick={closeDetail}
         class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
       >
-        <Icon icon="solar:close-circle-bold-duotone" class="size-5" />
+        <Icon icon="solar:close-circle-linear" class="size-5" />
       </button>
     </div>
 
@@ -421,7 +421,7 @@
           class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
           download
         >
-          <Icon icon="solar:download-bold-duotone" class="size-3.5" />
+          <Icon icon="solar:download-linear" class="size-3.5" />
           Download
         </a>
       {/if}
@@ -434,7 +434,7 @@
         </div>
       {:else if detail.chunks.length === 0}
         <div class="flex flex-col items-center justify-center gap-2 py-12">
-          <Icon icon="solar:document-bold-duotone" class="size-6 text-zinc-300" />
+          <Icon icon="solar:document-linear" class="size-6 text-zinc-300" />
           <span class="text-xs text-zinc-400">No chunks yet — document is still processing</span>
         </div>
       {:else}

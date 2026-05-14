@@ -75,7 +75,7 @@
 <div class="flex min-h-screen">
   <div class="hidden lg:flex lg:w-1/2 flex-col bg-zinc-950 px-12 py-10">
     <a href="/" class="flex items-center gap-2 mb-auto">
-      <Icon icon="solar:eye-bold-duotone" class="size-6 text-white" />
+      <Icon icon="solar:eye-linear" class="size-6 text-white" />
       <span class="font-[Goga] text-xl tracking-tight text-white">Perception</span>
     </a>
 
@@ -118,7 +118,7 @@
           href="{API_BASE}/auth/oidc"
           class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
         >
-          <Icon icon="solar:key-bold-duotone" class="size-4" />
+          <Icon icon="solar:key-linear" class="size-4" />
           Sign in with SSO
         </a>
       {:else}
@@ -221,7 +221,7 @@
             href="{API_BASE}/auth/oidc"
             class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-50"
           >
-            <Icon icon="solar:key-bold-duotone" class="size-4" />
+            <Icon icon="solar:key-linear" class="size-4" />
             Sign in with SSO
           </a>
         {/if}

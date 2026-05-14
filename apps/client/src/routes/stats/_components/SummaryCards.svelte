@@ -47,10 +47,10 @@
   };
 
   const cards = $derived<KpiCard[]>([
-    { icon: 'solar:chart-square-bold-duotone', label: 'Total Events', value: totalEvents() },
-    { icon: 'solar:buildings-2-bold-duotone', label: 'Unique Entities', value: uniqueEntities() },
-    { icon: 'solar:tag-bold-duotone', label: 'Labeled', value: labelCoveragePct(), suffix: '%' },
-    { icon: 'solar:users-group-rounded-bold-duotone', label: 'Active Actors', value: activeActors() },
+    { icon: 'solar:chart-square-linear', label: 'Total Events', value: totalEvents() },
+    { icon: 'solar:buildings-2-linear', label: 'Unique Entities', value: uniqueEntities() },
+    { icon: 'solar:tag-linear', label: 'Labeled', value: labelCoveragePct(), suffix: '%' },
+    { icon: 'solar:users-group-rounded-linear', label: 'Active Actors', value: activeActors() },
   ]);
 </script>
 

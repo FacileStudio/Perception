@@ -16,31 +16,31 @@
 
   const STATUS_STYLE: Record<string, { icon: string; iconClass: string; bgClass: string; borderClass: string }> = {
     proposed: {
-      icon: 'solar:hand-shake-bold-duotone',
+      icon: 'solar:hand-shake-linear',
       iconClass: 'text-blue-500 bg-blue-50',
       bgClass: 'bg-blue-50/30',
       borderClass: 'border-blue-200/60',
     },
     approved: {
-      icon: 'solar:clock-circle-bold-duotone',
+      icon: 'solar:clock-circle-linear',
       iconClass: 'text-amber-500 bg-amber-50',
       bgClass: 'bg-amber-50/30',
       borderClass: 'border-amber-200/60',
     },
     executed: {
-      icon: 'solar:check-circle-bold-duotone',
+      icon: 'solar:check-circle-linear',
       iconClass: 'text-emerald-500 bg-emerald-50',
       bgClass: 'bg-emerald-50/30',
       borderClass: 'border-emerald-200/60',
     },
     dismissed: {
-      icon: 'solar:close-circle-bold-duotone',
+      icon: 'solar:close-circle-linear',
       iconClass: 'text-zinc-400 bg-zinc-100',
       bgClass: 'bg-zinc-50/30',
       borderClass: 'border-zinc-200/60',
     },
     failed: {
-      icon: 'solar:danger-triangle-bold-duotone',
+      icon: 'solar:danger-triangle-linear',
       iconClass: 'text-red-500 bg-red-50',
       bgClass: 'bg-red-50/30',
       borderClass: 'border-red-200/60',
@@ -127,7 +127,7 @@
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:hand-shake-bold-duotone" class="size-4" />
+        <Icon icon="solar:hand-shake-linear" class="size-4" />
         Proposals
       </span>
       {#if items.length > 0}
@@ -155,13 +155,13 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
         <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:hand-shake-bold-duotone" class="size-7 text-zinc-300" />
+          <Icon icon="solar:hand-shake-linear" class="size-7 text-zinc-300" />
         </div>
         <span class="text-sm text-zinc-400">
           {filter === 'all' ? 'No proposals yet' : `No ${filter} proposals`}
@@ -212,7 +212,7 @@
                       class="rounded-full text-xs"
                       onclick={() => approve(proposal.id)}
                     >
-                      <Icon icon="solar:check-circle-bold-duotone" class="mr-1.5 size-3.5" />
+                      <Icon icon="solar:check-circle-linear" class="mr-1.5 size-3.5" />
                       Approve
                     </Button>
                     <Button
@@ -221,14 +221,14 @@
                       class="rounded-full text-xs"
                       onclick={() => dismiss(proposal.id)}
                     >
-                      <Icon icon="solar:close-circle-bold-duotone" class="mr-1.5 size-3.5" />
+                      <Icon icon="solar:close-circle-linear" class="mr-1.5 size-3.5" />
                       Dismiss
                     </Button>
                   </div>
                 {/if}
                 {#if proposal.status === 'executed' && proposal.executed_result}
                   <div class="mt-2 flex items-center gap-1.5 text-xs text-emerald-600">
-                    <Icon icon="solar:check-circle-bold-duotone" class="size-3.5" />
+                    <Icon icon="solar:check-circle-linear" class="size-3.5" />
                     {proposal.executed_result}
                   </div>
                 {/if}

@@ -16,28 +16,28 @@
 
   const cards = $derived([
     {
-      icon: 'solar:graph-bold-duotone',
+      icon: 'solar:graph-linear',
       label: 'Graph Connectivity',
       value: lcc !== null ? `${lcc}%` : '—',
       color: lccColor(lcc),
       sub: data.graph_health ? `${data.graph_health.node_count} nodes · ${data.graph_health.edge_count} edges` : null,
     },
     {
-      icon: 'solar:brain-bold-duotone',
+      icon: 'solar:brain-linear',
       label: 'Memory Episodes',
       value: String(data.memory_episodes),
       color: data.memory_episodes > 0 ? 'text-violet-600' : 'text-zinc-400',
       sub: 'durable facts stored',
     },
     {
-      icon: 'solar:pulse-2-bold-duotone',
+      icon: 'solar:pulse-2-linear',
       label: 'Change Points',
       value: String(data.change_points_30d),
       color: data.change_points_30d > 5 ? 'text-amber-600' : data.change_points_30d > 0 ? 'text-blue-600' : 'text-zinc-400',
       sub: 'regime shifts (30d)',
     },
     {
-      icon: 'solar:shield-warning-bold-duotone',
+      icon: 'solar:shield-warning-linear',
       label: 'Drift Alerts',
       value: String(data.drift_alerts_30d),
       color: data.drift_alerts_30d > 0 ? 'text-red-500' : 'text-emerald-600',

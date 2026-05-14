@@ -19,19 +19,19 @@
 
   const SEVERITY_STYLE: Record<string, { icon: string; iconClass: string; bgClass: string; borderClass: string }> = {
     critical: {
-      icon: 'solar:danger-circle-bold-duotone',
+      icon: 'solar:danger-circle-linear',
       iconClass: 'text-red-500 bg-red-50',
       bgClass: 'bg-red-50/40',
       borderClass: 'border-red-200/60',
     },
     warning: {
-      icon: 'solar:shield-warning-bold-duotone',
+      icon: 'solar:shield-warning-linear',
       iconClass: 'text-amber-500 bg-amber-50',
       bgClass: 'bg-amber-50/30',
       borderClass: 'border-amber-200/60',
     },
     info: {
-      icon: 'solar:info-circle-bold-duotone',
+      icon: 'solar:info-circle-linear',
       iconClass: 'text-blue-500 bg-blue-50',
       bgClass: 'bg-blue-50/30',
       borderClass: 'border-blue-200/60',
@@ -111,7 +111,7 @@
   <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:bell-bold-duotone" class="size-4" />
+        <Icon icon="solar:bell-linear" class="size-4" />
         Notifications
       </span>
       {#if total > 0}
@@ -136,7 +136,7 @@
         disabled={markingAll || items.every(n => n.read_at)}
         onclick={markAllRead}
       >
-        <Icon icon="solar:check-read-bold-duotone" class="mr-1.5 size-3.5" />
+        <Icon icon="solar:check-read-linear" class="mr-1.5 size-3.5" />
         Mark all read
       </Button>
     </div>
@@ -149,13 +149,13 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
         <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:bell-bold-duotone" class="size-7 text-zinc-300" />
+          <Icon icon="solar:bell-linear" class="size-7 text-zinc-300" />
         </div>
         <span class="text-sm text-zinc-400">
           {filter === 'unread' ? 'No unread notifications' : filter === 'read' ? 'No read notifications' : 'No notifications yet'}
@@ -194,7 +194,7 @@
                         class="rounded-lg p-1.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-zinc-600 group-hover:opacity-100"
                         title="Mark as read"
                       >
-                        <Icon icon="solar:check-circle-bold-duotone" class="size-4" />
+                        <Icon icon="solar:check-circle-linear" class="size-4" />
                       </button>
                     {/if}
                   </div>

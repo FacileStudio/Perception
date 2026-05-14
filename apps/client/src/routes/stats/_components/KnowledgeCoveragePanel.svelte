@@ -17,21 +17,21 @@
   }
 
   const rows = $derived([
-    { label: 'With narratives', count: data.coverage.with_narratives, icon: 'solar:document-text-bold-duotone' },
-    { label: 'In communities', count: data.coverage.in_communities, icon: 'solar:users-group-rounded-bold-duotone' },
-    { label: 'With relations', count: data.coverage.with_relations, icon: 'solar:link-round-bold-duotone' },
+    { label: 'With narratives', count: data.coverage.with_narratives, icon: 'solar:document-text-linear' },
+    { label: 'In communities', count: data.coverage.in_communities, icon: 'solar:users-group-rounded-linear' },
+    { label: 'With relations', count: data.coverage.with_relations, icon: 'solar:link-round-linear' },
   ]);
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:pie-chart-2-bold-duotone" class="size-4 text-zinc-500" />
+  <Icon icon="solar:pie-chart-2-linear" class="size-4 text-zinc-500" />
   <span class="text-sm font-semibold text-zinc-900">Knowledge Coverage</span>
   <span class="text-xs text-zinc-400 ml-auto">{total} entities</span>
 </div>
 
 {#if total === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:pie-chart-2-bold-duotone" class="size-6 text-zinc-300" />
+    <Icon icon="solar:pie-chart-2-linear" class="size-6 text-zinc-300" />
     <span class="text-xs text-zinc-400">No entities yet.</span>
   </div>
 {:else}

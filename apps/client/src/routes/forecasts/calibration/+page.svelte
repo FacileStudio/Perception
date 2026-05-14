@@ -86,7 +86,7 @@
       </a>
       <span class="text-zinc-300">/</span>
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:tuning-2-bold-duotone" class="size-4" />
+        <Icon icon="solar:tuning-2-linear" class="size-4" />
         Calibration
       </span>
     </div>
@@ -99,13 +99,13 @@
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
-        <Icon icon="solar:danger-triangle-bold-duotone" class="size-6 text-red-400" />
+        <Icon icon="solar:danger-triangle-linear" class="size-6 text-red-400" />
         <span class="text-sm text-red-500">{error}</span>
       </div>
     {:else if !snapshot}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
         <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:tuning-2-bold-duotone" class="size-7 text-zinc-300" />
+          <Icon icon="solar:tuning-2-linear" class="size-7 text-zinc-300" />
         </div>
         <span class="text-sm text-zinc-400">No calibration data yet</span>
         <span class="text-xs text-zinc-300">Resolve some forecasts to generate calibration metrics</span>
@@ -251,9 +251,9 @@
                       </td>
                       <td class="py-2.5">
                         {#if s.is_active}
-                          <Icon icon="solar:check-circle-bold-duotone" class="size-4 text-emerald-500" />
+                          <Icon icon="solar:check-circle-linear" class="size-4 text-emerald-500" />
                         {:else}
-                          <Icon icon="solar:close-circle-bold-duotone" class="size-4 text-zinc-300" />
+                          <Icon icon="solar:close-circle-linear" class="size-4 text-zinc-300" />
                         {/if}
                       </td>
                     </tr>
