@@ -87,7 +87,7 @@ async function detectAtRiskClients(workspaceId: string = ''): Promise<RawProposa
     if (previous > 0 && recent / previous < 0.5) {
       proposals.push({
         action_type: 'tag_client',
-        target_provider: 'charles',
+        target_provider: 'ardoise',
         target_entity_id: r.id as string,
         target_entity_name: r.canonical_name as string,
         title: `Tag ${r.canonical_name} as at-risk`,

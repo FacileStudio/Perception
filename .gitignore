@@ -8,3 +8,4 @@ data/
 *.db-wal
 .svelte-kit/
 .vite/
+CLAUDE.md

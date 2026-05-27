@@ -296,7 +296,7 @@ Hard constraint: no autonomous execution without user confirmation.
 - [x] UI: actionable proposal cards — one-click approve or dismiss
 - [x] Vikunja write adapter: task creation
 - [x] Docuseal write adapter: contract annotation (not mutation)
-- [x] Charles write adapter: client tag (at-risk, high-velocity)
+- [x] Ardoise write adapter: client tag (at-risk, high-velocity)
 - [x] Audit: all executed actions logged as events with `provider_type = 'perception-actions'`
 
 ---
@@ -855,12 +855,12 @@ Automatically generate ontology concepts when Perception encounters unknown prov
 
 Link the same real-world entity across different SaaS providers when identifiers don't match.
 
-- [ ] Provider identity signals: email domain (Charles → email → Docuseal), project/repo name similarity, shared human names in actor fields, temporal co-occurrence of events about same entity
+- [ ] Provider identity signals: email domain (Ardoise → email → Docuseal), project/repo name similarity, shared human names in actor fields, temporal co-occurrence of events about same entity
 - [ ] Cross-provider candidate generation: for each new entity, compare against entities from other providers using blocking by capability + one of the identity signals
 - [ ] Link confidence model: weighted combination of domain match (strongest), name similarity, temporal proximity, and capability compatibility
 - [ ] `entity_provider_links` table: `id`, `entity_id`, `provider_type`, `provider_entity_id`, `provider_name`, `link_confidence`, `link_method` (domain | name | temporal | manual), `confirmed`, `created_at`
 - [ ] Migration for `entity_provider_links`
-- [ ] Provider link enrichment: when entity is accessed, show all provider appearances — "This entity appears in Charles as 'Acme Corp', in Docuseal as 'ACME SAS', in email as 'acme.fr'"
+- [ ] Provider link enrichment: when entity is accessed, show all provider appearances — "This entity appears in Ardoise as 'Acme Corp', in Docuseal as 'ACME SAS', in email as 'acme.fr'"
 - [ ] Retrieval expansion: when an entity is identified in a query, automatically include events from linked provider entities — weighted by link confidence
 
 ---

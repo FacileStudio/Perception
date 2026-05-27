@@ -15,7 +15,7 @@ type NookEventEnvelope = {
   source: "webhook" | "website" | "imap" | "system" | "test";
   provider: {
     id: string | null;
-    type: "uptime-kuma" | "docuseal" | "dokploy" | "git" | "vikunja" | "charles" | "sablier" | "imap" | "website" | "system";
+    type: "uptime-kuma" | "docuseal" | "dokploy" | "git" | "vikunja" | "ardoise" | "sablier" | "imap" | "website" | "system";
     name: string;
     tags: string[];
   };

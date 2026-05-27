@@ -1,6 +1,6 @@
 # Extraction Contract
 
-Perception is fully provider-agnostic. It has no knowledge of vikunja, dokploy, charles, or any other provider. All provider understanding lives in `provider_schemas`, inferred at runtime from data.
+Perception is fully provider-agnostic. It has no knowledge of vikunja, dokploy, ardoise, or any other provider. All provider understanding lives in `provider_schemas`, inferred at runtime from data.
 
 Extraction runs in two layers on every ingest.
 

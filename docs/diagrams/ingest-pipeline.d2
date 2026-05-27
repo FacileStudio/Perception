@@ -37,7 +37,7 @@ extract: Provider extractor {
   route: Route by provider.type
   vikunja: Task facts
   docuseal: Contract facts
-  charles: Client activity facts
+  ardoise: Client activity facts
   dokploy: Deployment facts
   git: Code facts
   uptime: Service health facts
@@ -95,7 +95,7 @@ privacy.pii -> extract.route
 
 extract.route -> extract.vikunja: vikunja
 extract.route -> extract.docuseal: docuseal
-extract.route -> extract.charles: charles
+extract.route -> extract.ardoise: ardoise
 extract.route -> extract.dokploy: dokploy
 extract.route -> extract.git: git
 extract.route -> extract.uptime: uptime-kuma or website
@@ -105,7 +105,7 @@ extract.route -> extract.fallback: unknown
 
 extract.vikunja -> tx.event
 extract.docuseal -> tx.event
-extract.charles -> tx.event
+extract.ardoise -> tx.event
 extract.dokploy -> tx.event
 extract.git -> tx.event
 extract.uptime -> tx.event

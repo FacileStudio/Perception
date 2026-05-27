@@ -58,7 +58,7 @@ Dashboard → POST /chat
 | `event_embeddings` | Voyage vector per event, retry-tracked |
 | `task_facts` | Vikunja task fields |
 | `contract_facts` | Docuseal contract/signer fields |
-| `client_activity_facts` | Charles CRM changes |
+| `client_activity_facts` | Ardoise CRM changes |
 | `deployment_facts` | Dokploy deploys |
 | `code_facts` | Git pushes, PRs |
 | `service_health_facts` | Uptime Kuma + website monitors |
@@ -89,7 +89,7 @@ Install: `bun add github:FacileStudio/perception-js`
 
 ## Providers supported
 
-`vikunja` · `docuseal` · `charles` · `dokploy` · `git` · `uptime-kuma` · `imap` · `sablier` · `website`
+`vikunja` · `docuseal` · `ardoise` · `dokploy` · `git` · `uptime-kuma` · `imap` · `sablier` · `website`
 
 Unknown providers still create an `events` row at `quality = degraded` — no silent drops.
 
@@ -151,10 +151,10 @@ Unknown providers still create an `events` row at `quality = degraded` — no si
 - Separate service or embedded Nook module long-term?
 - Raw payload storage ever allowed in production?
 - Email body excerpts indexed, or headers + subject only?
-- Charles as canonical entity source, or local entity resolver?
+- Ardoise as canonical entity source, or local entity resolver?
 - Local libSQL on la ruche, or Turso Cloud?
 
-Recommended defaults: separate service · no raw payloads in prod · IMAP headers v1 · Charles IDs when available + local resolver · start local libSQL, move to Turso only when remote sync is needed.
+Recommended defaults: separate service · no raw payloads in prod · IMAP headers v1 · Ardoise IDs when available + local resolver · start local libSQL, move to Turso only when remote sync is needed.
 
 ---
 

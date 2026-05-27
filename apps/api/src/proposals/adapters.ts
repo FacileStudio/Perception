@@ -42,17 +42,17 @@ const docusealAdapter: WriteAdapter = {
   },
 };
 
-const charlesAdapter: WriteAdapter = {
+const ardoiseAdapter: WriteAdapter = {
   async execute(proposal) {
-    console.log(`[proposals] charles tag stub for ${proposal.target_entity_id}`);
-    return `Tagged ${proposal.target_entity_name ?? proposal.target_entity_id ?? 'unknown'} as at-risk in Charles (stub)`;
+    console.log(`[proposals] ardoise tag stub for ${proposal.target_entity_id}`);
+    return `Tagged ${proposal.target_entity_name ?? proposal.target_entity_id ?? 'unknown'} as at-risk in Ardoise (stub)`;
   },
 };
 
 const adapterMap: Record<ActionType, WriteAdapter> = {
   create_task: vikunjaAdapter,
   annotate_contract: docusealAdapter,
-  tag_client: charlesAdapter,
+  tag_client: ardoiseAdapter,
 };
 
 export function getAdapter(actionType: ActionType): WriteAdapter | null {
