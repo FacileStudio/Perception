@@ -52,7 +52,7 @@ app.get('/ready', async (c) => {
 });
 
 app.get('/openapi.json', (c) => c.json(openApiSpec));
-app.get('/docs', apiReference({ url: '/openapi.json', pageTitle: 'Perception API' }));
+app.get('/docs', apiReference({ url: 'openapi.json', pageTitle: 'Perception API' }));
 
 app.get('/auth/config', (c) => {
   return c.json({
