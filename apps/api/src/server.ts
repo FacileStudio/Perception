@@ -2,9 +2,11 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { bodyLimit } from 'hono/body-limit';
+import { apiReference } from '@scalar/hono-api-reference';
 import { runMigrations } from './db/migrations';
 import { db } from './db/client';
 import { auth, getAuthError } from './auth';
+import { openApiSpec } from './openapi';
 import { ingestRoutes } from './routes/ingest';
 import { chatRoutes } from './routes/chat';
 import { eventsRoutes } from './routes/events';
@@ -48,6 +50,9 @@ app.get('/ready', async (c) => {
     return c.json({ ok: false, error: 'db_unavailable' }, 503);
   }
 });
+
+app.get('/openapi.json', (c) => c.json(openApiSpec));
+app.get('/docs', apiReference({ url: '/openapi.json', pageTitle: 'Perception API' }));
 
 app.get('/auth/config', (c) => {
   return c.json({
