@@ -3,6 +3,8 @@ import { Database } from 'bun:sqlite';
 import { betterAuth } from 'better-auth';
 import { organization } from 'better-auth/plugins';
 
+const emailPasswordEnabled = !config.ssoOnly;
+
 let _auth: ReturnType<typeof betterAuth> | null = null;
 let _authError: string | null = null;
 
@@ -26,7 +28,7 @@ function getAuth(): ReturnType<typeof betterAuth> {
       baseURL: `http://localhost:${config.port}`,
       database: sqliteDb,
       emailAndPassword: {
-        enabled: true,
+        enabled: emailPasswordEnabled,
         minPasswordLength: 8,
         autoSignIn: true,
       },
