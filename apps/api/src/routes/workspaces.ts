@@ -241,6 +241,9 @@ workspaceRoutes.post('/:id/invite', async (c) => {
   });
 
   if (userRow.rows.length === 0) {
+    if (config.ssoOnly) {
+      return c.json({ error: 'sso_only_no_invite', message: 'User must sign in via SSO before being invited' }, 403);
+    }
     const userId = randomUUID();
     const now = new Date().toISOString();
     await db.execute({

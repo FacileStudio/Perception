@@ -88,6 +88,9 @@ app.get('/auth/status', async (c) => {
 });
 
 app.post('/auth/login', async (c) => {
+  if (config.ssoOnly) {
+    return c.json({ error: 'password_login_disabled' }, 403);
+  }
   const body = await c.req.json().catch(() => null);
   if (!body?.password || body.password !== config.adminPassword) {
     return c.json({ error: 'unauthorized' }, 401);
@@ -135,6 +138,12 @@ app.post('/auth/logout', async (c) => {
 });
 
 app.on(['POST', 'GET'], '/auth/*', (c) => {
+  if (config.ssoOnly) {
+    const path = new URL(c.req.url).pathname;
+    if (path.includes('/sign-up') || path.includes('/sign-in/email')) {
+      return c.json({ error: 'sso_only_mode' }, 403);
+    }
+  }
   try {
     return auth.handler(c.req.raw);
   } catch (e) {
