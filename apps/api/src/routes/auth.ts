@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { config } from '../config';
+import { db } from '../db/client';
 import { createSession, destroySession, upsertUser, getSessionWithUser } from '../security/session';
 import { isOIDCEnabled, initiateOIDCLogin, handleOIDCCallback } from '../security/oidc';
 
@@ -70,8 +71,16 @@ if (isOIDCEnabled()) {
 
   authRoutes.get('/oidc/callback', async (c) => {
     try {
-      const { email, name } = await handleOIDCCallback(c);
+      const { email, name, picture } = await handleOIDCCallback(c);
       const userId = await upsertUser(email, 'oidc', name);
+      if (picture) {
+        try {
+          await db.execute({
+            sql: 'UPDATE user SET image = ? WHERE email = ?',
+            args: [picture, email],
+          });
+        } catch {}
+      }
       await createSession(c, userId);
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/chat`);

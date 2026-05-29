@@ -57,7 +57,7 @@ export async function initiateOIDCLogin(c: Context): Promise<Response> {
   return c.redirect(`${d.authorization_endpoint}?${params.toString()}`);
 }
 
-export async function handleOIDCCallback(c: Context): Promise<{ email: string; name?: string }> {
+export async function handleOIDCCallback(c: Context): Promise<{ email: string; name?: string; picture?: string }> {
   const stateCookie = getCookie(c, OIDC_STATE_COOKIE);
   const { code, state } = c.req.query() as { code?: string; state?: string };
 
@@ -97,5 +97,6 @@ export async function handleOIDCCallback(c: Context): Promise<{ email: string; n
   if (!email) throw new Error('no_email_in_claims');
 
   const name = (payload.name as string | undefined) ?? (payload.preferred_username as string | undefined);
-  return { email, name };
+  const picture = payload.picture as string | undefined;
+  return { email, name, picture };
 }
