@@ -17,6 +17,7 @@ export const api = {
     logout: () => request('/auth/logout', { method: 'POST' }),
     status: () => request<{ authenticated: boolean; user: AuthUser | null }>('/auth/status'),
     config: () => request<{ sso_only: boolean; oidc_enabled: boolean }>('/auth/config'),
+    syncProfile: () => request<{ synced: boolean; reason?: string; refreshed?: boolean }>('/auth/sync-profile', { method: 'POST' }),
   },
   workspaces: {
     list: () => request<{ workspaces: Array<{ id: string; name: string; slug: string; role: string; created_at: string }>; active_workspace_id: string | null }>('/workspaces'),

@@ -11,12 +11,13 @@ interface OIDCDiscovery {
   token_endpoint: string;
   jwks_uri: string;
   issuer: string;
+  userinfo_endpoint: string;
 }
 
 let discovery: OIDCDiscovery | null = null;
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
-async function getDiscovery(): Promise<OIDCDiscovery> {
+export async function getDiscovery(): Promise<OIDCDiscovery> {
   if (discovery) return discovery;
   const issuer = config.oidcIssuer.replace(/\/$/, '');
   const res = await fetch(`${issuer}/.well-known/openid-configuration`);
@@ -51,13 +52,13 @@ export async function initiateOIDCLogin(c: Context): Promise<Response> {
     response_type: 'code',
     client_id: config.oidcClientId,
     redirect_uri: config.oidcRedirectUrl,
-    scope: 'openid email profile',
+    scope: 'openid email profile offline_access',
     state,
   });
   return c.redirect(`${d.authorization_endpoint}?${params.toString()}`);
 }
 
-export async function handleOIDCCallback(c: Context): Promise<{ email: string; name?: string; picture?: string }> {
+export async function handleOIDCCallback(c: Context): Promise<{ email: string; name?: string; picture?: string; accessToken?: string; refreshToken?: string }> {
   const stateCookie = getCookie(c, OIDC_STATE_COOKIE);
   const { code, state } = c.req.query() as { code?: string; state?: string };
 
@@ -84,7 +85,7 @@ export async function handleOIDCCallback(c: Context): Promise<{ email: string; n
     const err = await tokenRes.text();
     throw new Error(`token_exchange_failed: ${err}`);
   }
-  const tokens = await tokenRes.json() as { id_token?: string };
+  const tokens = await tokenRes.json() as { id_token?: string; access_token?: string; refresh_token?: string };
   if (!tokens.id_token) throw new Error('missing_id_token');
 
   const jwksSet = await getJWKS();
@@ -98,5 +99,5 @@ export async function handleOIDCCallback(c: Context): Promise<{ email: string; n
 
   const name = (payload.name as string | undefined) ?? (payload.preferred_username as string | undefined);
   const picture = payload.picture as string | undefined;
-  return { email, name, picture };
+  return { email, name, picture, accessToken: tokens.access_token, refreshToken: tokens.refresh_token };
 }

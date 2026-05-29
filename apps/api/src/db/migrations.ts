@@ -750,6 +750,14 @@ ALTER TABLE chat_sessions ADD COLUMN user_id TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS chat_sessions_user_idx ON chat_sessions(workspace_id, user_id, updated_at DESC)
       `,
     },
+    {
+      name: '033_oidc_tokens',
+      sql: `
+ALTER TABLE users ADD COLUMN oidc_access_token TEXT;
+ALTER TABLE users ADD COLUMN oidc_refresh_token TEXT;
+ALTER TABLE users ADD COLUMN profile_synced_at TEXT
+      `,
+    },
   ];
 
   for (const migration of migrations) {

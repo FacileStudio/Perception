@@ -5,6 +5,7 @@
   import { page } from '$app/stores';
   import { auth, checkAuth, clearChatState, loadChatSessions } from '$lib/stores';
   import { authClient } from '$lib/auth-client';
+  import { api } from '$lib/api';
   import Sidebar from '$lib/components/sidebar.svelte';
   import { ensureSolar } from '$lib/solar';
 
@@ -16,6 +17,7 @@
     await checkAuth();
     if (auth.authenticated) {
       await loadChatSessions();
+      api.auth.syncProfile().catch(() => {});
       return;
     }
     if ($page.url.pathname !== '/login') {

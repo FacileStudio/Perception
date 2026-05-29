@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { config } from '../config';
 import { db } from '../db/client';
-import { createSession, destroySession, upsertUser, getSessionWithUser } from '../security/session';
-import { isOIDCEnabled, initiateOIDCLogin, handleOIDCCallback } from '../security/oidc';
+import { createSession, destroySession, upsertUser, getSession, getSessionWithUser } from '../security/session';
+import { isOIDCEnabled, initiateOIDCLogin, handleOIDCCallback, getDiscovery } from '../security/oidc';
 
 export const authRoutes = new Hono();
 
@@ -71,13 +71,21 @@ if (isOIDCEnabled()) {
 
   authRoutes.get('/oidc/callback', async (c) => {
     try {
-      const { email, name, picture } = await handleOIDCCallback(c);
+      const { email, name, picture, accessToken, refreshToken } = await handleOIDCCallback(c);
       const userId = await upsertUser(email, 'oidc', name);
       if (picture) {
         try {
           await db.execute({
             sql: 'UPDATE user SET image = ? WHERE email = ?',
             args: [picture, email],
+          });
+        } catch {}
+      }
+      if (accessToken || refreshToken) {
+        try {
+          await db.execute({
+            sql: 'UPDATE users SET oidc_access_token = ?, oidc_refresh_token = ?, profile_synced_at = ? WHERE id = ?',
+            args: [accessToken ?? null, refreshToken ?? null, new Date().toISOString(), userId],
           });
         } catch {}
       }
@@ -89,5 +97,76 @@ if (isOIDCEnabled()) {
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/login?error=oidc_failed`);
     }
+  });
+
+  authRoutes.post('/sync-profile', async (c) => {
+    const session = await getSession(c);
+    if (!session) return c.json({ error: 'unauthorized' }, 401);
+
+    const userRes = await db.execute({
+      sql: 'SELECT id, email, source, oidc_access_token, oidc_refresh_token, profile_synced_at FROM users WHERE id = ?',
+      args: [session.userId],
+    });
+    if (userRes.rows.length === 0) return c.json({ error: 'user_not_found' }, 404);
+    const user = userRes.rows[0];
+
+    if (user.source !== 'oidc') return c.json({ synced: false, reason: 'not_oidc_user' });
+    if (!user.oidc_access_token) return c.json({ synced: false, reason: 'no_tokens' });
+
+    const syncedAt = user.profile_synced_at ? new Date(user.profile_synced_at as string).getTime() : 0;
+    if (Date.now() - syncedAt < 5 * 60 * 1000) return c.json({ synced: false, reason: 'rate_limited' });
+
+    const discovery = await getDiscovery();
+    let accessToken = user.oidc_access_token as string;
+    let refreshToken = user.oidc_refresh_token as string | null;
+    let tokensRefreshed = false;
+
+    let userinfoRes = await fetch(discovery.userinfo_endpoint, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (userinfoRes.status === 401 && refreshToken) {
+      const tokenRes = await fetch(discovery.token_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: config.oidcClientId,
+          client_secret: config.oidcClientSecret,
+        }),
+      });
+      if (!tokenRes.ok) return c.json({ synced: false, reason: 'token_refresh_failed' });
+
+      const newTokens = await tokenRes.json() as { access_token: string; refresh_token?: string };
+      accessToken = newTokens.access_token;
+      if (newTokens.refresh_token) refreshToken = newTokens.refresh_token;
+      tokensRefreshed = true;
+
+      userinfoRes = await fetch(discovery.userinfo_endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    }
+
+    if (!userinfoRes.ok) return c.json({ synced: false, reason: 'userinfo_failed' });
+
+    const profile = await userinfoRes.json() as { name?: string; picture?: string };
+    const now = new Date().toISOString();
+
+    if (profile.name) {
+      await db.execute({ sql: 'UPDATE users SET name = ? WHERE id = ?', args: [profile.name, session.userId] });
+    }
+    if (profile.picture) {
+      try {
+        await db.execute({ sql: 'UPDATE user SET image = ? WHERE email = ?', args: [profile.picture, user.email as string] });
+      } catch {}
+    }
+
+    await db.execute({
+      sql: 'UPDATE users SET oidc_access_token = ?, oidc_refresh_token = ?, profile_synced_at = ? WHERE id = ?',
+      args: [accessToken, refreshToken ?? null, now, session.userId],
+    });
+
+    return c.json({ synced: true, refreshed: tokensRefreshed });
   });
 }
