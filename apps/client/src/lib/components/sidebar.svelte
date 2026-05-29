@@ -177,6 +177,7 @@
               <img
                 src={auth.user.image}
                 alt={label}
+                title={auth.user.source === 'oidc' ? 'Synced from SSO' : undefined}
                 class="size-7 shrink-0 rounded-full object-cover"
               />
             {:else}

@@ -17,13 +17,14 @@ export async function checkAuth() {
     const session = await authClient.getSession();
     if (session.data?.user) {
       auth.authenticated = true;
+      const me = await api.users.me().catch(() => null);
       auth.user = {
         id: session.data.user.id,
         email: session.data.user.email,
         name: session.data.user.name,
         image: session.data.user.image ?? null,
         color: '#818cf8',
-        source: 'better-auth',
+        source: me?.user?.source ?? 'local',
       };
       await loadWorkspaces();
     } else {

@@ -62,9 +62,18 @@
               <tr class="border-b border-zinc-100 last:border-0 hover:bg-zinc-50/50 transition-colors">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
-                    <div class="size-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0" style="background-color: {user.color}">
-                      {(user.name ?? user.email).charAt(0).toUpperCase()}
-                    </div>
+                    {#if user.image}
+                      <img
+                        src={user.image}
+                        alt={user.name ?? user.email}
+                        title={user.source === 'oidc' ? 'Synced from SSO' : undefined}
+                        class="size-8 rounded-full object-cover shrink-0"
+                      />
+                    {:else}
+                      <div class="size-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0" style="background-color: {user.color}">
+                        {(user.name ?? user.email).charAt(0).toUpperCase()}
+                      </div>
+                    {/if}
                     <div>
                       {#if user.name}
                         <div class="font-medium text-zinc-950">{user.name}</div>
