@@ -116,9 +116,21 @@ if (config.oidcIssuer && config.oidcClientId) {
     try {
       const { handleOIDCCallback } = await import('./security/oidc');
       const { createSession, upsertUser } = await import('./security/session');
-      const { email, name } = await handleOIDCCallback(c);
-      const userId = await upsertUser(email, 'oidc', name);
+      const { db } = await import('./db/client');
+      const result = await handleOIDCCallback(c);
+      const userId = await upsertUser(result.email, 'oidc', result.name);
       await createSession(c, userId);
+      if (result.accessToken) {
+        await db.execute({
+          sql: 'UPDATE users SET oidc_access_token = ?, oidc_refresh_token = ?, profile_synced_at = ? WHERE id = ?',
+          args: [result.accessToken, result.refreshToken ?? null, new Date().toISOString(), userId],
+        });
+      }
+      if (result.picture) {
+        try {
+          await db.execute({ sql: 'UPDATE user SET image = ? WHERE email = ?', args: [result.picture, result.email] });
+        } catch {}
+      }
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/chat`);
     } catch (err) {
@@ -126,6 +138,79 @@ if (config.oidcIssuer && config.oidcClientId) {
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/login?error=oidc_failed`);
     }
+  });
+
+  app.post('/auth/sync-profile', async (c) => {
+    const { getSessionWithUser } = await import('./security/session');
+    const currentUser = await getSessionWithUser(c);
+    if (!currentUser) return c.json({ error: 'unauthorized' }, 401);
+
+    if (currentUser.source !== 'oidc') return c.json({ synced: false });
+
+    const { db } = await import('./db/client');
+    const userRes = await db.execute({
+      sql: 'SELECT oidc_access_token, oidc_refresh_token, profile_synced_at FROM users WHERE id = ?',
+      args: [currentUser.id],
+    });
+    if (userRes.rows.length === 0) return c.json({ synced: false });
+    const row = userRes.rows[0];
+
+    if (!row.oidc_access_token) return c.json({ synced: false });
+
+    const syncedAt = row.profile_synced_at ? new Date(row.profile_synced_at as string).getTime() : 0;
+    if (Date.now() - syncedAt < 5 * 60 * 1000) return c.json({ synced: false });
+
+    const { getDiscovery } = await import('./security/oidc');
+    const discovery = await getDiscovery();
+    let accessToken = row.oidc_access_token as string;
+    let refreshToken = row.oidc_refresh_token as string | null;
+
+    let userinfoRes = await fetch(discovery.userinfo_endpoint, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (userinfoRes.status === 401 && refreshToken) {
+      const tokenRes = await fetch(discovery.token_endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: config.oidcClientId,
+          client_secret: config.oidcClientSecret,
+        }),
+      });
+      if (!tokenRes.ok) return c.json({ synced: false });
+
+      const newTokens = await tokenRes.json() as { access_token: string; refresh_token?: string };
+      accessToken = newTokens.access_token;
+      if (newTokens.refresh_token) refreshToken = newTokens.refresh_token;
+
+      userinfoRes = await fetch(discovery.userinfo_endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    }
+
+    if (!userinfoRes.ok) return c.json({ synced: false });
+
+    const profile = await userinfoRes.json() as { name?: string; picture?: string };
+    const now = new Date().toISOString();
+
+    if (profile.name) {
+      await db.execute({ sql: 'UPDATE users SET name = ? WHERE id = ?', args: [profile.name, currentUser.id] });
+    }
+    if (profile.picture) {
+      try {
+        await db.execute({ sql: 'UPDATE user SET image = ? WHERE email = ?', args: [profile.picture, currentUser.email] });
+      } catch {}
+    }
+
+    await db.execute({
+      sql: 'UPDATE users SET oidc_access_token = ?, oidc_refresh_token = ?, profile_synced_at = ? WHERE id = ?',
+      args: [accessToken, refreshToken ?? null, now, currentUser.id],
+    });
+
+    return c.json({ synced: true });
   });
 }
 
