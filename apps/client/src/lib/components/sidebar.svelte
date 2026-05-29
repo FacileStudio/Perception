@@ -173,12 +173,20 @@
             onclick={() => (userMenuOpen = !userMenuOpen)}
             class="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/60 px-3 text-left transition-colors hover:bg-zinc-100"
           >
-            <div
-              class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-              style="background-color: {auth.user.color}"
-            >
-              {initials(label)}
-            </div>
+            {#if auth.user.image}
+              <img
+                src={auth.user.image}
+                alt={label}
+                class="size-7 shrink-0 rounded-full object-cover"
+              />
+            {:else}
+              <div
+                class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+                style="background-color: {auth.user.color}"
+              >
+                {initials(label)}
+              </div>
+            {/if}
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name || auth.user.email}</p>
             </div>

@@ -21,6 +21,7 @@ export async function checkAuth() {
         id: session.data.user.id,
         email: session.data.user.email,
         name: session.data.user.name,
+        image: session.data.user.image ?? null,
         color: '#818cf8',
         source: 'better-auth',
       };

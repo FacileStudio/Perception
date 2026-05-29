@@ -62,9 +62,9 @@ export async function getSession(c: Context): Promise<{ sessionId: string; userI
   return { sessionId: row.id as string, userId: row.user_id as string };
 }
 
-export async function getSessionWithUser(c: Context): Promise<{ id: string; email: string; name: string | null; color: string; source: string } | null> {
+export async function getSessionWithUser(c: Context): Promise<{ id: string; email: string; name: string | null; image: string | null; color: string; source: string } | null> {
   if (config.localDevAuthDisabled) {
-    return { id: 'dev', email: 'dev@local', name: 'Dev User', color: '#818cf8', source: 'local' };
+    return { id: 'dev', email: 'dev@local', name: 'Dev User', image: null, color: '#818cf8', source: 'local' };
   }
   const session = await getSession(c);
   if (!session) return null;
@@ -74,10 +74,19 @@ export async function getSessionWithUser(c: Context): Promise<{ id: string; emai
   });
   if (result.rows.length === 0) return null;
   const row = result.rows[0];
+  let image: string | null = null;
+  try {
+    const imgRes = await db.execute({
+      sql: 'SELECT image FROM user WHERE email = ?',
+      args: [row.email as string],
+    });
+    if (imgRes.rows.length > 0) image = imgRes.rows[0].image as string | null;
+  } catch {}
   return {
     id: row.id as string,
     email: row.email as string,
     name: row.name as string | null,
+    image,
     color: row.color as string,
     source: row.source as string,
   };
