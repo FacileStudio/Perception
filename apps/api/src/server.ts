@@ -68,14 +68,20 @@ app.get('/auth/status', async (c) => {
   try {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (session?.user) {
+      const acct = await db.execute({
+        sql: "SELECT providerId FROM account WHERE userId = ? AND providerId != 'credential' LIMIT 1",
+        args: [session.user.id],
+      });
+      const source = acct.rows.length > 0 ? 'oidc' : 'local';
       return c.json({
         authenticated: true,
         user: {
           id: session.user.id,
           email: session.user.email,
           name: session.user.name,
+          image: session.user.image ?? null,
           color: '#818cf8',
-          source: 'better-auth',
+          source,
         },
       });
     }
@@ -126,11 +132,16 @@ if (config.oidcIssuer && config.oidcClientId) {
           args: [result.accessToken, result.refreshToken ?? null, new Date().toISOString(), userId],
         });
       }
-      if (result.picture) {
-        try {
-          await db.execute({ sql: 'UPDATE user SET image = ? WHERE email = ?', args: [result.picture, result.email] });
-        } catch {}
-      }
+      try {
+        const updates: string[] = [];
+        const args: (string | null)[] = [];
+        if (result.name) { updates.push('name = ?'); args.push(result.name); }
+        if (result.picture) { updates.push('image = ?'); args.push(result.picture); }
+        if (updates.length > 0) {
+          args.push(result.email);
+          await db.execute({ sql: `UPDATE user SET ${updates.join(', ')} WHERE email = ?`, args });
+        }
+      } catch {}
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/chat`);
     } catch (err) {
@@ -199,11 +210,16 @@ if (config.oidcIssuer && config.oidcClientId) {
     if (profile.name) {
       await db.execute({ sql: 'UPDATE users SET name = ? WHERE id = ?', args: [profile.name, currentUser.id] });
     }
-    if (profile.picture) {
-      try {
-        await db.execute({ sql: 'UPDATE user SET image = ? WHERE email = ?', args: [profile.picture, currentUser.email] });
-      } catch {}
-    }
+    try {
+      const updates: string[] = [];
+      const args: (string | null)[] = [];
+      if (profile.name) { updates.push('name = ?'); args.push(profile.name); }
+      if (profile.picture) { updates.push('image = ?'); args.push(profile.picture); }
+      if (updates.length > 0) {
+        args.push(currentUser.email);
+        await db.execute({ sql: `UPDATE user SET ${updates.join(', ')} WHERE email = ?`, args });
+      }
+    } catch {}
 
     await db.execute({
       sql: 'UPDATE users SET oidc_access_token = ?, oidc_refresh_token = ?, profile_synced_at = ? WHERE id = ?',
