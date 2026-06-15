@@ -241,9 +241,9 @@
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2">
                   <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(entity.type_label)}"></span>
-                  <p class="text-sm font-medium text-zinc-900">{entity.canonical_name}</p>
-                  <Badge variant="secondary" class="font-mono">{entity.type_label}</Badge>
-                  <span class="ml-auto text-xs text-zinc-400">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
+                  <p class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{entity.canonical_name}</p>
+                  <Badge variant="secondary" class="shrink-0 font-mono">{entity.type_label}</Badge>
+                  <span class="shrink-0 text-xs text-zinc-400">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
                 </div>
                 {#if narrativesMap.has(entity.id)}
                   <p class="text-sm text-zinc-500">{narrativesMap.get(entity.id)!.text}</p>
@@ -280,13 +280,13 @@
           {#each pagedCommunities as comm, ci (comm.id)}
             <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <div class="flex flex-col gap-1.5">
-                <div class="flex items-center gap-2">
-                  <Badge variant="secondary">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
-                  <p class="text-sm font-medium text-zinc-900">{comm.title}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary" class="shrink-0">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
+                  <p class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{comm.title}</p>
                   {#if comm.stale}
-                    <Badge variant="outline" class="text-amber-600">stale</Badge>
+                    <Badge variant="outline" class="shrink-0 text-amber-600">stale</Badge>
                   {/if}
-                  <span class="ml-auto text-xs text-zinc-400">
+                  <span class="shrink-0 text-xs text-zinc-400">
                     {comm.member_count} {comm.member_count === 1 ? 'entity' : 'entities'} · {(comm.importance * 100).toFixed(0)}%
                   </span>
                 </div>

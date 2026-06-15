@@ -144,14 +144,14 @@
               onkeydown={(e) => e.key === 'Enter' && (selectedEvent = event)}
             >
               <div class="flex flex-1 flex-col gap-1.5">
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <Badge variant="secondary" class="font-mono">{event.provider_name}</Badge>
                   <span class="text-xs text-zinc-500">{event.event_type}</span>
                   <span class="text-xs text-zinc-400">{formatDate(event.occurred_at)}</span>
                 </div>
-                <p class="text-sm font-medium text-zinc-900">{event.title}</p>
+                <p class="text-sm font-medium text-zinc-900 break-words">{event.title}</p>
                 {#if event.summary}
-                  <p class="text-sm text-zinc-500">{event.summary}</p>
+                  <p class="text-sm text-zinc-500 break-words">{event.summary}</p>
                 {/if}
                 <div class="flex flex-wrap items-center gap-2 pt-1">
                   {#if event.quality !== 'complete'}

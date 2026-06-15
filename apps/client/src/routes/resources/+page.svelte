@@ -180,7 +180,7 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
         <Icon icon="solar:documents-linear" class="size-4" />
@@ -214,10 +214,10 @@
 
   {#if showUpload}
     <div class="border-b border-zinc-200/80 bg-zinc-50/50 px-4 py-4 sm:px-6" transition:fly={{ y: -10, duration: 200 }}>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
         <button
           onclick={() => fileInput?.click()}
-          class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700"
+          class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 sm:flex-1"
         >
           <Icon icon="solar:file-download-linear" class="size-5" />
           {#if pendingFiles.length > 1}
@@ -236,26 +236,28 @@
           onchange={handleFileSelect}
           class="hidden"
         />
-        <Button
-          size="sm"
-          class="rounded-full bg-zinc-950 text-white hover:bg-zinc-800"
-          disabled={pendingFiles.length === 0 || uploading}
-          onclick={handleUpload}
-        >
-          {#if uploading}
-            Processing...
-          {:else}
-            Upload
-          {/if}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="rounded-full"
-          onclick={() => { showUpload = false; pendingFiles = []; }}
-        >
-          Cancel
-        </Button>
+        <div class="flex items-center gap-3">
+          <Button
+            size="sm"
+            class="flex-1 rounded-full bg-zinc-950 text-white hover:bg-zinc-800 sm:flex-none"
+            disabled={pendingFiles.length === 0 || uploading}
+            onclick={handleUpload}
+          >
+            {#if uploading}
+              Processing...
+            {:else}
+              Upload
+            {/if}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="flex-1 rounded-full sm:flex-none"
+            onclick={() => { showUpload = false; pendingFiles = []; }}
+          >
+            Cancel
+          </Button>
+        </div>
       </div>
     </div>
   {/if}

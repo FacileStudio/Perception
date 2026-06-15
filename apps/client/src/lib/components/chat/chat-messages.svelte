@@ -40,13 +40,13 @@
       {#each chatState.messages as msg, i}
         {#if msg.role === 'user'}
           <div class="flex justify-end">
-            <div class="max-w-[75%] rounded-[22px] rounded-br-md bg-zinc-950 px-4 py-3 text-sm text-white shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)]">
+            <div class="max-w-[85%] break-words rounded-[22px] rounded-br-md bg-zinc-950 px-4 py-3 text-sm text-white shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)] sm:max-w-[75%]">
               {msg.content}
             </div>
           </div>
         {:else}
           <div class="flex justify-start">
-            <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
+            <div class="max-w-[90%] min-w-0 break-words rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)] sm:max-w-[75%]">
               {#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1 && !msg.content}
                 <TypingIndicator />
               {:else}

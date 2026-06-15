@@ -132,8 +132,8 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
-    <div class="flex items-center gap-3">
+  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div class="flex min-w-0 items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
         <Icon icon="solar:telescope-linear" class="size-4" />
         Forecasts
@@ -142,7 +142,7 @@
         <span class="text-xs text-zinc-400">{items.length} total</span>
       {/if}
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <div class="flex rounded-full border border-zinc-200 p-0.5">
         {#each (['all', 'open', 'resolved', 'expired'] as const) as f}
           <button

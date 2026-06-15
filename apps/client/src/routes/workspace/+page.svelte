@@ -352,13 +352,13 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur sm:px-6">
-    <div class="flex items-center gap-4">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
-        <Icon icon="solar:buildings-linear" class="size-4" />
-        {auth.workspace?.name ?? 'Workspace'}
+  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+      <span class="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-zinc-900">
+        <Icon icon="solar:buildings-linear" class="size-4 shrink-0" />
+        <span class="truncate">{auth.workspace?.name ?? 'Workspace'}</span>
       </span>
-      <div class="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-50 p-0.5">
+      <div class="-mx-1 flex gap-1 overflow-x-auto rounded-lg border border-zinc-200 bg-zinc-50 p-0.5 sm:mx-0">
         {#each [
           { key: 'general', label: 'General', icon: 'solar:settings-linear' },
           { key: 'settings', label: 'Config', icon: 'solar:tuning-2-linear' },
@@ -367,7 +367,7 @@
         ] as item}
           <button
             onclick={() => tab = item.key as typeof tab}
-            class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {tab === item.key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}"
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors {tab === item.key ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-500 hover:text-zinc-700'}"
           >
             <Icon icon={item.icon} class="size-3.5" />
             {item.label}
@@ -375,7 +375,7 @@
         {/each}
       </div>
     </div>
-    <Button onclick={() => (showCreate = !showCreate)} variant="outline" size="sm">
+    <Button onclick={() => (showCreate = !showCreate)} variant="outline" size="sm" class="w-full shrink-0 sm:w-auto">
       <Icon icon="mdi:plus" class="mr-1.5 size-4" />
       New workspace
     </Button>
@@ -387,7 +387,7 @@
       <CreateWorkspaceDrawer bind:open={showCreate} />
 
       {#if tab === 'general'}
-        <div class="rounded-lg border border-zinc-200 bg-white p-6">
+        <div class="rounded-lg border border-zinc-200 bg-white p-4 sm:p-6">
           <h2 class="text-lg font-semibold text-zinc-950 mb-4">Workspace details</h2>
           {#if saveError}<p class="mb-3 text-sm text-destructive">{saveError}</p>{/if}
           {#if saveSuccess}<p class="mb-3 text-sm text-emerald-600">{saveSuccess}</p>{/if}
@@ -428,7 +428,7 @@
         {/if}
 
         <div class="rounded-lg border border-zinc-200 bg-white">
-          <div class="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+          <div class="flex items-center justify-between border-b border-zinc-100 px-4 py-4 sm:px-6">
             <h2 class="text-lg font-semibold text-zinc-950">Members</h2>
             <Button onclick={() => (showInvite = !showInvite)} variant="outline" size="sm">
               <Icon icon="solar:user-plus-linear" class="mr-1.5 size-4" />
@@ -437,22 +437,22 @@
           </div>
 
           {#if showInvite}
-            <div class="border-b border-zinc-100 px-6 py-4">
+            <div class="border-b border-zinc-100 px-4 py-4 sm:px-6">
               {#if inviteError}<p class="mb-2 text-sm text-destructive">{inviteError}</p>{/if}
               {#if inviteSuccess}<p class="mb-2 text-sm text-emerald-600">{inviteSuccess}</p>{/if}
-              <form onsubmit={handleInvite} class="flex items-end gap-3">
+              <form onsubmit={handleInvite} class="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div class="flex-1 space-y-1.5">
                   <Label for="invite-email">Email</Label>
                   <Input id="invite-email" type="email" bind:value={inviteEmail} placeholder="colleague@company.com" disabled={inviting} />
                 </div>
                 <div class="space-y-1.5">
                   <Label for="invite-role">Role</Label>
-                  <select id="invite-role" bind:value={inviteRole} class="h-10 rounded-md border border-zinc-200 bg-white px-3 text-sm" disabled={inviting}>
+                  <select id="invite-role" bind:value={inviteRole} class="h-10 w-full rounded-md border border-zinc-200 bg-white px-3 text-sm sm:w-auto" disabled={inviting}>
                     <option value="member">Member</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
-                <Button type="submit" disabled={inviting || !inviteEmail.trim()}>
+                <Button type="submit" disabled={inviting || !inviteEmail.trim()} class="w-full sm:w-auto">
                   {inviting ? 'Sending...' : 'Send invite'}
                 </Button>
               </form>
@@ -466,7 +466,7 @@
           {:else}
             <div class="divide-y divide-zinc-100">
               {#each members as member}
-                <div class="flex items-center gap-4 px-6 py-3">
+                <div class="flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
                   <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-600">
                     {member.name?.slice(0, 2).toUpperCase() ?? member.email.slice(0, 2).toUpperCase()}
                   </div>
@@ -493,13 +493,13 @@
 
         {#if auth.workspaces.length > 1}
           <div class="rounded-lg border border-zinc-200 bg-white">
-            <div class="border-b border-zinc-100 px-6 py-4">
+            <div class="border-b border-zinc-100 px-4 py-4 sm:px-6">
               <h2 class="text-lg font-semibold text-zinc-950">All workspaces</h2>
             </div>
             <div class="divide-y divide-zinc-100">
               {#each auth.workspaces as ws}
                 {@const active = ws.id === auth.workspace?.id}
-                <button onclick={() => { if (!active) handleSwitchWorkspace(ws.id); }} class="flex w-full items-center gap-4 px-6 py-3 text-left transition-colors {active ? 'bg-zinc-50' : 'hover:bg-zinc-50'}" disabled={active}>
+                <button onclick={() => { if (!active) handleSwitchWorkspace(ws.id); }} class="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors sm:gap-4 sm:px-6 {active ? 'bg-zinc-50' : 'hover:bg-zinc-50'}" disabled={active}>
                   <Icon icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'} class="size-5 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}" />
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium text-zinc-950">{ws.name}</p>
@@ -516,9 +516,9 @@
         {#if settingsLoading}
           <div class="flex items-center justify-center py-16"><span class="text-sm text-zinc-400">Loading settings...</span></div>
         {:else}
-          <div class="flex items-center justify-between mb-4">
+          <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p class="text-xs text-zinc-400">Settings cascade: <strong>workspace</strong> overrides <strong>system</strong> overrides <strong>env</strong> overrides <strong>defaults</strong>.</p>
-            <Button variant="default" size="sm" onclick={saveSettings} disabled={settingsSaving} class="rounded-xl gap-2">
+            <Button variant="default" size="sm" onclick={saveSettings} disabled={settingsSaving} class="w-full shrink-0 gap-2 rounded-xl sm:w-auto">
               <Icon icon={settingsSaved ? 'solar:check-circle-linear' : 'solar:diskette-linear'} class="size-4" />
               {settingsSaving ? 'Saving...' : settingsSaved ? 'Saved!' : 'Save'}
             </Button>

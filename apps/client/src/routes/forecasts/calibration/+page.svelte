@@ -193,7 +193,7 @@
           </svg>
         </Card>
 
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
             <span class="text-xs font-medium text-zinc-500">Reliability</span>
             <span class="mt-1 block text-2xl font-semibold {snapshot.reliability_score < 0.05 ? 'text-emerald-600' : snapshot.reliability_score < 0.1 ? 'text-amber-600' : 'text-red-600'}">{fmt(snapshot.reliability_score)}</span>
@@ -268,7 +268,7 @@
           <Card class="rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
             <h3 class="mb-4 text-sm font-semibold text-zinc-900">Conformal State</h3>
             <div class="flex flex-col gap-4">
-              <div class="flex items-center gap-6">
+              <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
                 <div>
                   <span class="text-xs font-medium text-zinc-500">Empirical Coverage</span>
                   <span class="mt-1 block text-xl font-semibold {Math.abs(conformal.empirical_coverage - conformal.coverage_target) < 0.05 ? 'text-emerald-600' : 'text-amber-600'}">

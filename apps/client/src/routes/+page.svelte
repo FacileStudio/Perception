@@ -29,7 +29,7 @@
 {#if !redirecting}
 <div class="min-h-screen bg-background text-foreground">
   <header class="border-b border-border">
-    <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+    <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
       <PerceptionLogo iconSizeClass="size-6" iconFrameClass="size-6" titleClass="text-xl font-bold" class="gap-2" />
       <Button href="/login">
         Sign in
@@ -40,12 +40,12 @@
 
   <main>
 
-    <section class="mx-auto max-w-5xl px-6 py-28 md:py-36">
+    <section class="mx-auto max-w-5xl px-4 py-20 sm:px-6 md:py-36">
       <p class="mb-5 inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1 text-xs text-muted-foreground">
         <Icon icon="solar:lock-keyhole-linear" class="size-3" />
         Self-hosted &middot; Zero telemetry
       </p>
-      <h1 class="max-w-3xl font-[Goga] text-5xl leading-[1.08] tracking-tight md:text-6xl">
+      <h1 class="max-w-3xl font-[Goga] text-4xl leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
         Operational intelligence<br class="hidden sm:block" />
         that thinks ahead.
       </h1>
@@ -74,8 +74,8 @@
       </div>
     </section>
 
-    <section class="mx-auto max-w-5xl px-6 py-24">
-      <div class="grid items-start gap-16 md:grid-cols-2">
+    <section class="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-24">
+      <div class="grid items-start gap-10 md:grid-cols-2 md:gap-16">
         <div class="md:sticky md:top-24">
           <h2 class="font-[Goga] text-3xl tracking-tight">Built on math,<br />not magic.</h2>
           <p class="mt-4 max-w-md leading-relaxed text-muted-foreground">
@@ -101,7 +101,7 @@
     </section>
 
     <section class="border-y border-border bg-zinc-50/60">
-      <div class="mx-auto max-w-5xl px-6 py-20">
+      <div class="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
         <h2 class="mb-10 font-[Goga] text-3xl tracking-tight">And the rest.</h2>
         <div class="grid gap-x-16 gap-y-5 sm:grid-cols-2">
           {#each [
@@ -123,7 +123,7 @@
       </div>
     </section>
 
-    <section class="mx-auto max-w-5xl px-6 py-24 text-center">
+    <section class="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-24">
       <h2 class="font-[Goga] text-3xl tracking-tight">Ready to see clearly?</h2>
       <p class="mt-3 text-muted-foreground">
         Deploy on your infrastructure. Connect your sources. Start asking.
@@ -136,7 +136,7 @@
   </main>
 
   <footer class="border-t border-border">
-    <div class="mx-auto max-w-5xl px-6 py-6 text-center text-sm text-muted-foreground">
+    <div class="mx-auto max-w-5xl px-4 py-6 text-center text-sm text-muted-foreground sm:px-6">
       &copy; {new Date().getFullYear()} Perception by <a href="https://facile.studio" class="font-semibold underline hover:cursor-pointer">Facile.</a>
     </div>
   </footer>

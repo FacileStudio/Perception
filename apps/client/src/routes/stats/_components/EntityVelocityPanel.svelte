@@ -56,7 +56,7 @@
     {/if}
   </div>
 
-  <div class="flex gap-3">
+  <div class="flex flex-wrap gap-3">
     <div class="bg-zinc-50 rounded-xl px-3 py-2">
       <p class="text-xs text-zinc-400">Total Current</p>
       <p class="font-mono text-sm font-semibold text-zinc-900">{totalCurrent}</p>

@@ -124,7 +124,7 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
     <div class="flex items-center gap-3">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
         <Icon icon="solar:hand-shake-linear" class="size-4" />
@@ -134,12 +134,12 @@
         <span class="text-xs text-zinc-400">{items.length} total</span>
       {/if}
     </div>
-    <div class="flex items-center gap-2">
-      <div class="flex rounded-full border border-zinc-200 p-0.5">
+    <div class="-mx-4 flex items-center px-4 sm:mx-0 sm:px-0">
+      <div class="flex w-max rounded-full border border-zinc-200 p-0.5">
         {#each (['all', 'proposed', 'executed', 'dismissed'] as const) as f}
           <button
             onclick={() => (filter = f)}
-            class="rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:text-zinc-700'}"
+            class="shrink-0 rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:text-zinc-700'}"
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
@@ -191,7 +191,7 @@
                     <span class="text-xs text-zinc-400">{timeAgo(proposal.proposed_at)}</span>
                   </div>
                 </div>
-                <div class="mt-2 flex items-center gap-2">
+                <div class="mt-2 flex flex-wrap items-center gap-2">
                   <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
                     {proposal.action_type}
                   </span>
