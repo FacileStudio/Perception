@@ -41,10 +41,6 @@
   <main>
 
     <section class="mx-auto max-w-5xl px-4 py-20 sm:px-6 md:py-36">
-      <p class="mb-5 inline-flex items-center gap-2 rounded-full border border-border px-3.5 py-1 text-xs text-muted-foreground">
-        <Icon icon="solar:lock-keyhole-linear" class="size-3" />
-        Self-hosted &middot; Zero telemetry
-      </p>
       <h1 class="max-w-3xl font-[Goga] text-4xl leading-[1.08] tracking-tight sm:text-5xl md:text-6xl">
         Operational intelligence<br class="hidden sm:block" />
         that thinks ahead.
