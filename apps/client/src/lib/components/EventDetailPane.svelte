@@ -76,21 +76,21 @@
   ></div>
 
   <div
-    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-background shadow-2xl"
     in:fly={{ x: 420, duration: 280, easing: cubicOut }}
     out:fly={{ x: 420, duration: 200, easing: cubicOut }}
   >
-    <div class="flex items-start justify-between border-b border-zinc-100 px-5 py-4">
+    <div class="flex items-start justify-between border-b border-border/50 px-5 py-4">
       <div class="flex-1 pr-3">
-        <p class="text-sm font-semibold leading-snug text-zinc-900">{event.title}</p>
+        <p class="text-sm font-semibold leading-snug text-foreground">{event.title}</p>
         <div class="mt-1.5 flex items-center gap-2">
           <Badge variant="secondary" class="font-mono">{event.provider_name}</Badge>
-          <span class="text-xs text-zinc-400">{event.event_type}</span>
+          <span class="text-xs text-muted-foreground">{event.event_type}</span>
         </div>
       </div>
       <button
         onclick={onclose}
-        class="mt-0.5 shrink-0 rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+        class="mt-0.5 shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         aria-label="Close"
       >
         <Icon icon="solar:close-circle-linear" class="size-4" />
@@ -100,28 +100,28 @@
     <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
       <div class="space-y-2">
         <div class="flex items-center gap-2 text-xs">
-          <Icon icon="solar:calendar-linear" class="size-3.5 shrink-0 text-zinc-400" />
-          <span class="text-zinc-500">{formatDate(event.occurred_at)}</span>
+          <Icon icon="solar:calendar-linear" class="size-3.5 shrink-0 text-muted-foreground" />
+          <span class="text-muted-foreground">{formatDate(event.occurred_at)}</span>
         </div>
         {#if event.actor_name}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:user-linear" class="size-3.5 shrink-0 text-zinc-400" />
-            <span class="text-zinc-500">{event.actor_name}</span>
+            <Icon icon="solar:user-linear" class="size-3.5 shrink-0 text-muted-foreground" />
+            <span class="text-muted-foreground">{event.actor_name}</span>
           </div>
         {/if}
         {#if event.entity_name}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:box-linear" class="size-3.5 shrink-0 text-zinc-400" />
-            <span class="font-mono text-zinc-500">{event.entity_name}</span>
+            <Icon icon="solar:box-linear" class="size-3.5 shrink-0 text-muted-foreground" />
+            <span class="font-mono text-muted-foreground">{event.entity_name}</span>
             {#if event.entity_type}
-              <span class="text-zinc-400">· {event.entity_type}</span>
+              <span class="text-muted-foreground">· {event.entity_type}</span>
             {/if}
           </div>
         {/if}
         {#if event.status}
           <div class="flex items-center gap-2 text-xs">
-            <Icon icon="solar:flag-linear" class="size-3.5 shrink-0 text-zinc-400" />
-            <span class="text-zinc-500">{event.status}</span>
+            <Icon icon="solar:flag-linear" class="size-3.5 shrink-0 text-muted-foreground" />
+            <span class="text-muted-foreground">{event.status}</span>
           </div>
         {/if}
       </div>
@@ -129,7 +129,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <Badge variant={qualityVariant(event.quality)}>{event.quality}</Badge>
         {#each event.concepts ?? [] as concept}
-          <span class="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-400"
+          <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
             >{concept}</span
           >
         {/each}
@@ -137,23 +137,23 @@
 
       {#if event.summary}
         <div>
-          <p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+          <p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Summary
           </p>
-          <p class="text-sm leading-relaxed text-zinc-600">{event.summary}</p>
+          <p class="text-sm leading-relaxed text-muted-foreground">{event.summary}</p>
         </div>
       {/if}
 
       {#if loadingDetail}
-        <p class="text-xs text-zinc-400">Loading details…</p>
+        <p class="text-xs text-muted-foreground">Loading details…</p>
       {:else if detail?.facts && Object.keys(detail.facts).length > 0}
         <div>
-          <p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">Facts</p>
+          <p class="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Facts</p>
           <dl class="space-y-1.5">
             {#each Object.entries(detail.facts) as [k, v]}
               <div class="flex gap-2 text-xs">
-                <dt class="w-32 shrink-0 font-mono text-zinc-400">{k}</dt>
-                <dd class="break-all text-zinc-600">
+                <dt class="w-32 shrink-0 font-mono text-muted-foreground">{k}</dt>
+                <dd class="break-all text-muted-foreground">
                   {typeof v === 'object' ? JSON.stringify(v) : String(v)}
                 </dd>
               </div>
@@ -163,8 +163,8 @@
       {/if}
 
       {#if detail?.embedding}
-        <div class="rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-400">
-          <span class="font-medium text-zinc-500">Embedding:</span>
+        <div class="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
+          <span class="font-medium text-muted-foreground">Embedding:</span>
           {detail.embedding.status}
           {#if detail.embedding.embedded_at}
             · {formatDate(detail.embedding.embedded_at)}
@@ -177,7 +177,7 @@
           href={event.url}
           target="_blank"
           rel="noopener noreferrer"
-          class="flex items-center gap-2 rounded-xl border border-zinc-200 px-3.5 py-2.5 text-sm text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-800"
+          class="flex items-center gap-2 rounded-xl border border-border px-3.5 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <Icon icon="solar:square-top-down-linear" class="size-4 shrink-0" />
           Open source
@@ -185,7 +185,7 @@
       {/if}
     </div>
 
-    <div class="border-t border-zinc-100 px-5 py-4">
+    <div class="border-t border-border/50 px-5 py-4">
       <button
         onclick={handleDelete}
         disabled={deleting}

@@ -56,15 +56,15 @@
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
   {#each cards as card}
-    <Card class="rounded-[20px] border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
+    <Card class="rounded-[20px] border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
       <div class="flex items-start justify-between mb-3">
         <div></div>
-        <Icon icon={card.icon} class="size-5 text-zinc-400" />
+        <Icon icon={card.icon} class="size-5 text-muted-foreground" />
       </div>
-      <p class="font-mono text-2xl font-semibold text-zinc-900">
+      <p class="font-mono text-2xl font-semibold text-foreground">
         {card.value !== null ? card.value : '—'}{card.suffix ?? ''}
       </p>
-      <p class="text-xs text-zinc-400 mt-0.5">{card.label}</p>
+      <p class="text-xs text-muted-foreground mt-0.5">{card.label}</p>
     </Card>
   {/each}
 </div>

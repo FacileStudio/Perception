@@ -10,13 +10,13 @@
   const options: ('7d' | '30d')[] = ['7d', '30d'];
 </script>
 
-<div class="inline-flex rounded-full border border-zinc-200 p-0.5 gap-0.5">
+<div class="inline-flex rounded-full border border-border p-0.5 gap-0.5">
   {#each options as opt}
     <button
       type="button"
       class="px-3 py-1 rounded-full text-xs font-medium transition-colors {window === opt
-        ? 'bg-zinc-900 text-white'
-        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}"
+        ? 'bg-primary text-primary-foreground'
+        : 'bg-muted text-muted-foreground hover:bg-border'}"
       onclick={() => onchange(opt)}
     >
       {opt}

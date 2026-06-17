@@ -21,36 +21,36 @@
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:shield-warning-linear" class="size-4 text-zinc-500" />
-  <span class="text-sm font-semibold text-zinc-900">Schema Drift</span>
-  <span class="text-xs text-zinc-400 ml-auto">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>
+  <Icon icon="solar:shield-warning-linear" class="size-4 text-muted-foreground" />
+  <span class="text-sm font-semibold text-foreground">Schema Drift</span>
+  <span class="text-xs text-muted-foreground ml-auto">{alerts.length} alert{alerts.length !== 1 ? 's' : ''}</span>
 </div>
 
 {#if alerts.length === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
     <Icon icon="solar:check-circle-linear" class="size-6 text-emerald-300" />
-    <span class="text-xs text-zinc-400">All schemas stable. No drift detected.</span>
+    <span class="text-xs text-muted-foreground">All schemas stable. No drift detected.</span>
   </div>
 {:else}
   <div class="space-y-2 max-h-64 overflow-y-auto">
     {#each alerts as alert}
       {@const sev = severity(alert.drift_score)}
-      <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-zinc-50">
+      <div class="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-accent">
         <div class="flex size-7 shrink-0 items-center justify-center rounded-lg {sev.cls}">
           <Icon icon="solar:shield-warning-linear" class="size-3.5" />
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-zinc-800 truncate">{alert.provider_type}</span>
+            <span class="text-xs font-medium text-foreground truncate">{alert.provider_type}</span>
             <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium {sev.cls}">{sev.label}</span>
           </div>
-          <p class="text-[10px] text-zinc-400 mt-0.5">
+          <p class="text-[10px] text-muted-foreground mt-0.5">
             {alert.field_name} — drift score {alert.drift_score.toFixed(2)}
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="shrink-0 text-[10px] text-zinc-300">{timeAgo(alert.detected_at)}</span>
-          <a href="/settings" class="shrink-0 text-[10px] font-medium text-zinc-400 hover:text-zinc-600 transition-colors">review</a>
+          <span class="shrink-0 text-[10px] text-muted-foreground/50">{timeAgo(alert.detected_at)}</span>
+          <a href="/settings" class="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors">review</a>
         </div>
       </div>
     {/each}

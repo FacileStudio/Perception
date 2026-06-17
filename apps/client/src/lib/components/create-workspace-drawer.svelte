@@ -71,13 +71,13 @@
     <div class="space-y-1.5">
       <Label for="new-ws-name">Workspace name</Label>
       <Input id="new-ws-name" bind:value={name} placeholder="My Team" disabled={creating} />
-      <p class="text-xs text-zinc-400">The display name for this workspace.</p>
+      <p class="text-xs text-muted-foreground">The display name for this workspace.</p>
     </div>
 
     <div class="space-y-1.5">
       <Label for="new-ws-slug">Slug</Label>
       <Input id="new-ws-slug" bind:value={slug} placeholder="my-team" disabled={creating} oninput={handleSlugInput} />
-      <p class="text-xs text-zinc-400">URL-safe identifier. Auto-generated from the name if left unchanged.</p>
+      <p class="text-xs text-muted-foreground">URL-safe identifier. Auto-generated from the name if left unchanged.</p>
     </div>
 
     <div class="flex justify-end gap-3 pt-2">

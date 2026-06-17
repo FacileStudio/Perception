@@ -19,7 +19,7 @@
   }
 </script>
 
-<div class="border-t border-zinc-200/80 bg-white/95 px-4 py-3 backdrop-blur sm:px-6">
+<div class="border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:px-6">
   <div class="mx-auto flex max-w-2xl items-center gap-2">
     <input
       type="text"
@@ -27,7 +27,7 @@
       bind:value={chatState.input}
       onkeydown={handleKeydown}
       disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
-      class="h-[52px] flex-1 rounded-full border border-zinc-200/80 bg-zinc-50 px-5 text-[15px] text-zinc-950 placeholder:text-zinc-400 shadow-inner focus:outline-none focus:ring-2 focus:ring-zinc-950/10 disabled:opacity-50"
+      class="h-[52px] flex-1 rounded-full border border-border bg-muted px-5 text-[15px] text-foreground placeholder:text-muted-foreground shadow-inner focus:outline-none focus:ring-2 focus:ring-ring/10 disabled:opacity-50"
     />
     <Button
       onclick={onsend}

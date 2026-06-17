@@ -6,6 +6,7 @@
   import { Card } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
+  import { Tabs, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
   ensureSolar();
@@ -196,25 +197,21 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+  <div class="border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-      <div class="flex gap-0.5 rounded-xl border border-zinc-200/80 bg-zinc-50 p-0.5">
-        <button
-          class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'list' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-          onclick={() => setMode('list')}
-        >
-          <Icon icon="solar:list-linear" class="size-3.5" />
-          Entities
-        </button>
-        <button
-          class="flex items-center gap-1.5 rounded-[9px] px-3 py-1.5 text-xs font-medium transition-all {viewMode === 'communities' ? 'bg-zinc-900 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-800'}"
-          onclick={() => setMode('communities')}
-        >
-          <Icon icon="solar:users-group-rounded-linear" class="size-3.5" />
-          Communities
-        </button>
-      </div>
-      <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-zinc-400 lg:ml-auto">
+      <Tabs value={viewMode} onValueChange={(v) => setMode(v as 'list' | 'communities')}>
+        <TabsList>
+          <TabsTrigger value="list">
+            <Icon icon="solar:list-linear" class="size-3.5" />
+            Entities
+          </TabsTrigger>
+          <TabsTrigger value="communities">
+            <Icon icon="solar:users-group-rounded-linear" class="size-3.5" />
+            Communities
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <span class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground lg:ml-auto">
         <Icon icon="solar:bill-list-linear" class="size-4" />
         {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
         {#if relationCount > 0}
@@ -227,37 +224,37 @@
   <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-12">
-        <span class="text-sm text-zinc-400">Loading...</span>
+        <span class="text-sm text-muted-foreground">Loading...</span>
       </div>
     {:else if empty}
       <div class="flex items-center justify-center py-12">
-        <span class="text-sm text-zinc-400">No entities resolved yet.</span>
+        <span class="text-sm text-muted-foreground">No entities resolved yet.</span>
       </div>
     {:else if viewMode === 'list'}
       <div class="flex flex-col gap-3">
         {#each pagedAdjacency as { entity, connections } (entity.id)}
           <button class="w-full text-left" onclick={() => openEntity(entity.id)}>
-            <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow hover:shadow-[0_18px_48px_-30px_rgba(24,24,27,0.5)]">
+            <Card class="rounded-[24px] border-border p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow hover:shadow-[0_18px_48px_-30px_rgba(24,24,27,0.5)]">
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2">
                   <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(entity.type_label)}"></span>
-                  <p class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{entity.canonical_name}</p>
-                  <Badge variant="secondary" class="shrink-0 font-mono">{entity.type_label}</Badge>
-                  <span class="shrink-0 text-xs text-zinc-400">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
+                  <p class="text-sm font-medium text-foreground">{entity.canonical_name}</p>
+                  <Badge variant="secondary" class="font-mono">{entity.type_label}</Badge>
+                  <span class="ml-auto text-xs text-muted-foreground">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
                 </div>
                 {#if narrativesMap.has(entity.id)}
-                  <p class="text-sm text-zinc-500">{narrativesMap.get(entity.id)!.text}</p>
+                  <p class="text-sm text-muted-foreground">{narrativesMap.get(entity.id)!.text}</p>
                 {/if}
                 {#if connections.length > 0}
                   <div class="flex flex-wrap items-center gap-2 pt-1">
                     {#each connections.slice(0, 8) as { other, label }}
                       <Badge variant="outline" class="font-mono">
                         {other.canonical_name}
-                        <span class="ml-1 text-zinc-400">{label.replace(/_/g, ' ')}</span>
+                        <span class="ml-1 text-muted-foreground">{label.replace(/_/g, ' ')}</span>
                       </Badge>
                     {/each}
                     {#if connections.length > 8}
-                      <span class="text-xs text-zinc-400">+{connections.length - 8} more</span>
+                      <span class="text-xs text-muted-foreground">+{connections.length - 8} more</span>
                     {/if}
                   </div>
                 {/if}
@@ -269,42 +266,42 @@
     {:else if viewMode === 'communities'}
       {#if loadingCommunities}
         <div class="flex items-center justify-center py-12">
-          <span class="text-sm text-zinc-400">Loading...</span>
+          <span class="text-sm text-muted-foreground">Loading...</span>
         </div>
       {:else if communities.length === 0}
         <div class="flex items-center justify-center py-12">
-          <span class="text-sm text-zinc-400">No communities detected yet.</span>
+          <span class="text-sm text-muted-foreground">No communities detected yet.</span>
         </div>
       {:else}
         <div class="flex flex-col gap-3">
           {#each pagedCommunities as comm, ci (comm.id)}
-            <Card class="rounded-[24px] border-zinc-200/80 p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-[24px] border-border p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <div class="flex flex-col gap-1.5">
-                <div class="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary" class="shrink-0">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
-                  <p class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{comm.title}</p>
+                <div class="flex items-center gap-2">
+                  <Badge variant="secondary">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
+                  <p class="text-sm font-medium text-foreground">{comm.title}</p>
                   {#if comm.stale}
-                    <Badge variant="outline" class="shrink-0 text-amber-600">stale</Badge>
+                    <Badge variant="outline" class="text-amber-600">stale</Badge>
                   {/if}
-                  <span class="shrink-0 text-xs text-zinc-400">
+                  <span class="ml-auto text-xs text-muted-foreground">
                     {comm.member_count} {comm.member_count === 1 ? 'entity' : 'entities'} · {(comm.importance * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p class="text-sm text-zinc-500">{comm.summary}</p>
+                <p class="text-sm text-muted-foreground">{comm.summary}</p>
                 <div class="flex flex-wrap items-center gap-2 pt-1">
                   {#each comm.members.slice(0, 10) as member}
                     <button onclick={(e) => { e.stopPropagation(); openEntity(member.id); }}>
-                      <Badge variant="outline" class="cursor-pointer font-mono transition-colors hover:border-zinc-400 hover:bg-zinc-50">
+                      <Badge variant="outline" class="cursor-pointer font-mono transition-colors hover:border-foreground/30 hover:bg-accent">
                         <span class="mr-1.5 size-1.5 shrink-0 rounded-full" style="background:{colorFor(member.type_label)}"></span>
                         {member.name}
                       </Badge>
                     </button>
                   {/each}
                   {#if comm.members.length > 10}
-                    <span class="text-xs text-zinc-400">+{comm.members.length - 10} more</span>
+                    <span class="text-xs text-muted-foreground">+{comm.members.length - 10} more</span>
                   {/if}
                 </div>
-                <span class="text-xs text-zinc-400">
+                <span class="text-xs text-muted-foreground">
                   {new Date(comm.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
@@ -316,20 +313,20 @@
   </div>
 
   {#if viewMode === 'list' && entityTotalPages > 1}
-    <div class="border-t border-zinc-200/80 bg-white/90 px-4 py-3 sm:px-6">
+    <div class="border-t border-border bg-background/90 px-4 py-3 sm:px-6">
       <div class="flex items-center justify-between">
         <Button variant="outline" size="sm" onclick={() => { if (entityPage > 1) entityPage -= 1; }} disabled={entityPage <= 1}>Prev</Button>
-        <span class="text-xs text-zinc-500">Page {entityPage} of {entityTotalPages}</span>
+        <span class="text-xs text-muted-foreground">Page {entityPage} of {entityTotalPages}</span>
         <Button variant="outline" size="sm" onclick={() => { if (entityPage < entityTotalPages) entityPage += 1; }} disabled={entityPage >= entityTotalPages}>Next</Button>
       </div>
     </div>
   {/if}
 
   {#if viewMode === 'communities' && communityTotalPages > 1}
-    <div class="border-t border-zinc-200/80 bg-white/90 px-4 py-3 sm:px-6">
+    <div class="border-t border-border bg-background/90 px-4 py-3 sm:px-6">
       <div class="flex items-center justify-between">
         <Button variant="outline" size="sm" onclick={() => { if (communityPage > 1) communityPage -= 1; }} disabled={communityPage <= 1}>Prev</Button>
-        <span class="text-xs text-zinc-500">Page {communityPage} of {communityTotalPages}</span>
+        <span class="text-xs text-muted-foreground">Page {communityPage} of {communityTotalPages}</span>
         <Button variant="outline" size="sm" onclick={() => { if (communityPage < communityTotalPages) communityPage += 1; }} disabled={communityPage >= communityTotalPages}>Next</Button>
       </div>
     </div>
@@ -345,47 +342,47 @@
     aria-label="Entity details"
   >
     <div
-      class="flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-200 ease-out {paneVisible ? 'translate-x-0' : 'translate-x-full'}"
+      class="flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-200 ease-out {paneVisible ? 'translate-x-0' : 'translate-x-full'}"
     >
       {#if paneEntity}
-        <div class="flex items-center gap-3 border-b border-zinc-200/80 px-5 py-4">
+        <div class="flex items-center gap-3 border-b border-border px-5 py-4">
           <span class="size-3 shrink-0 rounded-full" style="background:{colorFor(paneEntity.type_label)}"></span>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold text-zinc-900">{paneEntity.canonical_name}</p>
+            <p class="truncate text-sm font-semibold text-foreground">{paneEntity.canonical_name}</p>
             <div class="flex items-center gap-2">
               <Badge variant="secondary" class="font-mono">{paneEntity.type_label}</Badge>
-              <span class="text-xs text-zinc-400">{(paneEntity.confidence * 100).toFixed(0)}% confidence</span>
+              <span class="text-xs text-muted-foreground">{(paneEntity.confidence * 100).toFixed(0)}% confidence</span>
             </div>
           </div>
-          <button onclick={closePane} class="flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900">
+          <button onclick={closePane} class="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
             <Icon icon="solar:close-circle-linear" class="size-5" />
           </button>
         </div>
 
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <div class="flex flex-col gap-5">
-            <div class="flex items-center gap-4 rounded-xl bg-zinc-50 px-4 py-3">
+            <div class="flex items-center gap-4 rounded-xl bg-muted px-4 py-3">
               <div class="text-center">
-                <p class="text-lg font-semibold text-zinc-900">{paneEntity.event_count}</p>
-                <p class="text-xs text-zinc-400">events</p>
+                <p class="text-lg font-semibold text-foreground">{paneEntity.event_count}</p>
+                <p class="text-xs text-muted-foreground">events</p>
               </div>
-              <div class="h-8 w-px bg-zinc-200"></div>
+              <div class="h-8 w-px bg-border"></div>
               <div class="text-center">
-                <p class="text-lg font-semibold text-zinc-900">{paneConnections.length}</p>
-                <p class="text-xs text-zinc-400">connections</p>
+                <p class="text-lg font-semibold text-foreground">{paneConnections.length}</p>
+                <p class="text-xs text-muted-foreground">connections</p>
               </div>
-              <div class="h-8 w-px bg-zinc-200"></div>
+              <div class="h-8 w-px bg-border"></div>
               <div class="text-center">
-                <p class="text-lg font-semibold text-zinc-900">{(paneEntity.confidence * 100).toFixed(0)}%</p>
-                <p class="text-xs text-zinc-400">confidence</p>
+                <p class="text-lg font-semibold text-foreground">{(paneEntity.confidence * 100).toFixed(0)}%</p>
+                <p class="text-xs text-muted-foreground">confidence</p>
               </div>
             </div>
 
             {#if paneNarrative}
               <div>
-                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400">Narrative</p>
-                <p class="text-sm leading-relaxed text-zinc-600">{paneNarrative.text}</p>
-                <p class="mt-1.5 text-xs text-zinc-400">
+                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Narrative</p>
+                <p class="text-sm leading-relaxed text-muted-foreground">{paneNarrative.text}</p>
+                <p class="mt-1.5 text-xs text-muted-foreground">
                   Based on {paneNarrative.source_event_count} {paneNarrative.source_event_count === 1 ? 'event' : 'events'}
                   · {new Date(paneNarrative.generated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   {#if paneNarrative.staleness_score > 0.5}
@@ -397,16 +394,16 @@
 
             {#if paneLoadingCommunity}
               <div>
-                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400">Community</p>
-                <p class="text-xs text-zinc-400">Loading...</p>
+                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Community</p>
+                <p class="text-xs text-muted-foreground">Loading...</p>
               </div>
             {:else if paneCommunity}
               <div>
-                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400">Community</p>
-                <div class="rounded-xl border border-zinc-200/80 p-3">
-                  <p class="text-sm font-medium text-zinc-900">{paneCommunity.title}</p>
-                  <p class="mt-1 text-sm text-zinc-500">{paneCommunity.summary}</p>
-                  <div class="mt-2 flex items-center gap-2 text-xs text-zinc-400">
+                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Community</p>
+                <div class="rounded-xl border border-border p-3">
+                  <p class="text-sm font-medium text-foreground">{paneCommunity.title}</p>
+                  <p class="mt-1 text-sm text-muted-foreground">{paneCommunity.summary}</p>
+                  <div class="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{paneCommunity.member_count} {paneCommunity.member_count === 1 ? 'member' : 'members'}</span>
                     <span>·</span>
                     <span>{(paneCommunity.importance * 100).toFixed(0)}% importance</span>
@@ -414,7 +411,7 @@
                   {#if paneCommunity.member_names.length > 0}
                     <div class="mt-2 flex flex-wrap gap-1.5">
                       {#each paneCommunity.member_names as name}
-                        <span class="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">{name}</span>
+                        <span class="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{name}</span>
                       {/each}
                     </div>
                   {/if}
@@ -424,19 +421,19 @@
 
             {#if paneConnections.length > 0}
               <div>
-                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-zinc-400">
+                <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Connections ({paneConnections.length})
                 </p>
                 <div class="flex flex-col gap-2">
                   {#each paneConnections as { other, label }}
                     <button
-                      class="flex w-full items-center gap-2 rounded-xl border border-zinc-200/80 px-3 py-2.5 text-left transition-colors hover:border-zinc-300 hover:bg-zinc-50"
+                      class="flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-left transition-colors hover:border-foreground/30 hover:bg-accent"
                       onclick={() => openEntity(other.id)}
                     >
                       <span class="size-2 shrink-0 rounded-full" style="background:{colorFor(other.type_label)}"></span>
-                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900">{other.canonical_name}</span>
-                      <span class="shrink-0 text-xs text-zinc-400">{label.replace(/_/g, ' ')}</span>
-                      <Icon icon="solar:arrow-right-linear" class="size-3.5 shrink-0 text-zinc-300" />
+                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{other.canonical_name}</span>
+                      <span class="shrink-0 text-xs text-muted-foreground">{label.replace(/_/g, ' ')}</span>
+                      <Icon icon="solar:arrow-right-linear" class="size-3.5 shrink-0 text-muted-foreground" />
                     </button>
                   {/each}
                 </div>

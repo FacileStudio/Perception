@@ -40,7 +40,7 @@
 </script>
 
 {#if data.length === 0 || total === 0}
-  <p class="text-sm text-zinc-400 text-center py-6">No data</p>
+  <p class="text-sm text-muted-foreground text-center py-6">No data</p>
 {:else}
   <svg viewBox="0 0 {size} {size}" class="mx-auto w-full max-w-[200px]">
     {#each slices() as s}
@@ -69,8 +69,8 @@
     {#each slices() as s}
       <div class="flex items-center gap-1">
         <span class="inline-block w-2 h-2 rounded-full" style="background:{s.color}"></span>
-        <span class="text-xs text-zinc-500">{s.label}</span>
-        <span class="text-xs text-zinc-400 tabular-nums">({s.pct}%)</span>
+        <span class="text-xs text-muted-foreground">{s.label}</span>
+        <span class="text-xs text-muted-foreground tabular-nums">({s.pct}%)</span>
       </div>
     {/each}
   </div>

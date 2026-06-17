@@ -180,14 +180,14 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+  <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:documents-linear" class="size-4" />
         Resources
       </span>
       {#if resources.length > 0}
-        <span class="text-xs text-zinc-400">{resources.length} documents</span>
+        <span class="text-xs text-muted-foreground">{resources.length} documents</span>
       {/if}
     </div>
     <div class="flex items-center gap-2">
@@ -203,7 +203,7 @@
       </Button>
       <Button
         size="sm"
-        class="rounded-full text-xs bg-zinc-950 text-white hover:bg-zinc-800"
+        class="rounded-full text-xs bg-primary text-primary-foreground hover:bg-primary/90"
         onclick={() => (showUpload = !showUpload)}
       >
         <Icon icon="solar:upload-linear" class="mr-1.5 size-3.5" />
@@ -213,11 +213,11 @@
   </div>
 
   {#if showUpload}
-    <div class="border-b border-zinc-200/80 bg-zinc-50/50 px-4 py-4 sm:px-6" transition:fly={{ y: -10, duration: 200 }}>
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div class="border-b border-border bg-muted/50 px-4 py-4 sm:px-6" transition:fly={{ y: -10, duration: 200 }}>
+      <div class="flex items-center gap-3">
         <button
           onclick={() => fileInput?.click()}
-          class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-300 bg-white px-4 py-3 text-sm text-zinc-500 transition-colors hover:border-zinc-400 hover:text-zinc-700 sm:flex-1"
+          class="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/50 bg-background px-4 py-3 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
           <Icon icon="solar:file-download-linear" class="size-5" />
           {#if pendingFiles.length > 1}
@@ -236,28 +236,26 @@
           onchange={handleFileSelect}
           class="hidden"
         />
-        <div class="flex items-center gap-3">
-          <Button
-            size="sm"
-            class="flex-1 rounded-full bg-zinc-950 text-white hover:bg-zinc-800 sm:flex-none"
-            disabled={pendingFiles.length === 0 || uploading}
-            onclick={handleUpload}
-          >
-            {#if uploading}
-              Processing...
-            {:else}
-              Upload
-            {/if}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="flex-1 rounded-full sm:flex-none"
-            onclick={() => { showUpload = false; pendingFiles = []; }}
-          >
-            Cancel
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          class="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+          disabled={pendingFiles.length === 0 || uploading}
+          onclick={handleUpload}
+        >
+          {#if uploading}
+            Processing...
+          {:else}
+            Upload
+          {/if}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="rounded-full"
+          onclick={() => { showUpload = false; pendingFiles = []; }}
+        >
+          Cancel
+        </Button>
       </div>
     </div>
   {/if}
@@ -265,7 +263,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-zinc-400">Loading resources...</span>
+        <span class="text-sm text-muted-foreground">Loading resources...</span>
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -274,11 +272,11 @@
       </div>
     {:else if resources.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
-        <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:documents-linear" class="size-7 text-zinc-300" />
+        <div class="flex size-14 items-center justify-center rounded-2xl bg-muted">
+          <Icon icon="solar:documents-linear" class="size-7 text-muted-foreground/50" />
         </div>
-        <span class="text-sm text-zinc-400">No resources yet</span>
-        <span class="text-xs text-zinc-300">Upload documents to add them to Perception's knowledge base</span>
+        <span class="text-sm text-muted-foreground">No resources yet</span>
+        <span class="text-xs text-muted-foreground/50">Upload documents to add them to Perception's knowledge base</span>
       </div>
     {:else}
       <div class="flex flex-col gap-3">
@@ -286,35 +284,35 @@
           {@const statusStyle = STATUS_STYLE[resource.status] ?? STATUS_STYLE.ready}
           {@const mimeIcon = MIME_ICONS[resource.mime_type] ?? 'solar:document-linear'}
           <Card
-            class="group relative cursor-pointer rounded-[20px] border border-zinc-200/60 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] transition-all hover:shadow-[0_12px_32px_-12px_rgba(24,24,27,0.2)]"
+            class="group relative cursor-pointer rounded-[20px] border border-border/60 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] transition-all hover:shadow-[0_12px_32px_-12px_rgba(24,24,27,0.2)]"
           >
             <button class="flex w-full items-start gap-3.5 text-left" onclick={() => openDetail(resource.id)}>
-              <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
-                <Icon icon={mimeIcon} class="size-5 text-zinc-500" />
+              <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                <Icon icon={mimeIcon} class="size-5 text-muted-foreground" />
               </span>
               <div class="min-w-0 flex-1">
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <h3 class="truncate text-sm font-semibold text-zinc-900">{resource.title}</h3>
+                    <h3 class="truncate text-sm font-semibold text-foreground">{resource.title}</h3>
                     {#if resource.description}
-                      <p class="mt-0.5 truncate text-xs text-zinc-500">{resource.description}</p>
+                      <p class="mt-0.5 truncate text-xs text-muted-foreground">{resource.description}</p>
                     {/if}
                   </div>
-                  <span class="shrink-0 text-xs text-zinc-400">{timeAgo(resource.uploaded_at)}</span>
+                  <span class="shrink-0 text-xs text-muted-foreground">{timeAgo(resource.uploaded_at)}</span>
                 </div>
                 <div class="mt-2 flex items-center gap-2">
                   <span class="rounded-full border px-2 py-0.5 text-[10px] font-medium {statusStyle.class}">
                     {statusStyle.label}
                   </span>
-                  <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                  <span class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                     {formatSize(resource.file_size)}
                   </span>
                   {#if resource.chunk_count > 0}
-                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                    <span class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {resource.chunk_count} chunks
                     </span>
                   {/if}
-                  <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                  <span class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                     {resource.mime_type.split('/')[1]}
                   </span>
                 </div>
@@ -323,7 +321,7 @@
             {#if confirmDelete !== resource.id}
               <button
                 onclick={(e) => { e.stopPropagation(); confirmDelete = resource.id; }}
-                class="absolute right-3 top-3 rounded-lg p-1.5 text-zinc-300 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                class="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground/50 opacity-0 transition-all hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                 title="Delete resource"
                 disabled={deleting === resource.id}
               >
@@ -333,11 +331,11 @@
 
             {#if confirmDelete === resource.id}
               <div
-                class="absolute inset-0 z-10 flex items-center justify-between gap-3 rounded-[20px] bg-white/95 px-4 backdrop-blur-sm"
+                class="absolute inset-0 z-10 flex items-center justify-between gap-3 rounded-[20px] bg-background/95 px-4 backdrop-blur-sm"
                 transition:fade={{ duration: 120 }}
               >
-                <span class="min-w-0 truncate text-sm text-zinc-600">
-                  Delete <span class="font-semibold text-zinc-900">{resource.title}</span>?
+                <span class="min-w-0 truncate text-sm text-muted-foreground">
+                  Delete <span class="font-semibold text-foreground">{resource.title}</span>?
                 </span>
                 <div class="flex shrink-0 items-center gap-2">
                   <Button
@@ -381,46 +379,46 @@
     transition:fade={{ duration: 150 }}
   ></div>
   <div
-    class="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-lg flex-col border-l border-zinc-200 bg-white shadow-2xl"
+    class="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-lg flex-col border-l border-border bg-background shadow-2xl"
     in:fly={{ x: 420, duration: 280, easing: cubicOut }}
     out:fly={{ x: 420, duration: 200 }}
   >
-    <div class="flex items-center justify-between border-b border-zinc-200/80 px-5 py-4">
+    <div class="flex items-center justify-between border-b border-border px-5 py-4">
       <div class="flex items-center gap-3 min-w-0">
-        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
-          <Icon icon={MIME_ICONS[detail.mime_type] ?? 'solar:document-linear'} class="size-4.5 text-zinc-500" />
+        <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted">
+          <Icon icon={MIME_ICONS[detail.mime_type] ?? 'solar:document-linear'} class="size-4.5 text-muted-foreground" />
         </span>
         <div class="min-w-0">
-          <h2 class="truncate text-sm font-semibold text-zinc-900">{detail.title}</h2>
-          <p class="text-xs text-zinc-400">{formatSize(detail.file_size)} — {detail.chunk_count} chunks</p>
+          <h2 class="truncate text-sm font-semibold text-foreground">{detail.title}</h2>
+          <p class="text-xs text-muted-foreground">{formatSize(detail.file_size)} — {detail.chunk_count} chunks</p>
         </div>
       </div>
       <button
         onclick={closeDetail}
-        class="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+        class="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
       >
         <Icon icon="solar:close-circle-linear" class="size-5" />
       </button>
     </div>
 
     {#if detail.description}
-      <div class="border-b border-zinc-100 px-5 py-3">
-        <p class="text-xs text-zinc-500">{detail.description}</p>
+      <div class="border-b border-border/50 px-5 py-3">
+        <p class="text-xs text-muted-foreground">{detail.description}</p>
       </div>
     {/if}
 
-    <div class="flex items-center gap-2 border-b border-zinc-100 px-5 py-3">
+    <div class="flex items-center gap-2 border-b border-border/50 px-5 py-3">
       <span class="rounded-full border px-2 py-0.5 text-[10px] font-medium {(STATUS_STYLE[detail.status] ?? STATUS_STYLE.ready).class}">
         {(STATUS_STYLE[detail.status] ?? STATUS_STYLE.ready).label}
       </span>
-      <span class="text-[10px] text-zinc-400">Uploaded {timeAgo(detail.uploaded_at)}</span>
+      <span class="text-[10px] text-muted-foreground">Uploaded {timeAgo(detail.uploaded_at)}</span>
       {#if detail.error}
         <span class="text-[10px] text-red-500">{detail.error}</span>
       {/if}
       {#if detail.has_file}
         <a
           href={api.resources.downloadUrl(detail.id)}
-          class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] font-medium text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+          class="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           download
         >
           <Icon icon="solar:download-linear" class="size-3.5" />
@@ -432,25 +430,25 @@
     <div class="flex-1 overflow-y-auto px-5 py-4">
       {#if detailLoading}
         <div class="flex items-center justify-center py-12">
-          <span class="text-sm text-zinc-400">Loading...</span>
+          <span class="text-sm text-muted-foreground">Loading...</span>
         </div>
       {:else if detail.chunks.length === 0}
         <div class="flex flex-col items-center justify-center gap-2 py-12">
-          <Icon icon="solar:document-linear" class="size-6 text-zinc-300" />
-          <span class="text-xs text-zinc-400">No chunks yet — document is still processing</span>
+          <Icon icon="solar:document-linear" class="size-6 text-muted-foreground/50" />
+          <span class="text-xs text-muted-foreground">No chunks yet — document is still processing</span>
         </div>
       {:else}
         <div class="flex flex-col gap-3">
           {#each detail.chunks as chunk (chunk.id)}
-            <div class="rounded-xl border border-zinc-200/60 bg-zinc-50/50 p-3">
+            <div class="rounded-xl border border-border/60 bg-muted/50 p-3">
               <div class="mb-2 flex items-center justify-between">
-                <span class="text-[10px] font-medium text-zinc-400">Chunk {chunk.chunk_index + 1}</span>
+                <span class="text-[10px] font-medium text-muted-foreground">Chunk {chunk.chunk_index + 1}</span>
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] text-zinc-400">{chunk.token_count} tokens</span>
+                  <span class="text-[10px] text-muted-foreground">{chunk.token_count} tokens</span>
                   <span class="size-1.5 rounded-full {chunk.embedding_status === 'ready' ? 'bg-emerald-400' : chunk.embedding_status === 'error' ? 'bg-red-400' : 'bg-amber-400'}"></span>
                 </div>
               </div>
-              <p class="whitespace-pre-wrap text-xs leading-relaxed text-zinc-600">{chunk.content.length > 500 ? chunk.content.slice(0, 500) + '...' : chunk.content}</p>
+              <p class="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{chunk.content.length > 500 ? chunk.content.slice(0, 500) + '...' : chunk.content}</p>
             </div>
           {/each}
         </div>

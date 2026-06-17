@@ -20,11 +20,11 @@
   <section class="flex flex-col gap-4">
     <div class="flex items-center justify-between gap-3">
       <div class="min-w-0">
-        <p class="font-[Goga] text-2xl tracking-tight text-zinc-950">Conversation history</p>
-        <p class="text-sm text-zinc-500">Reopen an older thread, or delete the dead weight.</p>
+        <p class="font-[Goga] text-2xl tracking-tight text-foreground">Conversation history</p>
+        <p class="text-sm text-muted-foreground">Reopen an older thread, or delete the dead weight.</p>
       </div>
       {#if chatState.loadingSessions}
-        <Icon icon="solar:refresh-linear" class="size-4 animate-spin text-zinc-300" />
+        <Icon icon="solar:refresh-linear" class="size-4 animate-spin text-muted-foreground/50" />
       {/if}
     </div>
     <div class="grid gap-3">

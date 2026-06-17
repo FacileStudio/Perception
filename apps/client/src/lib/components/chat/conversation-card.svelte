@@ -23,26 +23,26 @@
   }
 </script>
 
-<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-[24px] border border-zinc-200/80 bg-white/88 p-2 shadow-[0_18px_40px_-34px_rgba(24,24,27,0.28)] backdrop-blur">
+<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-[24px] border border-border bg-background/88 p-2 shadow-[0_18px_40px_-34px_rgba(24,24,27,0.28)] backdrop-blur">
   <button
     type="button"
-    class="flex min-w-0 flex-col items-start rounded-[18px] px-3 py-3 text-left transition-colors hover:bg-zinc-50"
+    class="flex min-w-0 flex-col items-start rounded-[18px] px-3 py-3 text-left transition-colors hover:bg-accent"
     onclick={() => onopen(session.id)}
     disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
   >
     <div class="flex w-full items-start justify-between gap-3">
-      <span class="card-title text-sm font-medium text-zinc-950">{session.title}</span>
-      <span class="shrink-0 pt-0.5 text-[11px] text-zinc-400">{formatConversationDate(session.updated_at)}</span>
+      <span class="card-title text-sm font-medium text-foreground">{session.title}</span>
+      <span class="shrink-0 pt-0.5 text-[11px] text-muted-foreground">{formatConversationDate(session.updated_at)}</span>
     </div>
     {#if session.preview}
-      <span class="card-preview mt-2 text-sm text-zinc-500">{session.preview}</span>
+      <span class="card-preview mt-2 text-sm text-muted-foreground">{session.preview}</span>
     {/if}
-    <span class="mt-3 text-[11px] text-zinc-400">{session.message_count} messages</span>
+    <span class="mt-3 text-[11px] text-muted-foreground">{session.message_count} messages</span>
   </button>
 
   <button
     type="button"
-    class="inline-flex min-h-11 min-w-11 items-center justify-center self-start rounded-full text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-40"
+    class="inline-flex min-h-11 min-w-11 items-center justify-center self-start rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
     onclick={(e) => ondelete(e, session.id)}
     disabled={chatState.deletingSessionId === session.id || chatState.pending || chatState.streaming}
     aria-label={`Delete ${session.title}`}

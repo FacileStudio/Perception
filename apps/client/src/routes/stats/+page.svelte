@@ -115,21 +115,21 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
-    <div class="flex min-w-0 items-center gap-3">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+  <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:chart-square-linear" class="size-4" />
         Stats
       </span>
       {#if generatedAt}
-        <span class="truncate text-xs text-zinc-400">Updated {generatedAt}</span>
+        <span class="text-xs text-muted-foreground">Updated {generatedAt}</span>
       {/if}
     </div>
     <div class="flex items-center gap-2">
       <button
         onclick={() => loadStats(true)}
         disabled={loading}
-        class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-40"
+        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
       >
         <Icon icon="solar:refresh-linear" class="size-3.5 {loading ? 'animate-spin' : ''}" />
         Refresh
@@ -141,7 +141,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-zinc-400">Loading stats…</span>
+        <span class="text-sm text-muted-foreground">Loading stats…</span>
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -152,8 +152,8 @@
       <div class="flex flex-col gap-5">
         {#if snapshots.length === 0}
           <div class="flex flex-col items-center justify-center gap-2 py-16">
-            <Icon icon="solar:chart-square-linear" class="size-8 text-zinc-300" />
-            <span class="text-sm text-zinc-400">No stats yet. Ingest some events first.</span>
+            <Icon icon="solar:chart-square-linear" class="size-8 text-muted-foreground/50" />
+            <span class="text-sm text-muted-foreground">No stats yet. Ingest some events first.</span>
           </div>
         {:else}
           <SummaryCards {snapshots} window={activeWindow} />
@@ -163,74 +163,74 @@
           {/if}
 
           {#if volumeSnap}
-            <Card class="rounded-[24px] border-zinc-200/80 px-5 pb-4 pt-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-[24px] border-border px-5 pb-4 pt-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <EventVolumeChart snap={volumeSnap} />
             </Card>
           {/if}
 
           <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {#if velocitySnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <EntityVelocityPanel snap={velocitySnap} />
               </Card>
             {/if}
 
             {#if statusSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <StatusHealthPanel snap={statusSnap} />
               </Card>
             {/if}
 
             {#if topEntitiesSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <TopEntitiesPanel snap={topEntitiesSnap} />
               </Card>
             {/if}
 
             {#if actorSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <ActorActivityPanel snap={actorSnap} />
               </Card>
             {/if}
 
             {#if intelligence}
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <KnowledgeCoveragePanel data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <ChangePointsTimeline data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <KnowledgeGapsPanel data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
                 <DriftAlertsPanel data={intelligence} />
               </Card>
             {/if}
           </div>
 
           {#if intelligence && intelligence.providers.length > 0}
-            <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
               <ProviderHealthPanel data={intelligence} />
             </Card>
           {/if}
         {/if}
 
-        <Card class="rounded-[24px] border-zinc-200/80 p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+        <Card class="rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
           <div class="mb-4 flex items-center gap-2">
-            <Icon icon="solar:chart-2-linear" class="size-4 text-zinc-500" />
-            <span class="text-sm font-semibold text-zinc-900">Token Usage</span>
+            <Icon icon="solar:chart-2-linear" class="size-4 text-muted-foreground" />
+            <span class="text-sm font-semibold text-foreground">Token Usage</span>
           </div>
           {#if usage.length === 0}
             <div class="flex flex-col items-center gap-2 py-8 text-center">
-              <Icon icon="solar:chart-2-linear" class="size-8 text-zinc-300" />
-              <span class="text-sm text-zinc-400">No token usage recorded yet. Send a chat message to start tracking.</span>
+              <Icon icon="solar:chart-2-linear" class="size-8 text-muted-foreground/50" />
+              <span class="text-sm text-muted-foreground">No token usage recorded yet. Send a chat message to start tracking.</span>
             </div>
           {:else}
-            <div class="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-100">
+            <div class="divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/50">
               {#each usage as row}
                 <div class="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
                   <div class="flex min-w-0 items-center gap-2.5">
@@ -238,14 +238,14 @@
                       <Icon icon={usageIcon(row.kind)} class="size-4" />
                     </span>
                     <div class="min-w-0">
-                      <p class="truncate font-mono text-sm text-zinc-900">{row.model}</p>
-                      <p class="text-xs text-zinc-400">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
+                      <p class="truncate font-mono text-sm text-foreground">{row.model}</p>
+                      <p class="text-xs text-muted-foreground">{row.calls} {row.calls === 1 ? 'call' : 'calls'}</p>
                     </div>
                   </div>
                   <div class="flex items-center justify-between gap-4 text-right sm:justify-end sm:gap-6">
                     <div>
-                      <p class="font-mono text-sm text-zinc-700">{formatTokens(row.input_tokens + row.output_tokens)}</p>
-                      <p class="text-xs text-zinc-400">
+                      <p class="font-mono text-sm text-foreground">{formatTokens(row.input_tokens + row.output_tokens)}</p>
+                      <p class="text-xs text-muted-foreground">
                         {#if row.kind === 'llm'}
                           {formatTokens(row.input_tokens)} in · {formatTokens(row.output_tokens)} out
                         {:else}
@@ -254,16 +254,16 @@
                       </p>
                     </div>
                     <div class="w-20">
-                      <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-zinc-900' : 'text-zinc-400'}">{formatCost(row.cost_usd)}</p>
-                      <p class="text-xs text-zinc-400">estimated</p>
+                      <p class="font-mono text-sm font-medium {row.cost_usd > 0 ? 'text-foreground' : 'text-muted-foreground'}">{formatCost(row.cost_usd)}</p>
+                      <p class="text-xs text-muted-foreground">estimated</p>
                     </div>
                   </div>
                 </div>
               {/each}
             </div>
-            <div class="mt-4 flex items-center justify-between rounded-2xl bg-zinc-50 px-4 py-3">
-              <span class="text-sm font-medium text-zinc-500">Total estimated cost</span>
-              <span class="font-mono text-sm font-semibold text-zinc-900">{formatCost(totalCost)}</span>
+            <div class="mt-4 flex items-center justify-between rounded-2xl bg-muted px-4 py-3">
+              <span class="text-sm font-medium text-muted-foreground">Total estimated cost</span>
+              <span class="font-mono text-sm font-semibold text-foreground">{formatCost(totalCost)}</span>
             </div>
           {/if}
         </Card>

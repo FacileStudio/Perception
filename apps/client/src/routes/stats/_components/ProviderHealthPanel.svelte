@@ -13,18 +13,18 @@
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:server-square-linear" class="size-4 text-zinc-500" />
-  <span class="text-sm font-semibold text-zinc-900">Provider Health</span>
-  <span class="text-xs text-zinc-400 ml-auto">30-day window</span>
+  <Icon icon="solar:server-square-linear" class="size-4 text-muted-foreground" />
+  <span class="text-sm font-semibold text-foreground">Provider Health</span>
+  <span class="text-xs text-muted-foreground ml-auto">30-day window</span>
 </div>
 
 {#if providers.length === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:server-square-linear" class="size-6 text-zinc-300" />
-    <span class="text-xs text-zinc-400">No provider activity in the last 30 days.</span>
+    <Icon icon="solar:server-square-linear" class="size-6 text-muted-foreground/50" />
+    <span class="text-xs text-muted-foreground">No provider activity in the last 30 days.</span>
   </div>
 {:else}
-  <div class="divide-y divide-zinc-100 overflow-hidden rounded-2xl border border-zinc-100">
+  <div class="divide-y divide-border/50 overflow-hidden rounded-2xl border border-border/50">
     {#each providers as provider}
       <div class="flex items-center gap-3 px-3.5 py-3">
         <div class="flex size-8 shrink-0 items-center justify-center rounded-xl {provider.drifted ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'}">
@@ -32,11 +32,11 @@
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-zinc-800 truncate">{provider.provider_name}</span>
-            <span class="text-[10px] text-zinc-400">{provider.provider_type}</span>
+            <span class="text-xs font-medium text-foreground truncate">{provider.provider_name}</span>
+            <span class="text-[10px] text-muted-foreground">{provider.provider_type}</span>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-[10px] text-zinc-400">{formatCount(provider.event_count)} events</span>
+            <span class="text-[10px] text-muted-foreground">{formatCount(provider.event_count)} events</span>
             {#if provider.drifted}
               <span class="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-600">
                 <span class="size-1 rounded-full bg-amber-400"></span>
@@ -44,7 +44,7 @@
               </span>
             {/if}
             {#if !provider.schema_confirmed}
-              <span class="inline-flex items-center gap-0.5 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[9px] font-medium text-zinc-500">
+              <span class="inline-flex items-center gap-0.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
                 schema unconfirmed
               </span>
             {/if}
@@ -62,7 +62,7 @@
               review
             </span>
           {:else}
-            <span class="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+            <span class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
               pending
             </span>
           {/if}

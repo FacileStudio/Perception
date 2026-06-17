@@ -10,10 +10,10 @@
   const html = $derived(renderChatMarkdown(content));
 </script>
 
-<div class="chat-markdown text-sm text-zinc-900" aria-live={streaming ? 'polite' : undefined}>
+<div class="chat-markdown text-sm text-foreground" aria-live={streaming ? 'polite' : undefined}>
   {@html html}
   {#if streaming}
-    <span class="animate-pulse text-zinc-400">|</span>
+    <span class="animate-pulse text-muted-foreground">|</span>
   {/if}
 </div>
 
@@ -47,10 +47,9 @@
   .chat-markdown :global(h2),
   .chat-markdown :global(h3),
   .chat-markdown :global(h4) {
-    font-family: "Goga", sans-serif;
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: rgb(24 24 27);
+    color: hsl(var(--foreground));
   }
 
   .chat-markdown :global(h2) {
@@ -72,18 +71,18 @@
   }
 
   .chat-markdown :global(blockquote) {
-    border-left: 2px solid rgb(228 228 231);
+    border-left: 2px solid hsl(var(--border));
     padding-left: 0.85rem;
-    color: rgb(82 82 91);
+    color: hsl(var(--muted-foreground));
   }
 
   .chat-markdown :global(hr) {
     border: 0;
-    border-top: 1px solid rgb(228 228 231);
+    border-top: 1px solid hsl(var(--border));
   }
 
   .chat-markdown :global(a) {
-    color: rgb(24 24 27);
+    color: hsl(var(--foreground));
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 0.15em;
@@ -95,7 +94,7 @@
 
   .chat-markdown :global(code) {
     border-radius: 0.45rem;
-    background: rgb(244 244 245);
+    background: hsl(var(--muted));
     padding: 0.12rem 0.4rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
     font-size: 0.8125rem;
@@ -104,7 +103,7 @@
   .chat-markdown :global(pre) {
     overflow-x: auto;
     border-radius: 1rem;
-    background: rgb(24 24 27);
+    background: hsl(var(--foreground));
     padding: 0.9rem 1rem;
   }
 
@@ -119,8 +118,8 @@
   .chat-markdown :global(.chat-md-table) {
     overflow-x: auto;
     border-radius: 1rem;
-    border: 1px solid rgb(228 228 231);
-    background: rgb(250 250 250);
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--secondary));
   }
 
   .chat-markdown :global(table) {
@@ -132,7 +131,7 @@
 
   .chat-markdown :global(th),
   .chat-markdown :global(td) {
-    border-bottom: 1px solid rgb(228 228 231);
+    border-bottom: 1px solid hsl(var(--border));
     padding: 0.65rem 0.75rem;
     text-align: left;
     vertical-align: top;
@@ -140,7 +139,7 @@
 
   .chat-markdown :global(th) {
     font-weight: 600;
-    color: rgb(39 39 42);
+    color: hsl(var(--foreground));
   }
 
   .chat-markdown :global(tr:last-child td) {

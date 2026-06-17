@@ -78,14 +78,14 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex items-center justify-between border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+  <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
-      <a href="/forecasts" class="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700">
+      <a href="/forecasts" class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <Icon icon="solar:arrow-left-linear" class="size-4" />
         Forecasts
       </a>
-      <span class="text-zinc-300">/</span>
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+      <span class="text-muted-foreground/50">/</span>
+      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:tuning-2-linear" class="size-4" />
         Calibration
       </span>
@@ -95,7 +95,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-zinc-400">Loading calibration data...</span>
+        <span class="text-sm text-muted-foreground">Loading calibration data...</span>
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -104,38 +104,38 @@
       </div>
     {:else if !snapshot}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
-        <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:tuning-2-linear" class="size-7 text-zinc-300" />
+        <div class="flex size-14 items-center justify-center rounded-2xl bg-muted">
+          <Icon icon="solar:tuning-2-linear" class="size-7 text-muted-foreground/50" />
         </div>
-        <span class="text-sm text-zinc-400">No calibration data yet</span>
-        <span class="text-xs text-zinc-300">Resolve some forecasts to generate calibration metrics</span>
+        <span class="text-sm text-muted-foreground">No calibration data yet</span>
+        <span class="text-xs text-muted-foreground/50">Resolve some forecasts to generate calibration metrics</span>
       </div>
     {:else}
       <div class="flex flex-col gap-6">
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Brier Score</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Brier Score</span>
             <span class="mt-1 block text-2xl font-semibold {brierColor(snapshot.brier_score)}">{fmt(snapshot.brier_score)}</span>
-            <span class="mt-0.5 block text-[10px] text-zinc-400">Lower is better</span>
+            <span class="mt-0.5 block text-[10px] text-muted-foreground">Lower is better</span>
           </Card>
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Log Score</span>
-            <span class="mt-1 block text-2xl font-semibold text-zinc-900">{fmt(snapshot.log_score)}</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Log Score</span>
+            <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.log_score)}</span>
           </Card>
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Sharpness</span>
-            <span class="mt-1 block text-2xl font-semibold text-zinc-900">{fmt(snapshot.sharpness_score)}</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Sharpness</span>
+            <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.sharpness_score)}</span>
           </Card>
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Forecast Count</span>
-            <span class="mt-1 block text-2xl font-semibold text-zinc-900">{snapshot.forecast_count}</span>
-            <span class="mt-0.5 block text-[10px] text-zinc-400">{formatDate(snapshot.computed_at)}</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Forecast Count</span>
+            <span class="mt-1 block text-2xl font-semibold text-foreground">{snapshot.forecast_count}</span>
+            <span class="mt-0.5 block text-[10px] text-muted-foreground">{formatDate(snapshot.computed_at)}</span>
           </Card>
         </div>
 
-        <Card class="rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-          <h3 class="mb-4 text-sm font-semibold text-zinc-900">Reliability Diagram</h3>
+        <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <h3 class="mb-4 text-sm font-semibold text-foreground">Reliability Diagram</h3>
           {@const mids = binMidpoints(snapshot.bin_edges)}
           {@const activeBins = mids.map((m, i) => ({ mid: m, actual: snapshot!.bin_actuals[i], count: snapshot!.bin_counts[i] })).filter(b => b.count > 0)}
           <svg viewBox="0 0 420 400" class="w-full max-w-md" role="img" aria-label="Reliability diagram showing predicted vs observed frequencies">
@@ -193,31 +193,31 @@
           </svg>
         </Card>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Reliability</span>
+        <div class="grid grid-cols-3 gap-3">
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Reliability</span>
             <span class="mt-1 block text-2xl font-semibold {snapshot.reliability_score < 0.05 ? 'text-emerald-600' : snapshot.reliability_score < 0.1 ? 'text-amber-600' : 'text-red-600'}">{fmt(snapshot.reliability_score)}</span>
-            <span class="mt-0.5 block text-[10px] text-zinc-400">Lower = better calibrated</span>
+            <span class="mt-0.5 block text-[10px] text-muted-foreground">Lower = better calibrated</span>
           </Card>
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Resolution</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Resolution</span>
             <span class="mt-1 block text-2xl font-semibold {snapshot.resolution_score > 0.1 ? 'text-emerald-600' : 'text-amber-600'}">{fmt(snapshot.resolution_score)}</span>
-            <span class="mt-0.5 block text-[10px] text-zinc-400">Higher = better discrimination</span>
+            <span class="mt-0.5 block text-[10px] text-muted-foreground">Higher = better discrimination</span>
           </Card>
-          <Card class="rounded-[20px] border border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <span class="text-xs font-medium text-zinc-500">Uncertainty</span>
-            <span class="mt-1 block text-2xl font-semibold text-zinc-900">{fmt(snapshot.uncertainty_score)}</span>
-            <span class="mt-0.5 block text-[10px] text-zinc-400">Inherent outcome entropy</span>
+          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <span class="text-xs font-medium text-muted-foreground">Uncertainty</span>
+            <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.uncertainty_score)}</span>
+            <span class="mt-0.5 block text-[10px] text-muted-foreground">Inherent outcome entropy</span>
           </Card>
         </div>
 
         {#if strategies.length > 0}
-          <Card class="rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <h3 class="mb-4 text-sm font-semibold text-zinc-900">Strategy Leaderboard</h3>
+          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <h3 class="mb-4 text-sm font-semibold text-foreground">Strategy Leaderboard</h3>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm">
                 <thead>
-                  <tr class="border-b border-zinc-200 text-xs text-zinc-500">
+                  <tr class="border-b border-border text-xs text-muted-foreground">
                     <th class="pb-2 font-medium">Strategy</th>
                     <th class="pb-2 font-medium">Type</th>
                     <th class="pb-2 font-medium">Brier Score</th>
@@ -228,32 +228,32 @@
                 </thead>
                 <tbody>
                   {#each strategies as s (s.strategy_id)}
-                    <tr class="border-b border-zinc-100 {s.is_active ? '' : 'opacity-40'}">
-                      <td class="py-2.5 font-medium text-zinc-900">{s.strategy_name}</td>
-                      <td class="py-2.5 text-zinc-500">
-                        <span class="rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-medium">{s.strategy_type}</span>
+                    <tr class="border-b border-border/50 {s.is_active ? '' : 'opacity-40'}">
+                      <td class="py-2.5 font-medium text-foreground">{s.strategy_name}</td>
+                      <td class="py-2.5 text-muted-foreground">
+                        <span class="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-medium">{s.strategy_type}</span>
                       </td>
                       <td class="py-2.5">
                         {#if s.brier_score !== null}
                           <span class={brierColor(s.brier_score)}>{fmt(s.brier_score)}</span>
                         {:else}
-                          <span class="text-zinc-300">--</span>
+                          <span class="text-muted-foreground/50">--</span>
                         {/if}
                       </td>
-                      <td class="py-2.5 text-zinc-600">{s.forecast_count}</td>
+                      <td class="py-2.5 text-muted-foreground">{s.forecast_count}</td>
                       <td class="py-2.5">
                         <div class="flex items-center gap-2">
-                          <div class="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-100">
+                          <div class="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                             <div class="h-full rounded-full bg-blue-500" style="width: {Math.round(s.weight * 100)}%"></div>
                           </div>
-                          <span class="text-xs text-zinc-500">{fmt(s.weight, 2)}</span>
+                          <span class="text-xs text-muted-foreground">{fmt(s.weight, 2)}</span>
                         </div>
                       </td>
                       <td class="py-2.5">
                         {#if s.is_active}
                           <Icon icon="solar:check-circle-linear" class="size-4 text-emerald-500" />
                         {:else}
-                          <Icon icon="solar:close-circle-linear" class="size-4 text-zinc-300" />
+                          <Icon icon="solar:close-circle-linear" class="size-4 text-muted-foreground/50" />
                         {/if}
                       </td>
                     </tr>
@@ -265,32 +265,32 @@
         {/if}
 
         {#if conformal}
-          <Card class="rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <h3 class="mb-4 text-sm font-semibold text-zinc-900">Conformal State</h3>
+          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <h3 class="mb-4 text-sm font-semibold text-foreground">Conformal State</h3>
             <div class="flex flex-col gap-4">
-              <div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div class="flex items-center gap-6">
                 <div>
-                  <span class="text-xs font-medium text-zinc-500">Empirical Coverage</span>
+                  <span class="text-xs font-medium text-muted-foreground">Empirical Coverage</span>
                   <span class="mt-1 block text-xl font-semibold {Math.abs(conformal.empirical_coverage - conformal.coverage_target) < 0.05 ? 'text-emerald-600' : 'text-amber-600'}">
                     {(conformal.empirical_coverage * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div>
-                  <span class="text-xs font-medium text-zinc-500">Target Coverage</span>
-                  <span class="mt-1 block text-xl font-semibold text-zinc-900">{(conformal.coverage_target * 100).toFixed(1)}%</span>
+                  <span class="text-xs font-medium text-muted-foreground">Target Coverage</span>
+                  <span class="mt-1 block text-xl font-semibold text-foreground">{(conformal.coverage_target * 100).toFixed(1)}%</span>
                 </div>
                 <div>
-                  <span class="text-xs font-medium text-zinc-500">Alpha (t)</span>
-                  <span class="mt-1 block text-xl font-semibold text-zinc-900">{fmt(conformal.alpha_t, 4)}</span>
+                  <span class="text-xs font-medium text-muted-foreground">Alpha (t)</span>
+                  <span class="mt-1 block text-xl font-semibold text-foreground">{fmt(conformal.alpha_t, 4)}</span>
                 </div>
               </div>
               <div>
-                <div class="mb-1 flex items-center justify-between text-[10px] text-zinc-400">
+                <div class="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>0%</span>
                   <span>Coverage</span>
                   <span>100%</span>
                 </div>
-                <div class="relative h-3 w-full overflow-hidden rounded-full bg-zinc-100">
+                <div class="relative h-3 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     class="absolute inset-y-0 left-0 rounded-full {Math.abs(conformal.empirical_coverage - conformal.coverage_target) < 0.05 ? 'bg-emerald-500' : 'bg-amber-500'}"
                     style="width: {Math.round(conformal.empirical_coverage * 100)}%"
@@ -309,20 +309,20 @@
         {#if Object.keys(snapshot.domain_scores).length > 0}
           {@const domainEntries = Object.entries(snapshot.domain_scores)}
           {@const maxDomainBrier = Math.max(...domainEntries.map(([, d]) => d.brier))}
-          <Card class="rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-            <h3 class="mb-4 text-sm font-semibold text-zinc-900">Per-Domain Scores</h3>
+          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+            <h3 class="mb-4 text-sm font-semibold text-foreground">Per-Domain Scores</h3>
             <div class="flex flex-col gap-2.5">
               {#each domainEntries.sort((a, b) => a[1].brier - b[1].brier) as [domain, scores]}
                 <div class="flex items-center gap-3">
-                  <span class="w-28 shrink-0 truncate text-xs font-medium text-zinc-700" title={domain}>{domain}</span>
-                  <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-zinc-100">
+                  <span class="w-28 shrink-0 truncate text-xs font-medium text-foreground" title={domain}>{domain}</span>
+                  <div class="relative h-2 flex-1 overflow-hidden rounded-full bg-muted">
                     <div
                       class="h-full rounded-full {scores.brier < 0.2 ? 'bg-emerald-500' : scores.brier < 0.3 ? 'bg-amber-500' : 'bg-red-500'}"
                       style="width: {maxDomainBrier > 0 ? Math.round((scores.brier / maxDomainBrier) * 100) : 0}%"
                     ></div>
                   </div>
                   <span class="w-12 shrink-0 text-right text-xs {scores.brier < 0.2 ? 'text-emerald-600' : scores.brier < 0.3 ? 'text-amber-600' : 'text-red-600'}">{fmt(scores.brier)}</span>
-                  <span class="w-10 shrink-0 text-right text-[10px] text-zinc-400">n={scores.count}</span>
+                  <span class="w-10 shrink-0 text-right text-[10px] text-muted-foreground">n={scores.count}</span>
                 </div>
               {/each}
             </div>

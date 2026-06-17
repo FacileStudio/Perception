@@ -46,16 +46,16 @@
 
 {#if auth.checking}
   <div class="flex h-screen items-center justify-center">
-    <span class="text-sm text-zinc-400">loading...</span>
+    <span class="text-sm text-muted-foreground">loading...</span>
   </div>
 {:else if !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/'}
   <div class="flex h-screen items-center justify-center">
-    <span class="text-sm text-zinc-400">redirecting...</span>
+    <span class="text-sm text-muted-foreground">redirecting...</span>
   </div>
 {:else if $page.url.pathname === '/login' || $page.url.pathname === '/'}
   {@render children?.()}
 {:else}
-  <div class="flex min-h-screen w-full flex-col bg-zinc-50/70 md:h-screen md:flex-row md:overflow-hidden">
+  <div class="flex min-h-screen w-full flex-col bg-muted/70 md:h-screen md:flex-row md:overflow-hidden">
     <Sidebar onLogout={handleLogout} />
     <MobileTopbar onLogout={handleLogout} />
     <main class="flex min-h-0 flex-1 flex-col pb-24 md:h-screen md:overflow-hidden md:pb-0">

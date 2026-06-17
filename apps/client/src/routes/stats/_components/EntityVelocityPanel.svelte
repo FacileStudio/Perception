@@ -49,30 +49,30 @@
 
 <div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
-    <Icon icon="solar:pulse-linear" class="size-4 text-zinc-500" />
-    <span class="text-sm font-semibold text-zinc-900">Entity Velocity</span>
+    <Icon icon="solar:pulse-linear" class="size-4 text-muted-foreground" />
+    <span class="text-sm font-semibold text-foreground">Entity Velocity</span>
     {#if !snap.min_sample_met}
-      <Badge variant="outline" class="border-zinc-200 text-zinc-400 text-xs">limited sample</Badge>
+      <Badge variant="outline" class="border-border text-muted-foreground text-xs">limited sample</Badge>
     {/if}
   </div>
 
-  <div class="flex flex-wrap gap-3">
-    <div class="bg-zinc-50 rounded-xl px-3 py-2">
-      <p class="text-xs text-zinc-400">Total Current</p>
-      <p class="font-mono text-sm font-semibold text-zinc-900">{totalCurrent}</p>
+  <div class="flex gap-3">
+    <div class="bg-muted rounded-xl px-3 py-2">
+      <p class="text-xs text-muted-foreground">Total Current</p>
+      <p class="font-mono text-sm font-semibold text-foreground">{totalCurrent}</p>
     </div>
-    <div class="bg-zinc-50 rounded-xl px-3 py-2">
-      <p class="text-xs text-zinc-400">Mean</p>
-      <p class="font-mono text-sm font-semibold text-zinc-900">{mean.toFixed(1)}</p>
+    <div class="bg-muted rounded-xl px-3 py-2">
+      <p class="text-xs text-muted-foreground">Mean</p>
+      <p class="font-mono text-sm font-semibold text-foreground">{mean.toFixed(1)}</p>
     </div>
-    <div class="bg-zinc-50 rounded-xl px-3 py-2">
-      <p class="text-xs text-zinc-400">StdDev</p>
-      <p class="font-mono text-sm font-semibold text-zinc-900">{stdDev.toFixed(1)}</p>
+    <div class="bg-muted rounded-xl px-3 py-2">
+      <p class="text-xs text-muted-foreground">StdDev</p>
+      <p class="font-mono text-sm font-semibold text-foreground">{stdDev.toFixed(1)}</p>
     </div>
   </div>
 
   {#if isEmpty}
-    <p class="flex flex-1 items-center justify-center text-sm text-zinc-400">No entity data in this window</p>
+    <p class="flex flex-1 items-center justify-center text-sm text-muted-foreground">No entity data in this window</p>
   {:else}
     <div class="flex-1 min-h-[120px]">
       <BarChart data={chartData} height={150} />

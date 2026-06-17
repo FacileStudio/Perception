@@ -80,24 +80,24 @@
   ></div>
 
   <div
-    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl"
+    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-background shadow-2xl"
     in:fly={{ x: 420, duration: 280, easing: cubicOut }}
     out:fly={{ x: 420, duration: 200, easing: cubicOut }}
   >
-    <div class="flex items-start justify-between border-b border-zinc-100 px-5 py-4">
+    <div class="flex items-start justify-between border-b border-border/50 px-5 py-4">
       <div class="flex items-center gap-3">
         <span
           class="size-3 shrink-0 rounded-full"
           style="background:{colorFor(node.type_label)}"
         ></span>
         <div>
-          <p class="text-sm font-semibold text-zinc-900">{node.canonical_name}</p>
-          <p class="mt-0.5 font-mono text-xs text-zinc-400">{node.type_label}</p>
+          <p class="text-sm font-semibold text-foreground">{node.canonical_name}</p>
+          <p class="mt-0.5 font-mono text-xs text-muted-foreground">{node.type_label}</p>
         </div>
       </div>
       <button
         onclick={onclose}
-        class="mt-0.5 shrink-0 rounded-full p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600"
+        class="mt-0.5 shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         aria-label="Close"
       >
         <Icon icon="solar:close-circle-linear" class="size-4" />
@@ -106,14 +106,14 @@
 
     <div class="flex-1 space-y-5 overflow-y-auto px-5 py-4">
       <div class="grid grid-cols-2 gap-3">
-        <div class="rounded-xl bg-zinc-50 px-4 py-3">
-          <p class="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Events</p>
-          <p class="mt-1 text-2xl font-semibold text-zinc-900">{node.event_count}</p>
+        <div class="rounded-xl bg-muted px-4 py-3">
+          <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Events</p>
+          <p class="mt-1 text-2xl font-semibold text-foreground">{node.event_count}</p>
         </div>
-        <div class="rounded-xl bg-zinc-50 px-4 py-3">
-          <p class="text-[11px] font-medium uppercase tracking-wide text-zinc-400">Confidence</p>
-          <p class="mt-1 text-2xl font-semibold text-zinc-900">
-            {(node.confidence * 100).toFixed(0)}<span class="text-sm font-normal text-zinc-400"
+        <div class="rounded-xl bg-muted px-4 py-3">
+          <p class="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Confidence</p>
+          <p class="mt-1 text-2xl font-semibold text-foreground">
+            {(node.confidence * 100).toFixed(0)}<span class="text-sm font-normal text-muted-foreground"
               >%</span
             >
           </p>
@@ -127,7 +127,7 @@
         </div>
       {:else if narrative}
         <div>
-          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Narrative
           </p>
           <div class="rounded-xl border border-emerald-200/80 bg-emerald-50/50 px-4 py-3">
@@ -150,7 +150,7 @@
         </div>
       {:else if community}
         <div>
-          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Community
           </p>
           <div class="rounded-xl border border-violet-200/80 bg-violet-50/50 px-4 py-3">
@@ -175,25 +175,25 @@
 
       {#if connections.length > 0}
         <div>
-          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+          <p class="mb-2.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Relations
-            <span class="ml-1 font-mono normal-case text-zinc-300">({connections.length})</span>
+            <span class="ml-1 font-mono normal-case text-muted-foreground/50">({connections.length})</span>
           </p>
           <div class="space-y-1.5">
             {#each connections as { other, label }}
               <div
-                class="flex items-center gap-3 rounded-xl border border-zinc-100 px-3.5 py-2.5"
+                class="flex items-center gap-3 rounded-xl border border-border/50 px-3.5 py-2.5"
               >
                 <span
                   class="size-2 shrink-0 rounded-full"
                   style="background:{colorFor(other.type_label)}"
                 ></span>
                 <div class="min-w-0 flex-1">
-                  <p class="truncate text-sm font-medium text-zinc-800">{other.canonical_name}</p>
-                  <p class="font-mono text-[10px] text-zinc-400">{other.type_label}</p>
+                  <p class="truncate text-sm font-medium text-foreground">{other.canonical_name}</p>
+                  <p class="font-mono text-[10px] text-muted-foreground">{other.type_label}</p>
                 </div>
                 <span
-                  class="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 font-mono text-[10px] text-zinc-500"
+                  class="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground"
                 >
                   {label.replace(/_/g, ' ')}
                 </span>
@@ -203,8 +203,8 @@
         </div>
       {:else}
         <div class="flex flex-col items-center justify-center gap-2 py-8 text-center">
-          <Icon icon="solar:graph-linear" class="size-8 text-zinc-300" />
-          <p class="text-sm text-zinc-400">No relations found for this entity.</p>
+          <Icon icon="solar:graph-linear" class="size-8 text-muted-foreground/50" />
+          <p class="text-sm text-muted-foreground">No relations found for this entity.</p>
         </div>
       {/if}
     </div>

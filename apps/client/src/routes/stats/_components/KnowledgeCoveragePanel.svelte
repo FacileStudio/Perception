@@ -24,15 +24,15 @@
 </script>
 
 <div class="flex items-center gap-2 mb-4">
-  <Icon icon="solar:pie-chart-2-linear" class="size-4 text-zinc-500" />
-  <span class="text-sm font-semibold text-zinc-900">Knowledge Coverage</span>
-  <span class="text-xs text-zinc-400 ml-auto">{total} entities</span>
+  <Icon icon="solar:pie-chart-2-linear" class="size-4 text-muted-foreground" />
+  <span class="text-sm font-semibold text-foreground">Knowledge Coverage</span>
+  <span class="text-xs text-muted-foreground ml-auto">{total} entities</span>
 </div>
 
 {#if total === 0}
   <div class="flex flex-col items-center gap-2 py-6 text-center">
-    <Icon icon="solar:pie-chart-2-linear" class="size-6 text-zinc-300" />
-    <span class="text-xs text-zinc-400">No entities yet.</span>
+    <Icon icon="solar:pie-chart-2-linear" class="size-6 text-muted-foreground/50" />
+    <span class="text-xs text-muted-foreground">No entities yet.</span>
   </div>
 {:else}
   <div class="space-y-4">
@@ -41,15 +41,15 @@
       <div>
         <div class="flex items-center justify-between mb-1.5">
           <div class="flex items-center gap-2">
-            <Icon icon={row.icon} class="size-3.5 text-zinc-400" />
-            <span class="text-xs text-zinc-600">{row.label}</span>
+            <Icon icon={row.icon} class="size-3.5 text-muted-foreground" />
+            <span class="text-xs text-muted-foreground">{row.label}</span>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-mono text-zinc-500">{row.count}/{total}</span>
+            <span class="text-xs font-mono text-muted-foreground">{row.count}/{total}</span>
             <span class="text-[10px] font-medium {p >= 60 ? 'text-emerald-600' : p >= 30 ? 'text-amber-600' : 'text-red-500'}">{p}%</span>
           </div>
         </div>
-        <div class="h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+        <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
             class="h-full rounded-full transition-all duration-700 {barColor(p)}"
             style="width: {p}%"

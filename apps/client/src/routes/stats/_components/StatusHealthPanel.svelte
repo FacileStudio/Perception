@@ -50,16 +50,16 @@
 
 <div class="flex h-full flex-col gap-4">
   <div class="flex items-center gap-2">
-    <Icon icon="solar:health-linear" class="size-4 text-zinc-500" />
-    <span class="text-sm font-semibold text-zinc-900">Status Health</span>
+    <Icon icon="solar:health-linear" class="size-4 text-muted-foreground" />
+    <span class="text-sm font-semibold text-foreground">Status Health</span>
     <Badge variant="secondary" class="text-xs">{totalEvents}</Badge>
     {#if !snap.min_sample_met}
-      <Badge variant="outline" class="border-zinc-200 text-zinc-400 text-xs">limited sample</Badge>
+      <Badge variant="outline" class="border-border text-muted-foreground text-xs">limited sample</Badge>
     {/if}
   </div>
 
   {#if isEmpty}
-    <p class="text-sm text-zinc-400 py-6 text-center">No status data in this window</p>
+    <p class="text-sm text-muted-foreground py-6 text-center">No status data in this window</p>
   {:else}
     <DonutChart data={chartData} />
   {/if}

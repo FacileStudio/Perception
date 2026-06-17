@@ -8,7 +8,7 @@
   const lcc = $derived(data.graph_health ? Math.round(data.graph_health.largest_component_ratio * 100) : null);
 
   function lccColor(pct: number | null): string {
-    if (pct === null) return 'text-zinc-400';
+    if (pct === null) return 'text-muted-foreground';
     if (pct >= 60) return 'text-emerald-600';
     if (pct >= 30) return 'text-amber-600';
     return 'text-red-500';
@@ -26,14 +26,14 @@
       icon: 'solar:brain-linear',
       label: 'Memory Episodes',
       value: String(data.memory_episodes),
-      color: data.memory_episodes > 0 ? 'text-violet-600' : 'text-zinc-400',
+      color: data.memory_episodes > 0 ? 'text-violet-600' : 'text-muted-foreground',
       sub: 'durable facts stored',
     },
     {
       icon: 'solar:pulse-2-linear',
       label: 'Change Points',
       value: String(data.change_points_30d),
-      color: data.change_points_30d > 5 ? 'text-amber-600' : data.change_points_30d > 0 ? 'text-blue-600' : 'text-zinc-400',
+      color: data.change_points_30d > 5 ? 'text-amber-600' : data.change_points_30d > 0 ? 'text-blue-600' : 'text-muted-foreground',
       sub: 'regime shifts (30d)',
     },
     {
@@ -48,15 +48,15 @@
 
 <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
   {#each cards as card}
-    <Card class="rounded-[20px] border-zinc-200/80 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
+    <Card class="rounded-[20px] border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)]">
       <div class="flex items-start justify-between mb-2">
         <div></div>
-        <Icon icon={card.icon} class="size-5 text-zinc-400" />
+        <Icon icon={card.icon} class="size-5 text-muted-foreground" />
       </div>
       <p class="font-mono text-2xl font-semibold {card.color}">{card.value}</p>
-      <p class="text-xs text-zinc-400 mt-0.5">{card.label}</p>
+      <p class="text-xs text-muted-foreground mt-0.5">{card.label}</p>
       {#if card.sub}
-        <p class="text-[10px] text-zinc-300 mt-1">{card.sub}</p>
+        <p class="text-[10px] text-muted-foreground/50 mt-1">{card.sub}</p>
       {/if}
     </Card>
   {/each}

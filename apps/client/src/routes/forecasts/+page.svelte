@@ -36,9 +36,9 @@
     },
     expired: {
       icon: 'solar:alarm-linear',
-      iconClass: 'text-zinc-400 bg-zinc-100',
-      bgClass: 'bg-zinc-50/30',
-      borderClass: 'border-zinc-200/60',
+      iconClass: 'text-muted-foreground bg-muted',
+      bgClass: 'bg-muted/30',
+      borderClass: 'border-border/60',
     },
     voided: {
       icon: 'solar:close-circle-linear',
@@ -132,22 +132,22 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
-    <div class="flex min-w-0 items-center gap-3">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+  <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:telescope-linear" class="size-4" />
         Forecasts
       </span>
       {#if items.length > 0}
-        <span class="text-xs text-zinc-400">{items.length} total</span>
+        <span class="text-xs text-muted-foreground">{items.length} total</span>
       {/if}
     </div>
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="flex rounded-full border border-zinc-200 p-0.5">
+    <div class="flex items-center gap-2">
+      <div class="flex rounded-full border border-border p-0.5">
         {#each (['all', 'open', 'resolved', 'expired'] as const) as f}
           <button
             onclick={() => (filter = f)}
-            class="rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:text-zinc-700'}"
+            class="rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-primary font-medium text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
@@ -155,7 +155,7 @@
       </div>
       <a
         href="/forecasts/calibration"
-        class="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent transition-colors"
       >
         <Icon icon="solar:tuning-2-linear" class="size-3.5" />
         Calibration
@@ -174,26 +174,26 @@
 
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if showForm}
-      <Card class="mb-5 rounded-[20px] border border-zinc-200/80 p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
-        <h3 class="mb-4 text-sm font-semibold text-zinc-900">New Forecast</h3>
+      <Card class="mb-5 rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+        <h3 class="mb-4 text-sm font-semibold text-foreground">New Forecast</h3>
         <div class="flex flex-col gap-3">
           <div>
-            <label for="fc-question" class="mb-1 block text-xs font-medium text-zinc-600">Question</label>
+            <label for="fc-question" class="mb-1 block text-xs font-medium text-muted-foreground">Question</label>
             <input
               id="fc-question"
               type="text"
               bind:value={formQuestion}
               placeholder="Will X happen by Y?"
-              class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-400"
+              class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
             />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label for="fc-type" class="mb-1 block text-xs font-medium text-zinc-600">Type</label>
+              <label for="fc-type" class="mb-1 block text-xs font-medium text-muted-foreground">Type</label>
               <select
                 id="fc-type"
                 bind:value={formType}
-                class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-400"
+                class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
               >
                 <option value="binary">Binary (Yes/No)</option>
                 <option value="numeric">Numeric</option>
@@ -201,23 +201,23 @@
               </select>
             </div>
             <div>
-              <label for="fc-deadline" class="mb-1 block text-xs font-medium text-zinc-600">Resolves by</label>
+              <label for="fc-deadline" class="mb-1 block text-xs font-medium text-muted-foreground">Resolves by</label>
               <input
                 id="fc-deadline"
                 type="date"
                 bind:value={formDeadline}
-                class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-400"
+                class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
               />
             </div>
           </div>
           <div>
-            <label for="fc-criteria" class="mb-1 block text-xs font-medium text-zinc-600">Resolution criteria</label>
+            <label for="fc-criteria" class="mb-1 block text-xs font-medium text-muted-foreground">Resolution criteria</label>
             <textarea
               id="fc-criteria"
               bind:value={formCriteria}
               placeholder="How will this be resolved?"
               rows="2"
-              class="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-400"
+              class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-foreground/30"
             ></textarea>
           </div>
           <div class="flex items-center gap-2">
@@ -245,7 +245,7 @@
 
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-zinc-400">Loading forecasts...</span>
+        <span class="text-sm text-muted-foreground">Loading forecasts...</span>
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -254,14 +254,14 @@
       </div>
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
-        <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:telescope-linear" class="size-7 text-zinc-300" />
+        <div class="flex size-14 items-center justify-center rounded-2xl bg-muted">
+          <Icon icon="solar:telescope-linear" class="size-7 text-muted-foreground/50" />
         </div>
-        <span class="text-sm text-zinc-400">
+        <span class="text-sm text-muted-foreground">
           {filter === 'all' ? 'No forecasts yet' : `No ${filter} forecasts`}
         </span>
         {#if filter === 'all'}
-          <span class="text-xs text-zinc-300">Create a forecast to start tracking predictions</span>
+          <span class="text-xs text-muted-foreground/50">Create a forecast to start tracking predictions</span>
         {/if}
       </div>
     {:else}
@@ -279,27 +279,27 @@
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start justify-between gap-2">
                     <div class="min-w-0">
-                      <h3 class="text-sm font-semibold text-zinc-900">{forecast.question}</h3>
+                      <h3 class="text-sm font-semibold text-foreground">{forecast.question}</h3>
                     </div>
                     <div class="flex shrink-0 items-center gap-2">
                       {#if forecast.status === 'open'}
                         <span class="text-xs font-medium text-amber-600">{timeRemaining(forecast.resolves_at)}</span>
                       {:else}
-                        <span class="text-xs text-zinc-400">{formatDate(forecast.resolved_at ?? forecast.resolves_at)}</span>
+                        <span class="text-xs text-muted-foreground">{formatDate(forecast.resolved_at ?? forecast.resolves_at)}</span>
                       {/if}
                     </div>
                   </div>
                   <div class="mt-2 flex flex-wrap items-center gap-2">
-                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                    <span class="rounded-full border border-border bg-white px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {TYPE_LABELS[forecast.question_type] ?? forecast.question_type}
                     </span>
                     {#if forecast.entity_name}
-                      <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                      <span class="rounded-full border border-border bg-white px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {forecast.entity_name}
                       </span>
                     {/if}
                     {#if forecast.base_rate !== null}
-                      <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                      <span class="rounded-full border border-border bg-white px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                         Base rate: {Math.round(forecast.base_rate * 100)}%
                       </span>
                     {/if}
@@ -310,7 +310,7 @@
                     {/if}
                   </div>
                   {#if forecast.resolution_criteria}
-                    <p class="mt-1.5 text-xs text-zinc-500">{forecast.resolution_criteria}</p>
+                    <p class="mt-1.5 text-xs text-muted-foreground">{forecast.resolution_criteria}</p>
                   {/if}
                 </div>
               </div>

@@ -19,8 +19,8 @@
 </script>
 
 <div class="flex items-center justify-between mb-3">
-  <span class="text-sm font-semibold text-zinc-900">Events per day</span>
-  <span class="text-xs text-zinc-400">30-day rolling window</span>
+  <span class="text-sm font-semibold text-foreground">Events per day</span>
+  <span class="text-xs text-muted-foreground">30-day rolling window</span>
 </div>
 
 <div class="flex items-end gap-[3px] h-14">
@@ -30,21 +30,21 @@
     >
       <div
         class="w-full rounded-t-[2px] transition-colors {day.date === todayKey
-          ? 'bg-zinc-900'
+          ? 'bg-primary'
           : day.count === 0
-            ? 'bg-zinc-100'
-            : 'bg-zinc-300 group-hover:bg-zinc-500'}"
+            ? 'bg-muted'
+            : 'bg-muted-foreground/30 group-hover:bg-muted-foreground/50'}"
         style="height:{barHeight(day.count)}px"
       ></div>
 
-      <div class="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-10 hidden group-hover:flex flex-col items-center gap-0.5 whitespace-nowrap rounded-xl border border-zinc-200 bg-white px-2.5 py-1.5 shadow-md">
-        <span class="text-[11px] font-medium text-zinc-900">{day.count} {day.count === 1 ? 'event' : 'events'}</span>
-        <span class="text-[10px] text-zinc-400">{shortLabel(day.date)}</span>
+      <div class="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-10 hidden group-hover:flex flex-col items-center gap-0.5 whitespace-nowrap rounded-xl border border-border bg-white px-2.5 py-1.5 shadow-md">
+        <span class="text-[11px] font-medium text-foreground">{day.count} {day.count === 1 ? 'event' : 'events'}</span>
+        <span class="text-[10px] text-muted-foreground">{shortLabel(day.date)}</span>
       </div>
     </div>
   {/each}
 </div>
 
 <div class="mt-1.5 flex justify-end">
-  <span class="text-[10px] text-zinc-400">today ↑</span>
+  <span class="text-[10px] text-muted-foreground">today ↑</span>
 </div>

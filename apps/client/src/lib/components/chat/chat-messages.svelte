@@ -29,10 +29,10 @@
   {#if chatState.loadingHistory}
     <div class="flex h-full items-center justify-center">
       <div class="flex flex-col items-center gap-3 text-center">
-        <span class="flex size-12 items-center justify-center rounded-3xl bg-white text-zinc-400 shadow-[0_18px_40px_-28px_rgba(24,24,27,0.32)]">
+        <span class="flex size-12 items-center justify-center rounded-3xl bg-background text-muted-foreground shadow-[0_18px_40px_-28px_rgba(24,24,27,0.32)]">
           <Icon icon="solar:refresh-linear" class="size-5 animate-spin" />
         </span>
-        <p class="text-sm text-zinc-400">Loading conversation...</p>
+        <p class="text-sm text-muted-foreground">Loading conversation...</p>
       </div>
     </div>
   {:else}
@@ -40,13 +40,13 @@
       {#each chatState.messages as msg, i}
         {#if msg.role === 'user'}
           <div class="flex justify-end">
-            <div class="max-w-[85%] break-words rounded-[22px] rounded-br-md bg-zinc-950 px-4 py-3 text-sm text-white shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)] sm:max-w-[75%]">
+            <div class="max-w-[75%] rounded-[22px] rounded-br-md bg-primary px-4 py-3 text-sm text-primary-foreground shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)]">
               {msg.content}
             </div>
           </div>
         {:else}
           <div class="flex justify-start">
-            <div class="max-w-[90%] min-w-0 break-words rounded-[22px] rounded-bl-md border border-zinc-200/90 bg-white px-4 py-3 text-sm text-zinc-900 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)] sm:max-w-[75%]">
+            <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-border bg-card px-4 py-3 text-sm text-card-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
               {#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1 && !msg.content}
                 <TypingIndicator />
               {:else}
@@ -59,14 +59,14 @@
                 <div class="mt-2.5">
                   <button
                     type="button"
-                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {expandedSql === msg.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-zinc-200 bg-zinc-50 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700'}"
+                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {expandedSql === msg.id ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-border bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'}"
                     onclick={() => expandedSql = expandedSql === msg.id ? null : (msg.id ?? null)}
                   >
                     <Icon icon="solar:database-linear" class="size-3.5" />
                     SQL query · {msg.sql_query.row_count} {msg.sql_query.row_count === 1 ? 'row' : 'rows'}
                   </button>
                   {#if expandedSql === msg.id && msg.sql_query}
-                    <pre class="mt-1.5 overflow-x-auto rounded-xl bg-zinc-950 px-3 py-2 font-mono text-[11px] text-zinc-300">{msg.sql_query.query}</pre>
+                    <pre class="mt-1.5 overflow-x-auto rounded-xl bg-zinc-950 px-3 py-2 font-mono text-[11px] text-muted-foreground/50">{msg.sql_query.query}</pre>
                   {/if}
                 </div>
               {/if}
@@ -140,7 +140,7 @@
                   {/each}
                   <button
                     type="button"
-                    class="inline-flex min-h-8 items-center gap-1 rounded-full border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900"
+                    class="inline-flex min-h-8 items-center gap-1 rounded-full border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     onclick={() => onopensources(msg)}
                   >
                     <Icon icon="solar:document-text-linear" class="size-3.5" />
@@ -152,7 +152,7 @@
                 <div class="mt-2 flex items-center gap-1">
                   <button
                     type="button"
-                    class="rounded-full p-1 transition-colors {msg.feedback === 'up' ? 'text-emerald-500' : 'text-zinc-300 hover:text-zinc-500'}"
+                    class="rounded-full p-1 transition-colors {msg.feedback === 'up' ? 'text-emerald-500' : 'text-muted-foreground/50 hover:text-muted-foreground'}"
                     onclick={async () => {
                       const newFeedback = msg.feedback === 'up' ? null : 'up';
                       msg.feedback = newFeedback;
@@ -163,7 +163,7 @@
                   </button>
                   <button
                     type="button"
-                    class="rounded-full p-1 transition-colors {msg.feedback === 'down' ? 'text-red-400' : 'text-zinc-300 hover:text-zinc-500'}"
+                    class="rounded-full p-1 transition-colors {msg.feedback === 'down' ? 'text-red-400' : 'text-muted-foreground/50 hover:text-muted-foreground'}"
                     onclick={async () => {
                       const newFeedback = msg.feedback === 'down' ? null : 'down';
                       msg.feedback = newFeedback;

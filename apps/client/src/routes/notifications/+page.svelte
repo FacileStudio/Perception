@@ -108,22 +108,22 @@
 </svelte:head>
 
 <div class="flex h-full flex-col">
-  <div class="flex flex-col gap-3 border-b border-zinc-200/80 bg-white/90 px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
+  <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-zinc-900">
+      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:bell-linear" class="size-4" />
         Notifications
       </span>
       {#if total > 0}
-        <span class="text-xs text-zinc-400">{total} total</span>
+        <span class="text-xs text-muted-foreground">{total} total</span>
       {/if}
     </div>
-    <div class="flex items-center justify-between gap-2 sm:justify-end">
-      <div class="flex rounded-full border border-zinc-200 p-0.5">
+    <div class="flex items-center gap-2">
+      <div class="flex rounded-full border border-border p-0.5">
         {#each (['all', 'unread', 'read'] as const) as f}
           <button
             onclick={() => (filter = f)}
-            class="rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:text-zinc-700'}"
+            class="rounded-full px-3 py-1 text-xs transition-colors {filter === f ? 'bg-primary font-medium text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
@@ -145,7 +145,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-zinc-400">Loading notifications...</span>
+        <span class="text-sm text-muted-foreground">Loading notifications...</span>
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -154,14 +154,14 @@
       </div>
     {:else if items.length === 0}
       <div class="flex flex-col items-center justify-center gap-3 py-20">
-        <div class="flex size-14 items-center justify-center rounded-2xl bg-zinc-100">
-          <Icon icon="solar:bell-linear" class="size-7 text-zinc-300" />
+        <div class="flex size-14 items-center justify-center rounded-2xl bg-muted">
+          <Icon icon="solar:bell-linear" class="size-7 text-muted-foreground/50" />
         </div>
-        <span class="text-sm text-zinc-400">
+        <span class="text-sm text-muted-foreground">
           {filter === 'unread' ? 'No unread notifications' : filter === 'read' ? 'No read notifications' : 'No notifications yet'}
         </span>
         {#if filter === 'all'}
-          <span class="text-xs text-zinc-300">Anomaly alerts will appear here when the system detects unusual patterns</span>
+          <span class="text-xs text-muted-foreground/50">Anomaly alerts will appear here when the system detects unusual patterns</span>
         {/if}
       </div>
     {:else}
@@ -179,19 +179,19 @@
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
                     <div class="flex items-center gap-2">
-                      <h3 class="truncate text-sm font-semibold text-zinc-900">{notif.title}</h3>
+                      <h3 class="truncate text-sm font-semibold text-foreground">{notif.title}</h3>
                       {#if !notif.read_at}
                         <span class="size-2 shrink-0 rounded-full bg-blue-500"></span>
                       {/if}
                     </div>
-                    <p class="mt-0.5 text-sm text-zinc-600">{notif.message}</p>
+                    <p class="mt-0.5 text-sm text-muted-foreground">{notif.message}</p>
                   </div>
                   <div class="flex shrink-0 items-center gap-2">
-                    <span class="text-xs text-zinc-400">{timeAgo(notif.created_at)}</span>
+                    <span class="text-xs text-muted-foreground">{timeAgo(notif.created_at)}</span>
                     {#if !notif.read_at}
                       <button
                         onclick={() => markRead(notif.id)}
-                        class="rounded-lg p-1.5 text-zinc-400 opacity-0 transition-opacity hover:bg-zinc-100 hover:text-zinc-600 group-hover:opacity-100"
+                        class="rounded-lg p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
                         title="Mark as read"
                       >
                         <Icon icon="solar:check-circle-linear" class="size-4" />
@@ -200,11 +200,11 @@
                   </div>
                 </div>
                 <div class="mt-2 flex items-center gap-2">
-                  <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                  <span class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                     {TYPE_LABELS[notif.type] ?? notif.type}
                   </span>
                   {#if notif.entity_name}
-                    <span class="rounded-full border border-zinc-200/80 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                    <span class="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                       {notif.entity_name}
                     </span>
                   {/if}

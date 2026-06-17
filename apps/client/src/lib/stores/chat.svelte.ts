@@ -197,10 +197,11 @@ export async function sendChatMessage(): Promise<{ sessionId: string | null; sou
     const sources = chatState.messages[idx].sources ?? [];
     try { await loadChatSessions(); } catch {}
     return { sessionId, sources };
-  } catch {
+  } catch (err) {
     chatState.pending = false;
     chatState.streaming = false;
-    chatState.messages[idx].content = 'Something went wrong. Please try again.';
+    const detail = err instanceof Error ? err.message : '';
+    chatState.messages[idx].content = detail || 'Something went wrong. Please try again.';
     try { await loadChatSessions(); } catch {}
     return { sessionId, sources: [] };
   }

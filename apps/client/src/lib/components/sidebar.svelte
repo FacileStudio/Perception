@@ -1,6 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { Separator } from '$lib/components/ui/separator';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import * as Avatar from '$lib/components/ui/avatar';
+  import * as Tooltip from '$lib/components/ui/tooltip';
   import PerceptionLogo from '$lib/components/perception-logo.svelte';
   import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
@@ -22,34 +25,15 @@
 
   const label = $derived(auth.user?.name?.trim() || auth.user?.email || '');
 
-  let userMenuOpen = $state(false);
-  let wsMenuOpen = $state(false);
   let showCreateWs = $state(false);
-  let menuContainer: HTMLDivElement | undefined;
-  let wsContainer: HTMLDivElement | undefined;
 
   onMount(() => {
     notifications.refresh();
     const interval = setInterval(() => notifications.refresh(), 60_000);
-
-    function handleClickOutside(e: MouseEvent) {
-      if (menuContainer && !menuContainer.contains(e.target as Node)) {
-        userMenuOpen = false;
-      }
-      if (wsContainer && !wsContainer.contains(e.target as Node)) {
-        wsMenuOpen = false;
-      }
-    }
-    document.addEventListener('click', handleClickOutside);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('click', handleClickOutside);
-    };
+    return () => clearInterval(interval);
   });
 
   async function handleSwitchWorkspace(id: string) {
-    wsMenuOpen = false;
     await switchWorkspace(id);
     window.location.reload();
   }
@@ -70,7 +54,7 @@
   ];
 </script>
 
-<aside class="hidden w-60 shrink-0 flex-col border-r border-zinc-200/80 bg-white/95 backdrop-blur md:sticky md:top-0 md:flex md:h-screen">
+<aside class="hidden w-60 shrink-0 flex-col border-r border-border bg-background/95 backdrop-blur md:sticky md:top-0 md:flex md:h-screen">
   <div class="px-5 pb-4 pt-8">
     <PerceptionLogo
       class="gap-2"
@@ -82,47 +66,36 @@
   </div>
 
   {#if auth.workspaces.length > 0}
-    <div class="relative px-3 pb-4" bind:this={wsContainer}>
-      <button
-        onclick={() => (wsMenuOpen = !wsMenuOpen)}
-        class="flex w-full items-center gap-2 rounded-lg border border-zinc-200/70 bg-zinc-50/60 px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-100"
-      >
-        <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-zinc-400" />
-        <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">
-          {auth.workspace?.name ?? 'Select workspace'}
-        </span>
-        <Icon
-          icon="solar:alt-arrow-down-linear"
-          class="size-3 shrink-0 text-zinc-400 transition-transform {wsMenuOpen ? 'rotate-180' : ''}"
-        />
-      </button>
-
-      {#if wsMenuOpen}
-        <div class="absolute left-3 right-3 top-full z-50 mt-1 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+    <div class="px-3 pb-4">
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger
+          class="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+        >
+          <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-muted-foreground" />
+          <span class="min-w-0 flex-1 truncate font-medium">
+            {auth.workspace?.name ?? 'Select workspace'}
+          </span>
+          <Icon icon="solar:alt-arrow-down-linear" class="size-3 shrink-0 text-muted-foreground" />
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content align="start" class="w-[var(--bits-dropdown-menu-anchor-width)]">
           {#each auth.workspaces as ws}
             {@const active = ws.id === auth.workspace?.id}
-            <button
-              onclick={() => handleSwitchWorkspace(ws.id)}
-              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors {active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50'}"
-            >
+            <DropdownMenu.Item onclick={() => handleSwitchWorkspace(ws.id)} class={active ? 'font-medium' : ''}>
               <Icon
                 icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'}
-                class="size-4 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}"
+                class="size-4 {active ? 'text-emerald-500' : 'text-muted-foreground/50'}"
               />
               <span class="min-w-0 flex-1 truncate">{ws.name}</span>
-              <span class="text-xs text-zinc-400">{ws.role}</span>
-            </button>
+              <span class="text-xs text-muted-foreground">{ws.role}</span>
+            </DropdownMenu.Item>
           {/each}
-          <div class="border-t border-zinc-100"></div>
-          <button
-            onclick={() => { wsMenuOpen = false; showCreateWs = true; }}
-            class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
-          >
-            <Icon icon="mdi:plus" class="size-4 shrink-0 text-zinc-300" />
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item onclick={() => (showCreateWs = true)}>
+            <Icon icon="mdi:plus" class="size-4 text-muted-foreground/50" />
             <span>Create workspace</span>
-          </button>
-        </div>
-      {/if}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
     </div>
   {/if}
 
@@ -131,9 +104,9 @@
       {@const active = link.match($page.url.pathname)}
       <a
         href={link.href}
-        class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active ? 'bg-zinc-950 font-medium text-white' : 'text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950'}"
+        class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors {active ? 'bg-primary font-medium text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'}"
       >
-        <Icon icon={link.icon} class="size-4 shrink-0 {active ? 'text-white' : ''}" />
+        <Icon icon={link.icon} class="size-4 shrink-0" />
         {link.label}
       </a>
     {/each}
@@ -143,72 +116,58 @@
 
   <div class="p-4">
     {#if auth.user}
-      <div class="relative" bind:this={menuContainer}>
-        {#if userMenuOpen}
-          <div class="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-md">
+      <div class="flex items-center gap-2">
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            class="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-border bg-muted/60 px-3 text-left transition-colors hover:bg-accent"
+          >
+            <Avatar.Root size="sm">
+              {#if auth.user.image}
+                <Avatar.Image src={auth.user.image} alt={label} />
+              {/if}
+              <Avatar.Fallback style={auth.user.color ? `background-color: ${auth.user.color}; color: white;` : ''}>
+                {initials(label)}
+              </Avatar.Fallback>
+            </Avatar.Root>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium">{auth.user.name || auth.user.email}</p>
+            </div>
+            <Icon icon="solar:alt-arrow-up-linear" class="size-3.5 shrink-0 text-muted-foreground" />
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content side="top" align="start" class="w-[var(--bits-dropdown-menu-anchor-width)]">
             {#each menuItems as item}
               {@const active = $page.url.pathname === item.href}
-              <a
-                href={item.href}
-                onclick={() => (userMenuOpen = false)}
-                class="flex items-center gap-2.5 px-3 py-2 text-sm transition-colors {active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950'}"
-              >
-                <Icon icon={item.icon} class="size-4 shrink-0" />
-                {item.label}
+              <a href={item.href}>
+                <DropdownMenu.Item class={active ? 'font-medium' : ''}>
+                  <Icon icon={item.icon} class="size-4" />
+                  {item.label}
+                </DropdownMenu.Item>
               </a>
             {/each}
-            <div class="border-t border-zinc-100"></div>
-            <button
-              onclick={() => { userMenuOpen = false; onLogout(); }}
-              class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
-            >
-              <Icon icon="solar:logout-3-linear" class="size-4 shrink-0" />
+            <DropdownMenu.Separator />
+            <DropdownMenu.Item onclick={onLogout} variant="destructive">
+              <Icon icon="solar:logout-3-linear" class="size-4" />
               Logout
-            </button>
-          </div>
-        {/if}
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
 
-        <div class="flex items-center gap-2">
-          <button
-            onclick={() => (userMenuOpen = !userMenuOpen)}
-            class="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/60 px-3 text-left transition-colors hover:bg-zinc-100"
-          >
-            {#if auth.user.image}
-              <img
-                src={auth.user.image}
-                alt={label}
-                title={auth.user.source === 'oidc' ? 'Synced from SSO' : undefined}
-                class="size-7 shrink-0 rounded-full object-cover"
-              />
-            {:else}
-              <div
-                class="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
-                style="background-color: {auth.user.color}"
-              >
-                {initials(label)}
-              </div>
-            {/if}
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-zinc-950">{auth.user.name || auth.user.email}</p>
-            </div>
-            <Icon
-              icon="solar:alt-arrow-up-linear"
-              class="size-3.5 shrink-0 text-zinc-400 transition-transform {userMenuOpen ? '' : 'rotate-180'}"
-            />
-          </button>
-
-          <a
-            href="/notifications"
-            class="relative flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors {$page.url.pathname === '/notifications' ? 'border-zinc-950 bg-zinc-950 text-white hover:bg-zinc-800' : 'border-zinc-200/70 bg-zinc-50/60 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950'}"
-          >
-            <Icon icon="solar:bell-linear" class="size-4" />
-            {#if notifications.unreadCount > 0}
-              <span class="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}
-              </span>
-            {/if}
-          </a>
-        </div>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            <a
+              href="/notifications"
+              class="relative flex size-10 shrink-0 items-center justify-center rounded-xl border transition-colors {$page.url.pathname === '/notifications' ? 'border-primary bg-primary text-primary-foreground hover:bg-primary/90' : 'border-border bg-muted/60 text-muted-foreground hover:bg-accent hover:text-accent-foreground'}"
+            >
+              <Icon icon="solar:bell-linear" class="size-4" />
+              {#if notifications.unreadCount > 0}
+                <span class="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                  {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}
+                </span>
+              {/if}
+            </a>
+          </Tooltip.Trigger>
+          <Tooltip.Content>Notifications</Tooltip.Content>
+        </Tooltip.Root>
       </div>
     {/if}
   </div>

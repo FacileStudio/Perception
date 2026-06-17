@@ -38,7 +38,7 @@
   <div class="mx-auto flex max-w-3xl flex-col gap-6 pb-8">
     <div class="flex min-h-[28dvh] items-center justify-center">
       <div class="w-full flex flex-col gap-5">
-        <p class="font-[Goga] text-3xl tracking-tight text-zinc-950 sm:text-[2.2rem]">Interrogate the noise.</p>
+        <p class="font-[Goga] text-3xl tracking-tight text-foreground sm:text-[2.2rem]">Interrogate the noise.</p>
         <div class="flex items-center gap-2">
           <input
             type="text"
@@ -46,7 +46,7 @@
             bind:value={chatState.input}
             onkeydown={handleKeydown}
             disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
-            class="h-[52px] flex-1 rounded-full border border-zinc-200/80 bg-white/90 px-5 text-[15px] text-zinc-950 placeholder:text-zinc-400 shadow-[0_18px_40px_-32px_rgba(24,24,27,0.25)] backdrop-blur focus:outline-none focus:ring-2 focus:ring-zinc-950/10 disabled:opacity-50"
+            class="h-[52px] flex-1 rounded-full border border-border bg-background/90 px-5 text-[15px] text-foreground placeholder:text-muted-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.25)] backdrop-blur focus:outline-none focus:ring-2 focus:ring-ring/10 disabled:opacity-50"
           />
           <Button
             onclick={handleSend}

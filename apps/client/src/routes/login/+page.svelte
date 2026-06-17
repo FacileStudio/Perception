@@ -116,7 +116,7 @@
       {#if auth.config.sso_only && auth.config.oidc_enabled}
         <a
           href="{API_BASE}/auth/oidc"
-          class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-900 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+          class="flex w-full items-center justify-center gap-2 rounded-md border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
         >
           <Icon icon="solar:key-linear" class="size-4" />
           Sign in with SSO
@@ -212,14 +212,14 @@
 
         {#if auth.config.oidc_enabled}
           <div class="my-6 flex items-center gap-3">
-            <div class="h-px flex-1 bg-zinc-200"></div>
-            <span class="text-xs text-zinc-400">or continue with</span>
-            <div class="h-px flex-1 bg-zinc-200"></div>
+            <div class="h-px flex-1 bg-border"></div>
+            <span class="text-xs text-muted-foreground">or continue with</span>
+            <div class="h-px flex-1 bg-border"></div>
           </div>
 
           <a
             href="{API_BASE}/auth/oidc"
-            class="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-950 transition-colors hover:bg-zinc-50"
+            class="flex w-full items-center justify-center gap-2 rounded-md border border-border bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             <Icon icon="solar:key-linear" class="size-4" />
             Sign in with SSO

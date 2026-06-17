@@ -24,14 +24,14 @@
 </script>
 
 <div class={`flex items-center gap-3 ${className}`}>
-  <span class={`flex items-center justify-center text-zinc-950 ${iconFrameClass}`}>
+  <span class={`flex items-center justify-center text-foreground ${iconFrameClass}`}>
     <Icon icon="solar:eye-bold-duotone" class={iconSizeClass} />
   </span>
   {#if showWordmark}
     <div class={`flex flex-col ${textClass}`}>
-      <span class={`font-[Goga] leading-none tracking-tight text-zinc-950 ${titleClass || 'text-lg'}`}>Perception</span>
+      <span class={`font-[Goga] leading-none tracking-tight text-foreground ${titleClass || 'text-lg'}`}>Perception</span>
       {#if subtitle}
-        <span class="text-xs text-zinc-500">{subtitle}</span>
+        <span class="text-xs text-muted-foreground">{subtitle}</span>
       {/if}
     </div>
   {/if}
