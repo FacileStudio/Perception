@@ -8,7 +8,7 @@
   import { Label } from '$lib/components/ui/label';
   import * as Dialog from '$lib/components/ui/dialog';
   import { buildTitle } from '$lib/head';
-  import CreateWorkspaceDrawer from '$lib/components/create-workspace-drawer.svelte';
+  import CreateSpaceDrawer from '$lib/components/create-space-drawer.svelte';
   import Icon from '@iconify/svelte';
 
   type Member = { id: string; user_id: string; name: string; email: string; role: string; joined_at: string };
@@ -58,7 +58,7 @@
   };
 
   const KEY_DESCRIPTIONS: Record<string, string> = {
-    ingest_secret: 'HMAC-SHA256 secret used to verify ingest requests targeting this workspace',
+    ingest_secret: 'HMAC-SHA256 secret used to verify ingest requests targeting this space',
     anthropic_api_key: 'Used for chat completions',
     voyage_api_key: 'Used for semantic search embeddings',
     llm_model: 'Claude model for chat (e.g. claude-sonnet-4-6)',
@@ -195,7 +195,7 @@
   }
 
   function sourceLabel(src: string) {
-    if (src === 'workspace') return { label: 'workspace', icon: 'solar:buildings-linear', cls: 'text-violet-600 bg-violet-50' };
+    if (src === 'workspace') return { label: 'space', icon: 'solar:buildings-linear', cls: 'text-violet-600 bg-violet-50' };
     if (src === 'db') return { label: 'system', icon: 'solar:database-linear', cls: 'text-blue-600 bg-blue-50' };
     if (src === 'env') return { label: 'env var', icon: 'solar:server-linear', cls: 'text-emerald-600 bg-emerald-50' };
     return { label: 'default', icon: 'solar:info-circle-linear', cls: 'text-muted-foreground bg-muted' };
@@ -213,10 +213,10 @@
       if (editSlug.trim() && editSlug.trim() !== auth.workspace.slug) body.slug = editSlug.trim();
       if (!body.name && !body.slug) { saving = false; return; }
       await api.workspaces.update(auth.workspace.id, body);
-      saveSuccess = 'Workspace updated.';
+      saveSuccess = 'Space updated.';
       await loadWorkspaces();
     } catch (err: any) {
-      saveError = err?.message ?? 'Failed to update workspace.';
+      saveError = err?.message ?? 'Failed to update space.';
     } finally {
       saving = false;
     }
@@ -241,7 +241,7 @@
   }
 
   async function handleRemoveMember(memberId: string, email: string) {
-    if (!auth.workspace || !confirm(`Remove ${email} from this workspace?`)) return;
+    if (!auth.workspace || !confirm(`Remove ${email} from this space?`)) return;
     try {
       await api.workspaces.removeMember(auth.workspace.id, memberId);
       await loadData();
@@ -349,7 +349,7 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle('Workspace')}</title>
+  <title>{buildTitle('Space')}</title>
 </svelte:head>
 
 <div class="flex h-full flex-col">
@@ -357,7 +357,7 @@
     <div class="flex items-center gap-4">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <Icon icon="solar:buildings-linear" class="size-4" />
-        {auth.workspace?.name ?? 'Workspace'}
+        {auth.workspace?.name ?? 'Space'}
       </span>
       <div class="flex gap-1 rounded-lg border border-border bg-muted p-0.5">
         {#each [
@@ -378,33 +378,33 @@
     </div>
     <Button onclick={() => (showCreate = !showCreate)} variant="outline" size="sm">
       <Icon icon="mdi:plus" class="mr-1.5 size-4" />
-      New workspace
+      New space
     </Button>
   </div>
 
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     <div class="mx-auto max-w-2xl space-y-6">
 
-      <CreateWorkspaceDrawer bind:open={showCreate} />
+      <CreateSpaceDrawer bind:open={showCreate} />
 
       {#if tab === 'general'}
         <div class="rounded-lg border border-border bg-background p-6">
-          <h2 class="text-lg font-semibold text-foreground mb-4">Workspace details</h2>
+          <h2 class="text-lg font-semibold text-foreground mb-4">Space details</h2>
           {#if saveError}<p class="mb-3 text-sm text-destructive">{saveError}</p>{/if}
           {#if saveSuccess}<p class="mb-3 text-sm text-emerald-600">{saveSuccess}</p>{/if}
           <form onsubmit={handleSaveGeneral} class="space-y-4">
             <div class="space-y-1.5">
-              <Label for="edit-name">Workspace name</Label>
+              <Label for="edit-name">Space name</Label>
               <Input id="edit-name" bind:value={editName} placeholder="My Team" disabled={saving} />
               <p class="text-xs text-muted-foreground">The display name shown in the sidebar and across the app.</p>
             </div>
             <div class="space-y-1.5">
-              <Label for="edit-slug">Workspace slug</Label>
+              <Label for="edit-slug">Space slug</Label>
               <Input id="edit-slug" bind:value={editSlug} placeholder="my-team" disabled={saving} />
               <p class="text-xs text-muted-foreground">URL-safe identifier used in API references and ingest targeting.</p>
             </div>
             <div class="space-y-1.5">
-              <Label for="ws-id">Workspace ID</Label>
+              <Label for="ws-id">Space ID</Label>
               <Input id="ws-id" value={auth.workspace?.id ?? ''} disabled class="font-mono text-xs opacity-70" />
               <p class="text-xs text-muted-foreground">Use this value for the <code class="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">x-perception-workspace</code> ingest header.</p>
             </div>
@@ -495,7 +495,7 @@
         {#if auth.workspaces.length > 1}
           <div class="rounded-lg border border-border bg-background">
             <div class="border-b border-border/50 px-6 py-4">
-              <h2 class="text-lg font-semibold text-foreground">All workspaces</h2>
+              <h2 class="text-lg font-semibold text-foreground">All spaces</h2>
             </div>
             <div class="divide-y divide-border/50">
               {#each auth.workspaces as ws}
@@ -518,7 +518,7 @@
           <div class="flex items-center justify-center py-16"><span class="text-sm text-muted-foreground">Loading settings...</span></div>
         {:else}
           <div class="flex items-center justify-between mb-4">
-            <p class="text-xs text-muted-foreground">Settings cascade: <strong>workspace</strong> overrides <strong>system</strong> overrides <strong>env</strong> overrides <strong>defaults</strong>.</p>
+            <p class="text-xs text-muted-foreground">Settings cascade: <strong>space</strong> overrides <strong>system</strong> overrides <strong>env</strong> overrides <strong>defaults</strong>.</p>
             <Button variant="default" size="sm" onclick={saveSettings} disabled={settingsSaving} class="rounded-xl gap-2">
               <Icon icon={settingsSaved ? 'solar:check-circle-linear' : 'solar:diskette-linear'} class="size-4" />
               {settingsSaving ? 'Saving...' : settingsSaved ? 'Saved!' : 'Save'}
@@ -563,7 +563,7 @@
                         </Button>
                       {/if}
                       {#if sources[key] === 'workspace'}
-                        <Button variant="ghost" size="sm" onclick={() => clearSetting(key)} class="shrink-0 rounded-xl text-muted-foreground hover:text-red-500" title="Clear workspace override">
+                        <Button variant="ghost" size="sm" onclick={() => clearSetting(key)} class="shrink-0 rounded-xl text-muted-foreground hover:text-red-500" title="Clear space override">
                           <Icon icon="solar:trash-bin-minimalistic-linear" class="size-4" />
                         </Button>
                       {/if}

@@ -43,7 +43,7 @@
         window.location.reload();
       }
     } catch (err: any) {
-      error = err?.message ?? 'Failed to create workspace.';
+      error = err?.message ?? 'Failed to create space.';
     } finally {
       creating = false;
     }
@@ -59,7 +59,7 @@
   });
 </script>
 
-<Drawer bind:open title="Create workspace">
+<Drawer bind:open title="Create space">
   {#if error}
     <div class="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
       <Icon icon="solar:danger-triangle-linear" class="size-4 shrink-0" />
@@ -69,9 +69,9 @@
 
   <form onsubmit={handleCreate} class="space-y-5">
     <div class="space-y-1.5">
-      <Label for="new-ws-name">Workspace name</Label>
+      <Label for="new-ws-name">Space name</Label>
       <Input id="new-ws-name" bind:value={name} placeholder="My Team" disabled={creating} />
-      <p class="text-xs text-muted-foreground">The display name for this workspace.</p>
+      <p class="text-xs text-muted-foreground">The display name for this space.</p>
     </div>
 
     <div class="space-y-1.5">
@@ -90,7 +90,7 @@
           Creating...
         {:else}
           <Icon icon="mdi:plus" class="mr-1.5 size-4" />
-          Create workspace
+          Create space
         {/if}
       </Button>
     </div>

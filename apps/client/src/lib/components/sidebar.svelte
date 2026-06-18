@@ -9,7 +9,7 @@
   import { ensureSolar } from '$lib/solar';
   import { auth, notifications } from '$lib/stores';
   import { switchWorkspace } from '$lib/stores/auth.svelte';
-  import CreateWorkspaceDrawer from '$lib/components/create-workspace-drawer.svelte';
+  import CreateSpaceDrawer from '$lib/components/create-space-drawer.svelte';
   import { onMount } from 'svelte';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
@@ -49,7 +49,7 @@
   ];
 
   const menuItems = [
-    { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-linear' },
+    { href: '/workspace', label: 'Space', icon: 'solar:buildings-linear' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-linear' },
   ];
 </script>
@@ -73,7 +73,7 @@
         >
           <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-muted-foreground" />
           <span class="min-w-0 flex-1 truncate font-medium">
-            {auth.workspace?.name ?? 'Select workspace'}
+            {auth.workspace?.name ?? 'Select space'}
           </span>
           <Icon icon="solar:alt-arrow-down-linear" class="size-3 shrink-0 text-muted-foreground" />
         </DropdownMenu.Trigger>
@@ -92,7 +92,7 @@
           <DropdownMenu.Separator />
           <DropdownMenu.Item onclick={() => (showCreateWs = true)}>
             <Icon icon="mdi:plus" class="size-4 text-muted-foreground/50" />
-            <span>Create workspace</span>
+            <span>Create space</span>
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>
@@ -173,4 +173,4 @@
   </div>
 </aside>
 
-<CreateWorkspaceDrawer bind:open={showCreateWs} />
+<CreateSpaceDrawer bind:open={showCreateWs} />

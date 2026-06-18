@@ -5,7 +5,7 @@
   import { ensureSolar } from '$lib/solar';
   import { auth, notifications } from '$lib/stores';
   import { switchWorkspace } from '$lib/stores/auth.svelte';
-  import CreateWorkspaceDrawer from '$lib/components/create-workspace-drawer.svelte';
+  import CreateSpaceDrawer from '$lib/components/create-space-drawer.svelte';
   import { onMount } from 'svelte';
 
   let { onLogout }: { onLogout: () => void | Promise<void> } = $props();
@@ -43,7 +43,7 @@
   }
 
   const menuItems = [
-    { href: '/workspace', label: 'Workspace', icon: 'solar:buildings-linear' },
+    { href: '/workspace', label: 'Space', icon: 'solar:buildings-linear' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-linear' },
   ];
 </script>
@@ -60,7 +60,7 @@
         class="flex max-w-[40vw] items-center gap-1.5 rounded-lg border border-zinc-200/70 bg-zinc-50/60 px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-zinc-100"
       >
         <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-zinc-400" />
-        <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">{auth.workspace?.name ?? 'Workspace'}</span>
+        <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">{auth.workspace?.name ?? 'Space'}</span>
         <Icon icon="solar:alt-arrow-down-linear" class="size-3 shrink-0 text-zinc-400 transition-transform {wsMenuOpen ? 'rotate-180' : ''}" />
       </button>
 
@@ -83,7 +83,7 @@
             class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
           >
             <Icon icon="mdi:plus" class="size-4 shrink-0 text-zinc-300" />
-            <span>Create workspace</span>
+            <span>Create space</span>
           </button>
         </div>
       {/if}
@@ -150,4 +150,4 @@
   {/if}
 </header>
 
-<CreateWorkspaceDrawer bind:open={showCreateWs} />
+<CreateSpaceDrawer bind:open={showCreateWs} />
