@@ -166,10 +166,22 @@ function buildStream(
 
         let fullText = '';
 
-        for await (const chunk of result.textStream) {
-          fullText += chunk;
-          const encoded = new TextEncoder().encode(`data: ${JSON.stringify({ text: chunk })}\n\n`);
-          controller.enqueue(encoded);
+        try {
+          for await (const chunk of result.textStream) {
+            fullText += chunk;
+            const encoded = new TextEncoder().encode(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+            controller.enqueue(encoded);
+          }
+        } catch (streamErr) {
+          const streamMsg = streamErr instanceof Error ? streamErr.message : String(streamErr);
+          if (streamMsg.includes('credit balance')) {
+            throw new Error('Anthropic API credits exhausted — please top up at console.anthropic.com');
+          }
+          throw streamErr;
+        }
+
+        if (!fullText) {
+          throw new Error('The AI model returned an empty response. Check that your Anthropic API key is valid and has sufficient credits.');
         }
 
         const messageId = await persistAssistantMessage(sessionId, fullText, sources, workspaceId);

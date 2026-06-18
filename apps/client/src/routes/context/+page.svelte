@@ -76,7 +76,6 @@
       eventsState.events = eventsState.events.filter((e) => e.id !== id);
       eventsState.total = Math.max(0, eventsState.total - 1);
     } catch {
-      // silently keep the item in the list on failure
     } finally {
       deletingIds = new Set([...deletingIds].filter((x) => x !== id));
     }
