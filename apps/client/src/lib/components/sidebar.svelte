@@ -160,7 +160,7 @@
             >
               <Icon icon="solar:bell-linear" class="size-4" />
               {#if notifications.unreadCount > 0}
-                <span class="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                <span class="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-destructive-foreground">
                   {notifications.unreadCount > 99 ? '99+' : notifications.unreadCount}
                 </span>
               {/if}
