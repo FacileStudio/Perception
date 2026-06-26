@@ -26,6 +26,19 @@
   const label = $derived(auth.user?.name?.trim() || auth.user?.email || '');
 
   let showCreateWs = $state(false);
+  let spaceSwitcherOpen = $state(false);
+
+  function handleSpaceSwitcherClickOutside(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (!target.closest('.space-switcher')) spaceSwitcherOpen = false;
+  }
+
+  $effect(() => {
+    if (spaceSwitcherOpen) {
+      document.addEventListener('click', handleSpaceSwitcherClickOutside);
+      return () => document.removeEventListener('click', handleSpaceSwitcherClickOutside);
+    }
+  });
 
   onMount(() => {
     notifications.refresh();
@@ -66,36 +79,53 @@
   </div>
 
   {#if auth.workspaces.length > 0}
-    <div class="px-3 pb-4">
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger
-          class="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-        >
-          <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-muted-foreground" />
-          <span class="min-w-0 flex-1 truncate font-medium">
-            {auth.workspace?.name ?? 'Select space'}
-          </span>
-          <Icon icon="solar:alt-arrow-down-linear" class="size-3 shrink-0 text-muted-foreground" />
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="start" class="w-[var(--bits-dropdown-menu-anchor-width)]">
-          {#each auth.workspaces as ws}
-            {@const active = ws.id === auth.workspace?.id}
-            <DropdownMenu.Item onclick={() => handleSwitchWorkspace(ws.id)} class={active ? 'font-medium' : ''}>
-              <Icon
-                icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'}
-                class="size-4 {active ? 'text-emerald-500' : 'text-muted-foreground/50'}"
-              />
-              <span class="min-w-0 flex-1 truncate">{ws.name}</span>
-              <span class="text-xs text-muted-foreground">{ws.role}</span>
-            </DropdownMenu.Item>
-          {/each}
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item onclick={() => (showCreateWs = true)}>
-            <Icon icon="mdi:plus" class="size-4 text-muted-foreground/50" />
-            <span>Create space</span>
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+    <div class="space-switcher relative px-3 pb-2">
+      <button
+        class="flex w-full items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-left text-sm transition-colors hover:bg-muted/60"
+        onclick={() => (spaceSwitcherOpen = !spaceSwitcherOpen)}
+      >
+        <Icon
+          icon="solar:users-group-rounded-bold-duotone"
+          class="size-[18px] shrink-0 text-muted-foreground"
+        />
+        <span class="min-w-0 flex-1 truncate font-medium">
+          {auth.workspace?.name ?? 'Select space'}
+        </span>
+        <Icon
+          icon="solar:alt-arrow-down-linear"
+          class="size-3.5 shrink-0 text-muted-foreground transition-transform {spaceSwitcherOpen ? 'rotate-180' : ''}"
+        />
+      </button>
+
+      {#if spaceSwitcherOpen}
+        <div class="absolute left-3 right-3 z-50 mt-1 overflow-hidden rounded-lg border border-border bg-background">
+          <div class="max-h-64 overflow-auto p-1">
+            {#each auth.workspaces as ws}
+              {@const active = ws.id === auth.workspace?.id}
+              <button
+                class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition-colors {active
+                  ? 'bg-foreground text-background'
+                  : 'text-foreground hover:bg-muted'}"
+                onclick={() => { handleSwitchWorkspace(ws.id); spaceSwitcherOpen = false; }}
+              >
+                <Icon icon="solar:users-group-rounded-bold-duotone" class="size-4 shrink-0" />
+                <span class="min-w-0 flex-1 truncate">{ws.name}</span>
+                <span class="text-xs text-muted-foreground">{ws.role}</span>
+              </button>
+            {/each}
+          </div>
+
+          <div class="border-t border-border p-1">
+            <button
+              class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              onclick={() => { showCreateWs = true; spaceSwitcherOpen = false; }}
+            >
+              <Icon icon="solar:add-circle-linear" class="size-4 shrink-0" />
+              Create space
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 
