@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { getEffectiveSetting } from '../db/settings';
 import type { ActionProposal, ActionType } from './types';
 
@@ -37,14 +38,14 @@ const vikunjaAdapter: WriteAdapter = {
 
 const docusealAdapter: WriteAdapter = {
   async execute(proposal) {
-    console.log(`[proposals] docuseal annotation stub for ${proposal.target_entity_id}`);
+    log.info('docuseal annotation stub', { tag: 'proposals', entity: proposal.target_entity_id });
     return `Annotation noted for contract ${proposal.target_entity_name ?? proposal.target_entity_id ?? 'unknown'} (Docuseal API is read-only for annotations)`;
   },
 };
 
 const ardoiseAdapter: WriteAdapter = {
   async execute(proposal) {
-    console.log(`[proposals] ardoise tag stub for ${proposal.target_entity_id}`);
+    log.info('ardoise tag stub', { tag: 'proposals', entity: proposal.target_entity_id });
     return `Tagged ${proposal.target_entity_name ?? proposal.target_entity_id ?? 'unknown'} as at-risk in Ardoise (stub)`;
   },
 };

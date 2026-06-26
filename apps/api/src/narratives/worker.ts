@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { generateNarrative } from './generate';
 import { forEachWorkspace } from '../db/workspaces';
@@ -92,7 +93,7 @@ async function run(): Promise<void> {
     }
 
     if (generated > 0 || refreshed > 0) {
-      console.log(`[narratives] ${generated} created, ${refreshed} refreshed, ${skipped} unchanged (workspace ${workspaceId})`);
+      log.info('narrative generation complete', { tag: 'narratives', generated, refreshed, skipped, workspaceId });
     }
   });
 }

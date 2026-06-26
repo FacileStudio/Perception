@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { computePersistence } from './persistent-homology';
 import { forEachWorkspace } from '../db/workspaces';
@@ -48,9 +49,13 @@ async function run(): Promise<void> {
       ],
     });
 
-    console.log(
-      `[tda] h0=${result.h0ComponentCount} h1=${result.h1LoopCount} gaps=${result.gapEntityIds.length} (workspace ${workspaceId})`,
-    );
+    log.info('topology computed', {
+      tag: 'tda',
+      h0: result.h0ComponentCount,
+      h1: result.h1LoopCount,
+      gaps: result.gapEntityIds.length,
+      workspaceId,
+    });
   });
 }
 

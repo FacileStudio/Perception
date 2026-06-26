@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { getEffectiveSetting } from '../db/settings';
 import { runAllEvaluators, type AnomalyAlert } from './evaluators';
@@ -68,7 +69,7 @@ async function fireWebhook(alerts: AnomalyAlert[], workspaceId: string): Promise
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    console.error('[notifications] webhook delivery failed:', err instanceof Error ? err.message : err);
+    log.error('webhook delivery failed', { tag: 'notifications', error: err instanceof Error ? err.message : String(err) });
   }
 }
 
@@ -86,7 +87,7 @@ async function run(): Promise<void> {
 
     if (newAlerts.length > 0) {
       await fireWebhook(newAlerts, workspaceId);
-      console.log(`[notifications] generated ${newAlerts.length} new alert(s) for workspace ${workspaceId}`);
+      log.info('generated alerts', { tag: 'notifications', count: newAlerts.length, workspaceId });
     }
   });
 }

@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { randomUUID } from 'crypto';
 import { computeCalibration } from './calibration';
@@ -69,7 +70,7 @@ async function run(): Promise<void> {
       }
     }
 
-    console.log(`[calibration-worker] snapshot=${snapshot.id} brier=${snapshot.brier_score.toFixed(4)} forecasts=${snapshot.forecast_count} (workspace ${workspaceId})`);
+    log.info('calibration snapshot', { tag: 'calibration-worker', snapshotId: snapshot.id, brier: parseFloat(snapshot.brier_score.toFixed(4)), forecasts: snapshot.forecast_count, workspaceId });
   });
 }
 

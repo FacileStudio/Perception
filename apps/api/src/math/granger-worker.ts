@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { grangerTest, firstDifference } from './granger';
 import { forEachWorkspace } from '../db/workspaces';
@@ -125,7 +126,7 @@ async function run(): Promise<void> {
     }
 
     if (detected > 0) {
-      console.log(`[granger] detected ${detected} causal links (workspace ${workspaceId})`);
+      log.info('detected causal links', { tag: 'granger', detected, workspaceId });
     }
   });
 }

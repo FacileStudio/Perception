@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import {
   ensureStrategiesSeeded,
@@ -28,7 +29,7 @@ async function run(): Promise<void> {
       } catch (err) {
         errors++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[ensemble-worker] failed to generate for ${row.id}: ${msg}`);
+        log.warn('failed to generate', { tag: 'ensemble-worker', forecastId: row.id, error: msg });
       }
     }
 
@@ -64,14 +65,14 @@ async function run(): Promise<void> {
       } catch (err) {
         errors++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[ensemble-worker] failed to score ${row.id}: ${msg}`);
+        log.warn('failed to score', { tag: 'ensemble-worker', forecastId: row.id, error: msg });
       }
     }
 
     const retired = await retireUnderperformers(workspaceId);
 
     if (generated > 0 || scored > 0 || retired > 0 || errors > 0) {
-      console.log(`[ensemble-worker] generated=${generated} scored=${scored} retired=${retired} errors=${errors} (workspace ${workspaceId})`);
+      log.info('ensemble pass complete', { tag: 'ensemble-worker', generated, scored, retired, errors, workspaceId });
     }
   });
 }

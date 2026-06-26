@@ -44,6 +44,8 @@ const WORKSPACE_TABLES = new Set([
   'eval_results',
   'ingest_rejections',
   'token_usage',
+  'entity_match_candidates',
+  'entity_merge_log',
 ]);
 
 export interface ScopedDb {

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { computeGraphHealth } from './graph-entropy';
 import { forEachWorkspace } from '../db/workspaces';
@@ -40,11 +41,15 @@ async function run(): Promise<void> {
       ],
     });
 
-    console.log(
-      `[graph-health] nodes=${health.nodeCount} edges=${health.edgeCount} ` +
-      `entropy=${health.degreeEntropy.toFixed(2)} isolated=${(health.isolatedNodeRatio * 100).toFixed(1)}% ` +
-      `lcc=${(health.largestComponentRatio * 100).toFixed(1)}% (workspace ${workspaceId})`,
-    );
+    log.info('graph health computed', {
+      tag: 'graph-health',
+      nodes: health.nodeCount,
+      edges: health.edgeCount,
+      entropy: parseFloat(health.degreeEntropy.toFixed(2)),
+      isolated_pct: parseFloat((health.isolatedNodeRatio * 100).toFixed(1)),
+      lcc_pct: parseFloat((health.largestComponentRatio * 100).toFixed(1)),
+      workspaceId,
+    });
   });
 }
 

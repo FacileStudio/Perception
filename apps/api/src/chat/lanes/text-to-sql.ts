@@ -1,5 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+import { log } from '../../lib/logger';
 import { db } from '../../db/client';
 import { getEffectiveSetting } from '../../db/settings';
 import type { QueryPlan } from '../planner';
@@ -198,7 +199,7 @@ export async function textToSqlLane(plan: QueryPlan, workspaceId: string = ''): 
     const rawSql = sqlMatch[1].trim();
     const validation = validateSql(rawSql);
     if (!validation.valid) {
-      console.warn(`[text-to-sql] rejected: ${validation.reason}`);
+      log.warn('rejected', { tag: 'text-to-sql', reason: validation.reason });
       return null;
     }
 
@@ -240,7 +241,7 @@ export async function textToSqlLane(plan: QueryPlan, workspaceId: string = ''): 
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[text-to-sql] error: ${msg}`);
+    log.warn('error', { tag: 'text-to-sql', error: msg });
     return null;
   }
 }

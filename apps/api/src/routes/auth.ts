@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { log } from '../lib/logger';
 import { config } from '../config';
 import { db } from '../db/client';
 import { createSession, destroySession, upsertUser, getSession, getSessionWithUser } from '../security/session';
@@ -64,7 +65,7 @@ if (isOIDCEnabled()) {
     try {
       return await initiateOIDCLogin(c);
     } catch (err) {
-      console.error('[oidc] login initiation failed', err);
+      log.error('login initiation failed', { tag: 'oidc', error: err instanceof Error ? err.message : String(err) });
       return c.json({ error: 'oidc_unavailable' }, 503);
     }
   });
@@ -93,7 +94,7 @@ if (isOIDCEnabled()) {
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/chat`);
     } catch (err) {
-      console.error('[oidc] callback failed', err);
+      log.error('callback failed', { tag: 'oidc', error: err instanceof Error ? err.message : String(err) });
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/login?error=oidc_failed`);
     }

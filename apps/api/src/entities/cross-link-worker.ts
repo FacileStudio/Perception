@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { forEachWorkspace } from '../db/workspaces';
 import { tokenSimilarity } from './link';
@@ -160,7 +161,7 @@ async function run(): Promise<void> {
     const nameLinks = await linkByNameSimilarity(workspaceId);
     const total = idLinks + nameLinks;
     if (total > 0) {
-      console.log(`[cross-link] workspace=${workspaceId} created ${total} relations (${idLinks} by external ID, ${nameLinks} by name similarity)`);
+      log.info('created relations', { tag: 'cross-link', workspaceId, total, idLinks, nameLinks });
     }
   });
 }

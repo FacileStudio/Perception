@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
 import { bodyLimit } from 'hono/body-limit';
+import { log, structuredLogger } from './lib/logger';
 import { apiReference } from '@scalar/hono-api-reference';
 import { runMigrations } from './db/migrations';
 import { db } from './db/client';
@@ -27,7 +27,7 @@ let startupError: string | null = null;
 
 const app = new Hono();
 
-app.use('*', logger());
+app.use('*', structuredLogger());
 app.use('*', cors({
   origin: ['http://localhost:3000', 'http://localhost:5173', process.env.CLIENT_ORIGIN ?? ''].filter(Boolean),
   credentials: true,
@@ -113,7 +113,7 @@ if (config.oidcIssuer && config.oidcClientId) {
       const { initiateOIDCLogin } = await import('./security/oidc');
       return await initiateOIDCLogin(c);
     } catch (err) {
-      console.error('[oidc] login initiation failed', err);
+      log.error('login initiation failed', { tag: 'oidc', error: err instanceof Error ? err.message : String(err) });
       return c.json({ error: 'oidc_unavailable' }, 503);
     }
   });
@@ -145,7 +145,7 @@ if (config.oidcIssuer && config.oidcClientId) {
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/chat`);
     } catch (err) {
-      console.error('[oidc] callback failed', err);
+      log.error('callback failed', { tag: 'oidc', error: err instanceof Error ? err.message : String(err) });
       const successUrl = config.oidcSuccessUrl || 'http://localhost:3000';
       return c.redirect(`${successUrl}/login?error=oidc_failed`);
     }
@@ -248,7 +248,7 @@ app.on(['POST', 'GET'], '/auth/*', (c) => {
   try {
     return auth.handler(c.req.raw);
   } catch (e) {
-    console.error('[auth] handler error:', e);
+    log.error('handler error', { tag: 'auth', error: e instanceof Error ? e.message : String(e) });
     return c.json({ error: 'auth_unavailable', detail: e instanceof Error ? e.message : String(e) }, 503);
   }
 });
@@ -271,11 +271,11 @@ try {
   const { forecastRoutes } = await import('./routes/forecasts');
   app.route('/forecasts', forecastRoutes);
 } catch (e) {
-  console.error('[startup] forecast routes failed to load:', e);
+  log.error('forecast routes failed to load', { tag: 'startup', error: e instanceof Error ? e.message : String(e) });
 }
 
 app.onError((err, c) => {
-  console.error('[error]', err);
+  log.error('unhandled error', { tag: 'error', error: err instanceof Error ? err.message : String(err) });
   const origin = c.req.header('origin');
   const allowed = ['http://localhost:3000', 'http://localhost:5173', process.env.CLIENT_ORIGIN ?? ''].filter(Boolean);
   if (origin && allowed.includes(origin)) {
@@ -299,25 +299,25 @@ export default {
   fetch: app.fetch,
 };
 
-console.log(`[perception] HTTP server listening on :${config.port}`);
+log.info('HTTP server listening', { tag: 'perception', port: config.port });
 
 (async () => {
   try {
-    console.log('[startup] running migrations...');
+    log.info('running migrations', { tag: 'startup' });
     await runMigrations();
-    console.log('[startup] migrations complete');
+    log.info('migrations complete', { tag: 'startup' });
 
-    console.log('[startup] bootstrapping workspace...');
+    log.info('bootstrapping workspace', { tag: 'startup' });
     await bootstrapDefaultWorkspace();
-    console.log('[startup] workspace bootstrap complete');
+    log.info('workspace bootstrap complete', { tag: 'startup' });
 
     ready = true;
-    console.log(`[perception] API fully ready on :${config.port}`);
+    log.info('API fully ready', { tag: 'perception', port: config.port });
 
     await startWorkers();
   } catch (e) {
     startupError = e instanceof Error ? e.message : String(e);
-    console.error('[startup] FATAL:', e);
+    log.error('FATAL', { tag: 'startup', error: e instanceof Error ? e.message : String(e) });
     ready = true;
   }
 })();
@@ -326,7 +326,7 @@ async function bootstrapDefaultWorkspace() {
   try {
     await db.execute("SELECT 1 FROM organization LIMIT 0");
   } catch {
-    console.log('[workspace] organization table not ready yet, skipping bootstrap');
+    log.info('organization table not ready yet, skipping bootstrap', { tag: 'workspace' });
     return;
   }
 
@@ -363,7 +363,7 @@ async function bootstrapDefaultWorkspace() {
           args: [orgId],
         });
       } catch (e) {
-        console.warn(`[workspace] skipped backfill for ${table}:`, e instanceof Error ? e.message : e);
+        log.warn(`skipped backfill for ${table}`, { tag: 'workspace', error: e instanceof Error ? e.message : String(e) });
       }
     }
 
@@ -397,12 +397,12 @@ async function bootstrapDefaultWorkspace() {
         }
       }
     } catch (e) {
-      console.warn('[workspace] user migration skipped:', e instanceof Error ? e.message : e);
+      log.warn('user migration skipped', { tag: 'workspace', error: e instanceof Error ? e.message : String(e) });
     }
 
-    console.log(`[workspace] bootstrapped default workspace: ${orgId}`);
+    log.info('bootstrapped default workspace', { tag: 'workspace', orgId });
   } catch (e) {
-    console.error('[workspace] bootstrap failed:', e);
+    log.error('bootstrap failed', { tag: 'workspace', error: e instanceof Error ? e.message : String(e) });
   }
 }
 
@@ -478,5 +478,5 @@ async function startWorkers() {
   scheduleWorker('conformal', 1020_000);
   scheduleWorker('ensemble', 1080_000);
 
-  console.log('[startup] all workers registered and scheduled');
+  log.info('all workers registered and scheduled', { tag: 'startup' });
 }

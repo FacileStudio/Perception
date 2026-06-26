@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { computeInterval, updateNonconformityScore, checkForChangePointReset } from './conformal';
 import type { QuestionType } from './types';
@@ -58,7 +59,7 @@ async function run(): Promise<void> {
       } catch (err) {
         errors++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[conformal-worker] failed to compute interval: ${msg}`);
+        log.warn('failed to compute interval', { tag: 'conformal-worker', error: msg });
       }
     }
 
@@ -82,12 +83,12 @@ async function run(): Promise<void> {
       } catch (err) {
         errors++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[conformal-worker] failed to update score: ${msg}`);
+        log.warn('failed to update score', { tag: 'conformal-worker', error: msg });
       }
     }
 
     if (computed > 0 || scored > 0 || errors > 0) {
-      console.log(`[conformal-worker] intervals_computed=${computed} skipped=${skipped} scores_updated=${scored} errors=${errors} (workspace ${workspaceId})`);
+      log.info('conformal pass complete', { tag: 'conformal-worker', computed, skipped, scored, errors, workspaceId });
     }
   });
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import type { Forecast, QuestionType } from './types';
 
@@ -101,7 +102,7 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
       sql: `UPDATE forecasts SET status = 'expired' WHERE id = ?`,
       args: [forecast.id],
     });
-    console.warn(`[resolution-oracle] expired forecast ${forecast.id} — malformed resolution_source`);
+    log.warn('expired forecast — malformed resolution_source', { tag: 'resolution-oracle', forecastId: forecast.id });
     return 'expired';
   }
 
@@ -111,7 +112,7 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
       sql: `UPDATE forecasts SET status = 'expired' WHERE id = ?`,
       args: [forecast.id],
     });
-    console.warn(`[resolution-oracle] expired forecast ${forecast.id} — unknown question_type: ${forecast.question_type}`);
+    log.warn('expired forecast — unknown question_type', { tag: 'resolution-oracle', forecastId: forecast.id, questionType: forecast.question_type });
     return 'expired';
   }
 
@@ -124,7 +125,7 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
       args: [forecast.id],
     });
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[resolution-oracle] expired forecast ${forecast.id} — query error: ${msg}`);
+    log.warn('expired forecast — query error', { tag: 'resolution-oracle', forecastId: forecast.id, error: msg });
     return 'error';
   }
 
@@ -133,7 +134,7 @@ async function resolveOne(forecast: Forecast): Promise<'resolved' | 'expired' | 
       sql: `UPDATE forecasts SET status = 'expired' WHERE id = ?`,
       args: [forecast.id],
     });
-    console.warn(`[resolution-oracle] expired forecast ${forecast.id} — ambiguous/null result`);
+    log.warn('expired forecast — ambiguous/null result', { tag: 'resolution-oracle', forecastId: forecast.id });
     return 'expired';
   }
 

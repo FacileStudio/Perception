@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import type { QuestionType } from './types';
 import type { ForecastInterval, ConformalState } from './conformal-types';
@@ -220,6 +221,6 @@ export async function checkForChangePointReset(entityId: string, workspaceId: st
 
   if (recent.rows.length > 0) {
     await saveAlphaT(1 - DEFAULT_COVERAGE_TARGET);
-    console.log(`[conformal] alpha_t reset due to change point for entity ${entityId}`);
+    log.info('alpha_t reset due to change point', { tag: 'conformal', entityId });
   }
 }

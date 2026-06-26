@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { initBocpd, updateBocpd, type BocpdState } from './bocpd';
 import { forEachWorkspace } from '../db/workspaces';
@@ -96,7 +97,7 @@ async function run(): Promise<void> {
     }
 
     if (detected > 0) {
-      console.log(`[change-points] detected ${detected} regime changes (workspace ${workspaceId})`);
+      log.info('detected regime changes', { tag: 'change-points', detected, workspaceId });
     }
   });
 }

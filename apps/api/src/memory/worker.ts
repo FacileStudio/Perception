@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { extractMemoryEpisodes } from './generate';
 import { embedDocuments } from '../embeddings/voyage';
@@ -77,7 +78,7 @@ async function run(): Promise<void> {
     }
 
     if (created > 0) {
-      console.log(`[memory] ${created} episodes extracted, ${embedded} embedded (workspace ${workspaceId})`);
+      log.info('memory extraction complete', { tag: 'memory', created, embedded, workspaceId });
     }
   });
 }

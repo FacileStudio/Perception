@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { mapPayload } from './mapper';
 import type { NookEventEnvelope, ProviderSchema } from '../types';
@@ -62,7 +63,7 @@ async function run(): Promise<void> {
       });
     }
 
-    console.log(`[uplift-worker] processed ${result.rows.length} events for workspace ${workspaceId}`);
+    log.info('processed events', { tag: 'uplift-worker', count: result.rows.length, workspaceId });
   });
 }
 

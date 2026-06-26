@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { detectCategoricalDrift } from './adwin';
 import { forEachWorkspace } from '../db/workspaces';
@@ -72,7 +73,7 @@ async function run(): Promise<void> {
     }
 
     if (alertCount > 0) {
-      console.log(`[concept-drift] ${alertCount} drift alert(s), schemas invalidated (workspace ${workspaceId})`);
+      log.info('drift alerts generated', { tag: 'concept-drift', alertCount, workspaceId });
     }
   });
 }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { getEffectiveSetting } from '../db/settings';
 
@@ -89,12 +90,12 @@ export function scheduleWorker(name: string, delayMs?: number): void {
 
   setInterval(async () => {
     if (await areWorkersPaused()) return;
-    executeWorker(name).catch(console.error);
+    executeWorker(name).catch((err) => log.error('worker execution failed', { tag: 'workers', worker: name, error: err instanceof Error ? err.message : String(err) }));
   }, def.intervalMs);
   if (delayMs !== undefined) {
     setTimeout(async () => {
       if (await areWorkersPaused()) return;
-      executeWorker(name).catch(console.error);
+      executeWorker(name).catch((err) => log.error('worker execution failed', { tag: 'workers', worker: name, error: err instanceof Error ? err.message : String(err) }));
     }, delayMs);
   }
 }

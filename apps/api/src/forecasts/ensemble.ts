@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import type { ForecastStrategy, StrategyScore, StrategyType } from './ensemble-types';
 
@@ -194,7 +195,7 @@ export async function generateStrategyForecasts(forecastId: string, workspaceId:
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[ensemble] strategy ${strategy.name} failed for forecast ${forecastId}: ${msg}`);
+      log.warn('strategy failed', { tag: 'ensemble', strategy: strategy.name, forecastId, error: msg });
     }
   }
 }

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { log } from '../lib/logger';
 import { requireWorkspace } from '../security/workspace';
 import { buildQueryPlan } from '../chat/planner';
 import { retrieveWithCorrection } from '../chat/retrieve';
@@ -168,7 +169,7 @@ chatRoutes.post('/', async (c) => {
       compositeWeights = (weights[plan.intent] ?? {}) as Record<string, number>;
       compositeResult = await decomposeAndRetrieve(plan.subqueries, ws.workspaceId);
     } catch (err) {
-      console.warn('[chat] composite decomposition failed, falling back to simple retrieval', err);
+      log.warn('composite decomposition failed, falling back to simple retrieval', { tag: 'chat', error: err instanceof Error ? err.message : String(err) });
     }
   }
 

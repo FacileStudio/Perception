@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from './client';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -758,6 +759,38 @@ ALTER TABLE users ADD COLUMN oidc_refresh_token TEXT;
 ALTER TABLE users ADD COLUMN profile_synced_at TEXT
       `,
     },
+    {
+      name: '034_entity_match_and_merge',
+      sql: `
+CREATE TABLE IF NOT EXISTS entity_match_candidates (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  source_entity_id TEXT NOT NULL,
+  target_entity_id TEXT NOT NULL,
+  similarity_score REAL NOT NULL,
+  match_method TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  resolved_by TEXT,
+  resolved_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  workspace_id TEXT NOT NULL DEFAULT 'default',
+  UNIQUE(source_entity_id, target_entity_id)
+);
+
+CREATE TABLE IF NOT EXISTS entity_merge_log (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  source_entity_id TEXT NOT NULL,
+  target_entity_id TEXT NOT NULL,
+  source_name TEXT NOT NULL,
+  target_name TEXT NOT NULL,
+  merged_by TEXT,
+  merged_at TEXT NOT NULL DEFAULT (datetime('now')),
+  workspace_id TEXT NOT NULL DEFAULT 'default'
+);
+
+CREATE INDEX IF NOT EXISTS entity_match_candidates_ws_idx ON entity_match_candidates(workspace_id, status);
+CREATE INDEX IF NOT EXISTS entity_merge_log_ws_idx ON entity_merge_log(workspace_id, merged_at DESC)
+      `,
+    },
   ];
 
   for (const migration of migrations) {
@@ -772,7 +805,7 @@ ALTER TABLE users ADD COLUMN profile_synced_at TEXT
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         if (msg.includes('libsql_vector_idx') || msg.includes('F32_BLOB') || msg.includes('near "WHERE"') || msg.includes('duplicate column name')) {
-          console.warn(`[migrations] skipped unsupported statement: ${stmt.slice(0, 80)}`);
+          log.warn('skipped unsupported statement', { tag: 'migrations', stmt: stmt.slice(0, 80) });
           continue;
         }
         throw e;
@@ -782,6 +815,6 @@ ALTER TABLE users ADD COLUMN profile_synced_at TEXT
       sql: 'INSERT INTO _migrations (name, applied_at) VALUES (?, ?)',
       args: [migration.name, new Date().toISOString()],
     });
-    console.log(`[migrations] applied: ${migration.name}`);
+    log.info('applied', { tag: 'migrations', name: migration.name });
   }
 }

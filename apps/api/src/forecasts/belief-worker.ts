@@ -1,3 +1,4 @@
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { updateBelief, hasNewEvidence, getLatestBelief } from './belief-updater';
 import { forEachWorkspace } from '../db/workspaces';
@@ -44,12 +45,12 @@ async function run(): Promise<void> {
       } catch (err) {
         errors++;
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[belief-worker] failed to update forecast ${forecastId}: ${msg}`);
+        log.warn('failed to update forecast', { tag: 'belief-worker', forecastId, error: msg });
       }
     }
 
     if (updated > 0 || errors > 0) {
-      console.log(`[belief-worker] updated=${updated} skipped=${skipped} errors=${errors} (workspace ${workspaceId})`);
+      log.info('belief update complete', { tag: 'belief-worker', updated, skipped, errors, workspaceId });
     }
   });
 }

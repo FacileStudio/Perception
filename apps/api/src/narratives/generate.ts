@@ -1,5 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { getEffectiveSetting } from '../db/settings';
 
@@ -151,7 +152,7 @@ async function callLLMWithRetry(
 
       if (isRateLimit && attempt < MAX_RETRIES) {
         const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
-        console.warn(`[narratives] rate-limited, retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        log.warn('rate-limited, retrying', { tag: 'narratives', delay_ms: delay, attempt: attempt + 1, maxRetries: MAX_RETRIES });
         await new Promise((r) => setTimeout(r, delay));
         continue;
       }

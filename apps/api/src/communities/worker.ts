@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { detectCommunities } from './detect';
 import { generateCommunitySummary } from './summarize';
@@ -80,7 +81,7 @@ async function run(): Promise<void> {
     }
 
     if (created > 0 || refreshed > 0) {
-      console.log(`[communities] ${created} created, ${refreshed} refreshed, ${skipped} unchanged (workspace ${workspaceId})`);
+      log.info('community detection complete', { tag: 'communities', created, refreshed, skipped, workspaceId });
     }
   });
 }

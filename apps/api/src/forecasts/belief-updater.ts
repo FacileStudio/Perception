@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { getEffectiveSetting } from '../db/settings';
 import type { BeliefState, BeliefConfidence } from './belief-types';
@@ -244,7 +245,7 @@ export async function updateBelief(forecastId: string, wideSearch: boolean = fal
 
   const apiKey = await getEffectiveSetting('anthropic_api_key', workspaceId);
   if (!apiKey) {
-    console.warn('[belief-updater] no anthropic_api_key configured, skipping update');
+    log.warn('no anthropic_api_key configured, skipping update', { tag: 'belief-updater' });
     return current;
   }
 
@@ -274,7 +275,7 @@ export async function updateBelief(forecastId: string, wideSearch: boolean = fal
 
   let probability = Number(parsed.probability);
   if (isNaN(probability) || probability < 0 || probability > 1) {
-    console.warn(`[belief-updater] invalid probability ${parsed.probability}, skipping`);
+    log.warn('invalid probability, skipping', { tag: 'belief-updater', probability: parsed.probability });
     return current;
   }
 

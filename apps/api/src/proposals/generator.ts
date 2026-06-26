@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import type { ActionType } from './types';
 
@@ -149,7 +150,7 @@ export async function generateProposals(workspaceId: string = ''): Promise<RawPr
   for (let i = 0; i < results.length; i++) {
     if (results[i].status === 'rejected') {
       const label = ['silent_clients', 'at_risk_clients', 'unsigned_contracts'][i];
-      console.error(`[proposals] detection failed for ${label}:`, (results[i] as PromiseRejectedResult).reason);
+      log.error(`detection failed for ${label}`, { tag: 'proposals', error: String((results[i] as PromiseRejectedResult).reason) });
     }
   }
 

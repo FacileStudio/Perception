@@ -1,3 +1,4 @@
+import { log } from './lib/logger';
 import { config } from './config';
 import { Database } from 'bun:sqlite';
 import { betterAuth } from 'better-auth';
@@ -69,11 +70,11 @@ function getAuth(): ReturnType<typeof betterAuth> {
       ],
     });
 
-    console.log('[auth] Better Auth initialized');
+    log.info('Better Auth initialized', { tag: 'auth' });
     return _auth;
   } catch (e) {
     _authError = e instanceof Error ? e.message : String(e);
-    console.error('[auth] Better Auth failed to initialize:', _authError);
+    log.error('Better Auth failed to initialize', { tag: 'auth', error: _authError });
     throw e;
   }
 }

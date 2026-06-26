@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { log } from '../lib/logger';
 import { randomUUID } from 'crypto';
 import { basename } from 'node:path';
 import { requireWorkspace } from '../security/workspace';
@@ -32,7 +33,7 @@ resourcesRoutes.post('/', async (c) => {
     try {
       body = await c.req.parseBody({ all: true });
     } catch (err) {
-      console.error('[resources] multipart parse failed:', err);
+      log.error('multipart parse failed', { tag: 'resources', error: err instanceof Error ? err.message : String(err) });
       return c.json({ error: 'invalid_multipart_body' }, 400);
     }
     const raw = body['files'];
@@ -58,7 +59,7 @@ resourcesRoutes.post('/', async (c) => {
         args: [id, ws.workspaceId, file.name, '', mime, buffer.length, filePath, now, now],
       });
 
-      processResource(id, buffer, mime).catch(console.error);
+      processResource(id, buffer, mime).catch((err) => log.error('resource processing failed', { tag: 'resources', resourceId: id, error: err instanceof Error ? err.message : String(err) }));
       ids.push(id);
     }
 
@@ -85,7 +86,7 @@ resourcesRoutes.post('/', async (c) => {
       args: [id, ws.workspaceId, file.name, '', mime, buffer.length, filePath, now, now],
     });
 
-    processResource(id, buffer, mime).catch(console.error);
+    processResource(id, buffer, mime).catch((err) => log.error('resource processing failed', { tag: 'resources', resourceId: id, error: err instanceof Error ? err.message : String(err) }));
     ids.push(id);
   }
 
@@ -200,7 +201,7 @@ resourcesRoutes.delete('/:id', async (c) => {
   await db.execute({ sql: `DELETE FROM resources WHERE id = ? AND workspace_id = ?`, args: [id, ws.workspaceId] });
 
   if (filePath) {
-    await removeUpload(filePath).catch(console.error);
+    await removeUpload(filePath).catch((err) => log.error('upload removal failed', { tag: 'resources', error: err instanceof Error ? err.message : String(err) }));
   }
 
   return c.json({ ok: true });

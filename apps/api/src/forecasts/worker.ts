@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { log } from '../lib/logger';
 import { db } from '../db/client';
 import { generateCandidateQuestions } from './generator';
 import { filterByQuality } from './quality-gate';
@@ -20,7 +21,7 @@ async function run(): Promise<void> {
   await forEachWorkspace(async (workspaceId) => {
     const expired = await expireStale(workspaceId);
     if (expired > 0) {
-      console.log(`[forecasts] expired ${expired} stale forecast(s) (workspace ${workspaceId})`);
+      log.info('expired stale forecasts', { tag: 'forecasts', expired, workspaceId });
     }
 
     const candidates = await generateCandidateQuestions(workspaceId);
@@ -56,7 +57,7 @@ async function run(): Promise<void> {
     }
 
     if (inserted > 0) {
-      console.log(`[forecasts] generated ${inserted} new forecast(s) from ${candidates.length} candidate(s) (workspace ${workspaceId})`);
+      log.info('generated forecasts', { tag: 'forecasts', inserted, candidates: candidates.length, workspaceId });
     }
   });
 }
