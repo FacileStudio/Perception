@@ -9,6 +9,8 @@
   import Sidebar from '$lib/components/sidebar.svelte';
   import MobileNav from '$lib/components/mobile-nav.svelte';
   import MobileTopbar from '$lib/components/mobile-topbar.svelte';
+  import { TooltipProvider } from '$lib/components/ui/tooltip';
+  import Icon from '@iconify/svelte';
   import { ensureSolar } from '$lib/solar';
 
   let { children }: { children?: any } = $props();
@@ -48,19 +50,21 @@
   {@render children?.()}
 {:else if auth.checking}
   <div class="flex h-screen items-center justify-center">
-    <span class="text-sm text-muted-foreground">loading...</span>
+    <Icon icon="solar:spinner-line-duotone" class="size-6 text-muted-foreground animate-spin" />
   </div>
 {:else if !auth.authenticated}
   <div class="flex h-screen items-center justify-center">
-    <span class="text-sm text-muted-foreground">redirecting...</span>
+    <Icon icon="solar:spinner-line-duotone" class="size-6 text-muted-foreground animate-spin" />
   </div>
 {:else}
-  <div class="flex min-h-screen w-full flex-col bg-muted/70 md:h-screen md:flex-row md:overflow-hidden">
-    <Sidebar onLogout={handleLogout} />
-    <MobileTopbar onLogout={handleLogout} />
-    <main class="flex min-h-0 flex-1 flex-col pb-24 md:h-screen md:overflow-hidden md:pb-0">
-      {@render children?.()}
-    </main>
-  </div>
-  <MobileNav />
+  <TooltipProvider>
+    <div class="flex min-h-screen w-full flex-col bg-muted/70 md:h-screen md:flex-row md:overflow-hidden">
+      <Sidebar onLogout={handleLogout} />
+      <MobileTopbar onLogout={handleLogout} />
+      <main class="flex min-h-0 flex-1 flex-col pb-24 md:h-screen md:overflow-hidden md:pb-0">
+        {@render children?.()}
+      </main>
+    </div>
+    <MobileNav />
+  </TooltipProvider>
 {/if}
