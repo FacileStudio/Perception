@@ -22,13 +22,13 @@
       api.auth.syncProfile().catch(() => {});
       return;
     }
-    if ($page.url.pathname !== '/login') {
+    if ($page.url.pathname !== '/login' && !$page.url.pathname.startsWith('/docs')) {
       goto('/login');
     }
   });
 
   $effect(() => {
-    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/') {
+    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/' && !$page.url.pathname.startsWith('/docs')) {
       goto('/login');
     }
   });
@@ -44,16 +44,16 @@
   }
 </script>
 
-{#if auth.checking}
+{#if $page.url.pathname === '/login' || $page.url.pathname === '/' || $page.url.pathname.startsWith('/docs')}
+  {@render children?.()}
+{:else if auth.checking}
   <div class="flex h-screen items-center justify-center">
     <span class="text-sm text-muted-foreground">loading...</span>
   </div>
-{:else if !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/'}
+{:else if !auth.authenticated}
   <div class="flex h-screen items-center justify-center">
     <span class="text-sm text-muted-foreground">redirecting...</span>
   </div>
-{:else if $page.url.pathname === '/login' || $page.url.pathname === '/'}
-  {@render children?.()}
 {:else}
   <div class="flex min-h-screen w-full flex-col bg-muted/70 md:h-screen md:flex-row md:overflow-hidden">
     <Sidebar onLogout={handleLogout} />
