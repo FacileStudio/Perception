@@ -133,7 +133,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
     {#if eventsState.loading}
       <div class="flex items-center justify-center py-12">
-        <span class="text-sm text-muted-foreground">Loading...</span>
+        <Icon icon="solar:spinner-line-duotone" class="size-5 text-muted-foreground animate-spin" />
       </div>
     {:else if eventsState.events.length === 0}
       <div class="flex items-center justify-center py-12">
@@ -142,7 +142,7 @@
     {:else}
       <div class="flex flex-col gap-3">
         {#each eventsState.events as event}
-          <Card class="cursor-pointer rounded-[24px] border-border p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow hover:shadow-[0_24px_56px_-36px_rgba(24,24,27,0.5)]">
+          <Card class="cursor-pointer rounded-2xl border-border p-4 transition-colors hover:border-foreground/10">
             <div
               class="flex items-start justify-between gap-3"
               role="button"
@@ -152,7 +152,7 @@
             >
               <div class="flex flex-1 flex-col gap-1.5">
                 <div class="flex items-center gap-2">
-                  <Badge variant="secondary" class="font-mono">{event.provider_name}</Badge>
+                  <Badge variant="secondary" class="font-mono bg-primary/10 text-primary">{event.provider_name}</Badge>
                   <span class="text-xs text-muted-foreground">{event.event_type}</span>
                   <span class="text-xs text-muted-foreground">{formatDate(event.occurred_at)}</span>
                 </div>
@@ -171,7 +171,7 @@
                     <span class="text-xs text-muted-foreground">by {event.actor_name}</span>
                   {/if}
                   {#each (event.concepts ?? []).slice(0, 4) as concept}
-                    <span class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">{concept}</span>
+                    <span class="inline-flex items-center rounded-full bg-primary/5 px-2 py-0.5 font-mono text-[10px] text-foreground/70 border border-border/50">{concept}</span>
                   {/each}
                 </div>
               </div>

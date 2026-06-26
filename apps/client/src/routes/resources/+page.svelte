@@ -284,7 +284,7 @@
           {@const statusStyle = STATUS_STYLE[resource.status] ?? STATUS_STYLE.ready}
           {@const mimeIcon = MIME_ICONS[resource.mime_type] ?? 'solar:document-linear'}
           <Card
-            class="group relative cursor-pointer rounded-[20px] border border-border/60 p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] transition-all hover:shadow-[0_12px_32px_-12px_rgba(24,24,27,0.2)]"
+            class="group relative cursor-pointer rounded-[20px] border border-border/60 p-4 transition-all"
           >
             <button class="flex w-full items-start gap-3.5 text-left" onclick={() => openDetail(resource.id)}>
               <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted">

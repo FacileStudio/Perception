@@ -175,7 +175,7 @@
         {#each items as proposal (proposal.id)}
           {@const style = STATUS_STYLE[proposal.status] ?? STATUS_STYLE.proposed}
           <Card
-            class="group relative rounded-[20px] border {style.borderClass} {proposal.status === 'dismissed' ? 'opacity-60' : style.bgClass} p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] transition-opacity hover:opacity-100"
+            class="group relative rounded-[20px] border {style.borderClass} {proposal.status === 'dismissed' ? 'opacity-60' : style.bgClass} p-4 transition-opacity hover:opacity-100"
           >
             <div class="flex items-start gap-3.5">
               <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl {style.iconClass}">

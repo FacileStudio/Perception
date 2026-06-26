@@ -174,7 +174,7 @@
 
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if showForm}
-      <Card class="mb-5 rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+      <Card class="mb-5 rounded-[20px] border border-border p-5">
         <h3 class="mb-4 text-sm font-semibold text-foreground">New Forecast</h3>
         <div class="flex flex-col gap-3">
           <div>
@@ -270,7 +270,7 @@
           {@const style = STATUS_STYLE[forecast.status] ?? STATUS_STYLE.open}
           <a href="/forecasts/{forecast.id}" class="block">
             <Card
-              class="group relative rounded-[20px] border {style.borderClass} {style.bgClass} p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)] hover:shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow"
+              class="group relative rounded-[20px] border {style.borderClass} {style.bgClass} p-4"
             >
               <div class="flex items-start gap-3.5">
                 <span class="inline-flex size-9 shrink-0 items-center justify-center rounded-xl {style.iconClass}">

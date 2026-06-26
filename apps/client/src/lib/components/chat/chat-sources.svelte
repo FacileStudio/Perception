@@ -20,7 +20,7 @@
   }
 </script>
 
-<div class="fixed inset-x-4 bottom-24 top-24 z-20 flex flex-col rounded-[28px] border border-border bg-background/95 shadow-[0_32px_80px_-48px_rgba(24,24,27,0.55)] xl:static xl:inset-auto xl:bottom-auto xl:top-auto xl:w-80 xl:rounded-none xl:border-0 xl:border-l xl:shadow-none">
+<div class="fixed inset-x-4 bottom-24 top-24 z-20 flex flex-col rounded-[28px] border border-border bg-background/95 xl:static xl:inset-auto xl:bottom-auto xl:top-auto xl:w-80 xl:rounded-none xl:border-0 xl:border-l">
   <div class="flex items-center justify-between px-4 py-3">
     <span class="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
       <Icon icon="solar:document-text-linear" class="size-4" />

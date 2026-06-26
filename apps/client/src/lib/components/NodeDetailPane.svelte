@@ -80,7 +80,7 @@
   ></div>
 
   <div
-    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-background shadow-2xl"
+    class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-border bg-background"
     in:fly={{ x: 420, duration: 280, easing: cubicOut }}
     out:fly={{ x: 420, duration: 200, easing: cubicOut }}
   >

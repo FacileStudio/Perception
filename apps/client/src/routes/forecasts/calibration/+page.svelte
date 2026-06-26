@@ -114,27 +114,27 @@
       <div class="flex flex-col gap-6">
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Brier Score</span>
             <span class="mt-1 block text-2xl font-semibold {brierColor(snapshot.brier_score)}">{fmt(snapshot.brier_score)}</span>
             <span class="mt-0.5 block text-[10px] text-muted-foreground">Lower is better</span>
           </Card>
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Log Score</span>
             <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.log_score)}</span>
           </Card>
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Sharpness</span>
             <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.sharpness_score)}</span>
           </Card>
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Forecast Count</span>
             <span class="mt-1 block text-2xl font-semibold text-foreground">{snapshot.forecast_count}</span>
             <span class="mt-0.5 block text-[10px] text-muted-foreground">{formatDate(snapshot.computed_at)}</span>
           </Card>
         </div>
 
-        <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+        <Card class="rounded-[20px] border border-border p-5">
           <h3 class="mb-4 text-sm font-semibold text-foreground">Reliability Diagram</h3>
           {@const mids = binMidpoints(snapshot.bin_edges)}
           {@const activeBins = mids.map((m, i) => ({ mid: m, actual: snapshot!.bin_actuals[i], count: snapshot!.bin_counts[i] })).filter(b => b.count > 0)}
@@ -194,17 +194,17 @@
         </Card>
 
         <div class="grid grid-cols-3 gap-3">
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Reliability</span>
             <span class="mt-1 block text-2xl font-semibold {snapshot.reliability_score < 0.05 ? 'text-emerald-600' : snapshot.reliability_score < 0.1 ? 'text-amber-600' : 'text-red-600'}">{fmt(snapshot.reliability_score)}</span>
             <span class="mt-0.5 block text-[10px] text-muted-foreground">Lower = better calibrated</span>
           </Card>
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Resolution</span>
             <span class="mt-1 block text-2xl font-semibold {snapshot.resolution_score > 0.1 ? 'text-emerald-600' : 'text-amber-600'}">{fmt(snapshot.resolution_score)}</span>
             <span class="mt-0.5 block text-[10px] text-muted-foreground">Higher = better discrimination</span>
           </Card>
-          <Card class="rounded-[20px] border border-border p-4 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-4">
             <span class="text-xs font-medium text-muted-foreground">Uncertainty</span>
             <span class="mt-1 block text-2xl font-semibold text-foreground">{fmt(snapshot.uncertainty_score)}</span>
             <span class="mt-0.5 block text-[10px] text-muted-foreground">Inherent outcome entropy</span>
@@ -212,7 +212,7 @@
         </div>
 
         {#if strategies.length > 0}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <h3 class="mb-4 text-sm font-semibold text-foreground">Strategy Leaderboard</h3>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm">
@@ -265,7 +265,7 @@
         {/if}
 
         {#if conformal}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <h3 class="mb-4 text-sm font-semibold text-foreground">Conformal State</h3>
             <div class="flex flex-col gap-4">
               <div class="flex items-center gap-6">
@@ -309,7 +309,7 @@
         {#if Object.keys(snapshot.domain_scores).length > 0}
           {@const domainEntries = Object.entries(snapshot.domain_scores)}
           {@const maxDomainBrier = Math.max(...domainEntries.map(([, d]) => d.brier))}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <h3 class="mb-4 text-sm font-semibold text-foreground">Per-Domain Scores</h3>
             <div class="flex flex-col gap-2.5">
               {#each domainEntries.sort((a, b) => a[1].brier - b[1].brier) as [domain, scores]}

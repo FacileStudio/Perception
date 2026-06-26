@@ -117,7 +117,7 @@
 <div class="flex h-full flex-col">
   <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-4 backdrop-blur sm:px-6">
     <div class="flex items-center gap-3">
-      <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+      <span class="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
         <Icon icon="solar:chart-square-linear" class="size-4" />
         Stats
       </span>
@@ -141,7 +141,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-16">
-        <span class="text-sm text-muted-foreground">Loading stats…</span>
+        <Icon icon="solar:spinner-line-duotone" class="size-5 text-muted-foreground animate-spin" />
       </div>
     {:else if error}
       <div class="flex flex-col items-center justify-center gap-2 py-16">
@@ -163,63 +163,63 @@
           {/if}
 
           {#if volumeSnap}
-            <Card class="rounded-[24px] border-border px-5 pb-4 pt-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-2xl border-border px-5 pb-4 pt-5">
               <EventVolumeChart snap={volumeSnap} />
             </Card>
           {/if}
 
           <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {#if velocitySnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <EntityVelocityPanel snap={velocitySnap} />
               </Card>
             {/if}
 
             {#if statusSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <StatusHealthPanel snap={statusSnap} />
               </Card>
             {/if}
 
             {#if topEntitiesSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <TopEntitiesPanel snap={topEntitiesSnap} />
               </Card>
             {/if}
 
             {#if actorSnap}
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <ActorActivityPanel snap={actorSnap} />
               </Card>
             {/if}
 
             {#if intelligence}
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <KnowledgeCoveragePanel data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <ChangePointsTimeline data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <KnowledgeGapsPanel data={intelligence} />
               </Card>
 
-              <Card class="flex h-full flex-col rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+              <Card class="flex h-full flex-col rounded-2xl border-border p-5">
                 <DriftAlertsPanel data={intelligence} />
               </Card>
             {/if}
           </div>
 
           {#if intelligence && intelligence.providers.length > 0}
-            <Card class="rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-2xl border-border p-5">
               <ProviderHealthPanel data={intelligence} />
             </Card>
           {/if}
         {/if}
 
-        <Card class="rounded-[24px] border-border p-5 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+        <Card class="rounded-2xl border-border p-5">
           <div class="mb-4 flex items-center gap-2">
             <Icon icon="solar:chart-2-linear" class="size-4 text-muted-foreground" />
             <span class="text-sm font-semibold text-foreground">Token Usage</span>

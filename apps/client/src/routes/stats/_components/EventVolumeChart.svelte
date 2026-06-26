@@ -37,7 +37,7 @@
         style="height:{barHeight(day.count)}px"
       ></div>
 
-      <div class="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-10 hidden group-hover:flex flex-col items-center gap-0.5 whitespace-nowrap rounded-xl border border-border bg-white px-2.5 py-1.5 shadow-md">
+      <div class="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-10 hidden group-hover:flex flex-col items-center gap-0.5 whitespace-nowrap rounded-xl border border-border bg-white px-2.5 py-1.5">
         <span class="text-[11px] font-medium text-foreground">{day.count} {day.count === 1 ? 'event' : 'events'}</span>
         <span class="text-[10px] text-muted-foreground">{shortLabel(day.date)}</span>
       </div>

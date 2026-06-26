@@ -164,7 +164,7 @@
       </div>
     {:else if forecast}
       <div class="mx-auto max-w-3xl space-y-5">
-        <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+        <Card class="rounded-[20px] border border-border p-5">
           <h1 class="text-base font-semibold text-foreground">{forecast.question}</h1>
           <p class="mt-2 text-sm text-muted-foreground">{forecast.resolution_criteria}</p>
           <div class="mt-3 flex flex-wrap items-center gap-2">
@@ -196,7 +196,7 @@
         </Card>
 
         {#if beliefs.length > 0}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <h2 class="mb-3 text-sm font-semibold text-foreground">Belief Progression</h2>
             <svg viewBox="0 0 {SVG_W} {SVG_H}" class="w-full">
               {#each gridFracs as frac}
@@ -268,7 +268,7 @@
         {/if}
 
         {#if beliefs.length > 0}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <h2 class="mb-3 text-sm font-semibold text-foreground">Belief Timeline</h2>
             <div class="flex flex-col gap-3">
               {#each [...beliefs].sort((a, b) => b.step - a.step) as belief (belief.id)}
@@ -311,7 +311,7 @@
         {/if}
 
         {#if ensemble}
-          <Card class="rounded-[20px] border border-border p-5 shadow-[0_8px_24px_-16px_rgba(24,24,27,0.15)]">
+          <Card class="rounded-[20px] border border-border p-5">
             <div class="mb-4 flex items-center justify-between">
               <h2 class="text-sm font-semibold text-foreground">Ensemble Breakdown</h2>
               <span class="rounded-full border border-blue-200/80 bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-600">

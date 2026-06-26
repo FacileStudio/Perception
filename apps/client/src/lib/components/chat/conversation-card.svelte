@@ -23,7 +23,7 @@
   }
 </script>
 
-<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-[24px] border border-border bg-background/88 p-2 shadow-[0_18px_40px_-34px_rgba(24,24,27,0.28)] backdrop-blur">
+<div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 rounded-2xl border border-border bg-background/88 p-2 backdrop-blur">
   <button
     type="button"
     class="flex min-w-0 flex-col items-start rounded-[18px] px-3 py-3 text-left transition-colors hover:bg-accent"

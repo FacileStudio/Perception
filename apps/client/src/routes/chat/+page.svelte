@@ -46,7 +46,7 @@
             bind:value={chatState.input}
             onkeydown={handleKeydown}
             disabled={chatState.pending || chatState.streaming || chatState.loadingHistory}
-            class="h-[52px] flex-1 rounded-full border border-border bg-background/90 px-5 text-[15px] text-foreground placeholder:text-muted-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.25)] backdrop-blur focus:outline-none focus:ring-2 focus:ring-ring/10 disabled:opacity-50"
+            class="h-[52px] flex-1 rounded-full border border-border bg-background/90 px-5 text-[15px] text-foreground placeholder:text-muted-foreground backdrop-blur focus:outline-none focus:ring-2 focus:ring-ring/10 disabled:opacity-50"
           />
           <Button
             onclick={handleSend}

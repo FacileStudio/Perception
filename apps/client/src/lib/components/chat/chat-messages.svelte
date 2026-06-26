@@ -29,7 +29,7 @@
   {#if chatState.loadingHistory}
     <div class="flex h-full items-center justify-center">
       <div class="flex flex-col items-center gap-3 text-center">
-        <span class="flex size-12 items-center justify-center rounded-3xl bg-background text-muted-foreground shadow-[0_18px_40px_-28px_rgba(24,24,27,0.32)]">
+        <span class="flex size-12 items-center justify-center rounded-3xl bg-background text-muted-foreground">
           <Icon icon="solar:refresh-linear" class="size-5 animate-spin" />
         </span>
         <p class="text-sm text-muted-foreground">Loading conversation...</p>
@@ -40,13 +40,13 @@
       {#each chatState.messages as msg, i}
         {#if msg.role === 'user'}
           <div class="flex justify-end">
-            <div class="max-w-[75%] rounded-[22px] rounded-br-md bg-primary px-4 py-3 text-sm text-primary-foreground shadow-[0_18px_40px_-28px_rgba(24,24,27,0.9)]">
+            <div class="max-w-[75%] rounded-[22px] rounded-br-md bg-primary px-4 py-3 text-sm text-primary-foreground">
               {msg.content}
             </div>
           </div>
         {:else}
           <div class="flex justify-start">
-            <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-border bg-card px-4 py-3 text-sm text-card-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.35)]">
+            <div class="max-w-[75%] rounded-[22px] rounded-bl-md border border-border bg-card px-4 py-3 text-sm text-card-foreground">
               {#if (chatState.pending || chatState.streaming) && i === chatState.messages.length - 1 && !msg.content}
                 <TypingIndicator />
               {:else}

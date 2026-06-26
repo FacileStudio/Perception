@@ -224,7 +224,7 @@
   <div class="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
     {#if loading}
       <div class="flex items-center justify-center py-12">
-        <span class="text-sm text-muted-foreground">Loading...</span>
+        <Icon icon="solar:spinner-line-duotone" class="size-5 text-muted-foreground animate-spin" />
       </div>
     {:else if empty}
       <div class="flex items-center justify-center py-12">
@@ -234,12 +234,12 @@
       <div class="flex flex-col gap-3">
         {#each pagedAdjacency as { entity, connections } (entity.id)}
           <button class="w-full text-left" onclick={() => openEntity(entity.id)}>
-            <Card class="rounded-[24px] border-border p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)] transition-shadow hover:shadow-[0_18px_48px_-30px_rgba(24,24,27,0.5)]">
+            <Card class="rounded-2xl border-border p-4 transition-colors hover:border-foreground/10">
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2">
                   <span class="size-2.5 shrink-0 rounded-full" style="background:{colorFor(entity.type_label)}"></span>
                   <p class="text-sm font-medium text-foreground">{entity.canonical_name}</p>
-                  <Badge variant="secondary" class="font-mono">{entity.type_label}</Badge>
+                  <Badge variant="outline" class="font-mono text-xs">{entity.type_label}</Badge>
                   <span class="ml-auto text-xs text-muted-foreground">{entity.event_count} {entity.event_count === 1 ? 'event' : 'events'}</span>
                 </div>
                 {#if narrativesMap.has(entity.id)}
@@ -266,7 +266,7 @@
     {:else if viewMode === 'communities'}
       {#if loadingCommunities}
         <div class="flex items-center justify-center py-12">
-          <span class="text-sm text-muted-foreground">Loading...</span>
+          <Icon icon="solar:spinner-line-duotone" class="size-5 text-muted-foreground animate-spin" />
         </div>
       {:else if communities.length === 0}
         <div class="flex items-center justify-center py-12">
@@ -275,7 +275,7 @@
       {:else}
         <div class="flex flex-col gap-3">
           {#each pagedCommunities as comm, ci (comm.id)}
-            <Card class="rounded-[24px] border-border p-4 shadow-[0_18px_48px_-40px_rgba(24,24,27,0.4)]">
+            <Card class="rounded-2xl border-border p-4 transition-colors hover:border-foreground/10">
               <div class="flex flex-col gap-1.5">
                 <div class="flex items-center gap-2">
                   <Badge variant="secondary">{(communityPage - 1) * PAGE_SIZE + ci + 1}</Badge>
@@ -342,7 +342,7 @@
     aria-label="Entity details"
   >
     <div
-      class="flex h-full w-full max-w-md flex-col bg-background shadow-2xl transition-transform duration-200 ease-out {paneVisible ? 'translate-x-0' : 'translate-x-full'}"
+      class="flex h-full w-full max-w-md flex-col bg-background border-l border-border transition-transform duration-200 ease-out {paneVisible ? 'translate-x-0' : 'translate-x-full'}"
     >
       {#if paneEntity}
         <div class="flex items-center gap-3 border-b border-border px-5 py-4">
@@ -350,7 +350,7 @@
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-foreground">{paneEntity.canonical_name}</p>
             <div class="flex items-center gap-2">
-              <Badge variant="secondary" class="font-mono">{paneEntity.type_label}</Badge>
+              <Badge variant="outline" class="font-mono text-xs">{paneEntity.type_label}</Badge>
               <span class="text-xs text-muted-foreground">{(paneEntity.confidence * 100).toFixed(0)}% confidence</span>
             </div>
           </div>
@@ -395,7 +395,7 @@
             {#if paneLoadingCommunity}
               <div>
                 <p class="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">Community</p>
-                <p class="text-xs text-muted-foreground">Loading...</p>
+                <Icon icon="solar:spinner-line-duotone" class="size-5 text-muted-foreground animate-spin" />
               </div>
             {:else if paneCommunity}
               <div>

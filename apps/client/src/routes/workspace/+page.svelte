@@ -536,7 +536,7 @@
           ] as section}
             <section>
               <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{section.title}</h2>
-              <Card class="rounded-[20px] border-border shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-border/50">
+              <Card class="rounded-[20px] border-border divide-y divide-border/50">
                 {#each section.keys as key}
                   {@const src = sourceLabel(sources[key] ?? 'default')}
                   <div class="px-5 py-4">
@@ -577,7 +577,7 @@
 
       {:else if tab === 'workers'}
         <section>
-          <Card class="rounded-[20px] border-border shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-border/50 mb-6">
+          <Card class="rounded-[20px] border-border divide-y divide-border/50 mb-6">
             <div class="px-5 py-4">
               <div class="flex items-start justify-between gap-3">
                 <div>
@@ -629,7 +629,7 @@
               </button>
             </div>
           </div>
-          <Card class="rounded-[20px] border-border shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-border/50 {workersPaused ? 'opacity-60' : ''}">
+          <Card class="rounded-[20px] border-border divide-y divide-border/50 {workersPaused ? 'opacity-60' : ''}">
             {#if workersLoading}
               <div class="px-5 py-8 text-center text-sm text-muted-foreground">Loading workers...</div>
             {:else}
@@ -668,7 +668,7 @@
       {:else if tab === 'health'}
         <section>
           <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Knowledge Graph Health</h2>
-          <Card class="rounded-[20px] border-border shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-border/50 mb-6">
+          <Card class="rounded-[20px] border-border divide-y divide-border/50 mb-6">
             {#if healthLoading}
               <div class="px-5 py-8 text-center text-sm text-muted-foreground">Loading...</div>
             {:else if !graphHealth}
@@ -703,7 +703,7 @@
           </Card>
 
           <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Concept Drift Alerts</h2>
-          <Card class="rounded-[20px] border-border shadow-[0_8px_24px_-16px_rgba(24,24,27,0.3)] divide-y divide-border/50">
+          <Card class="rounded-[20px] border-border divide-y divide-border/50">
             {#if driftLoading}
               <div class="px-5 py-8 text-center text-sm text-muted-foreground">Loading...</div>
             {:else if driftAlerts.length === 0}
