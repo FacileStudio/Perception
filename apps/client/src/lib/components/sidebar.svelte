@@ -85,7 +85,7 @@
         onclick={() => (spaceSwitcherOpen = !spaceSwitcherOpen)}
       >
         <Icon
-          icon="solar:users-group-rounded-bold-duotone"
+          icon="solar:share-circle-bold-duotone"
           class="size-[18px] shrink-0 text-muted-foreground"
         />
         <span class="min-w-0 flex-1 truncate font-medium">
@@ -108,7 +108,7 @@
                   : 'text-foreground hover:bg-muted'}"
                 onclick={() => { handleSwitchWorkspace(ws.id); spaceSwitcherOpen = false; }}
               >
-                <Icon icon="solar:users-group-rounded-bold-duotone" class="size-4 shrink-0" />
+                <Icon icon="solar:share-circle-bold-duotone" class="size-4 shrink-0" />
                 <span class="min-w-0 flex-1 truncate">{ws.name}</span>
                 <span class="text-xs text-muted-foreground">{ws.role}</span>
               </button>
