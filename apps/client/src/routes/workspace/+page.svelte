@@ -195,7 +195,7 @@
   }
 
   function sourceLabel(src: string) {
-    if (src === 'workspace') return { label: 'space', icon: 'solar:buildings-linear', cls: 'text-violet-600 bg-violet-50' };
+    if (src === 'workspace') return { label: 'space', icon: 'solar:share-circle-linear', cls: 'text-violet-600 bg-violet-50' };
     if (src === 'db') return { label: 'system', icon: 'solar:database-linear', cls: 'text-blue-600 bg-blue-50' };
     if (src === 'env') return { label: 'env var', icon: 'solar:server-linear', cls: 'text-emerald-600 bg-emerald-50' };
     return { label: 'default', icon: 'solar:info-circle-linear', cls: 'text-muted-foreground bg-muted' };
@@ -356,7 +356,7 @@
   <div class="flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur sm:px-6">
     <div class="flex items-center gap-4">
       <span class="inline-flex items-center gap-2 text-sm font-medium text-foreground">
-        <Icon icon="solar:buildings-linear" class="size-4" />
+        <Icon icon="solar:share-circle-linear" class="size-4" />
         {auth.workspace?.name ?? 'Space'}
       </span>
       <div class="flex gap-1 rounded-lg border border-border bg-muted p-0.5">
@@ -501,7 +501,7 @@
               {#each auth.workspaces as ws}
                 {@const active = ws.id === auth.workspace?.id}
                 <button onclick={() => { if (!active) handleSwitchWorkspace(ws.id); }} class="flex w-full items-center gap-4 px-6 py-3 text-left transition-colors {active ? 'bg-muted' : 'hover:bg-accent'}" disabled={active}>
-                  <Icon icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'} class="size-5 shrink-0 {active ? 'text-emerald-500' : 'text-muted-foreground'}" />
+                  <Icon icon={active ? 'solar:check-circle-linear' : 'solar:share-circle-linear'} class="size-5 shrink-0 {active ? 'text-emerald-500' : 'text-muted-foreground'}" />
                   <div class="min-w-0 flex-1">
                     <p class="truncate text-sm font-medium text-foreground">{ws.name}</p>
                     <p class="text-xs text-muted-foreground">{ws.slug}</p>

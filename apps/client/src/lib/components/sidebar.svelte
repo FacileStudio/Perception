@@ -62,7 +62,7 @@
   ];
 
   const menuItems = [
-    { href: '/workspace', label: 'Space', icon: 'solar:buildings-linear' },
+    { href: '/workspace', label: 'Space', icon: 'solar:share-circle-linear' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-linear' },
   ];
 </script>

@@ -43,7 +43,7 @@
   }
 
   const menuItems = [
-    { href: '/workspace', label: 'Space', icon: 'solar:buildings-linear' },
+    { href: '/workspace', label: 'Space', icon: 'solar:share-circle-linear' },
     { href: '/users', label: 'Users', icon: 'solar:users-group-rounded-linear' },
   ];
 </script>
@@ -59,7 +59,7 @@
         onclick={() => (wsMenuOpen = !wsMenuOpen)}
         class="flex max-w-[40vw] items-center gap-1.5 rounded-lg border border-zinc-200/70 bg-zinc-50/60 px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-zinc-100"
       >
-        <Icon icon="solar:buildings-linear" class="size-4 shrink-0 text-zinc-400" />
+        <Icon icon="solar:share-circle-linear" class="size-4 shrink-0 text-zinc-400" />
         <span class="min-w-0 flex-1 truncate font-medium text-zinc-700">{auth.workspace?.name ?? 'Space'}</span>
         <Icon icon="solar:alt-arrow-down-linear" class="size-3 shrink-0 text-zinc-400 transition-transform {wsMenuOpen ? 'rotate-180' : ''}" />
       </button>
@@ -72,7 +72,7 @@
               onclick={() => handleSwitchWorkspace(ws.id)}
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors {active ? 'bg-zinc-100 font-medium text-zinc-950' : 'text-zinc-600 hover:bg-zinc-50'}"
             >
-              <Icon icon={active ? 'solar:check-circle-linear' : 'solar:buildings-linear'} class="size-4 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}" />
+              <Icon icon={active ? 'solar:check-circle-linear' : 'solar:share-circle-linear'} class="size-4 shrink-0 {active ? 'text-emerald-500' : 'text-zinc-300'}" />
               <span class="min-w-0 flex-1 truncate">{ws.name}</span>
               <span class="text-xs text-zinc-400">{ws.role}</span>
             </button>
