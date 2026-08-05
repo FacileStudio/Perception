@@ -14,7 +14,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
     "@libsql/client": "^0.14.0",
-    "@scalar/hono-api-reference": "^0.10.19",
+    "@scalar/hono-api-reference": "0.10.19",
     "ai": "^4.3.16",
     "better-auth": "^1.6.11",
     "email-reply-parser": "^2.3.5",

@@ -14,11 +14,15 @@ const STRIPPED_RESPONSE_HEADERS = new Set([
 ]);
 
 export const handle: Handle = async ({ event, resolve }) => {
-  if (!event.url.pathname.startsWith('/api/')) {
+  const pathname = event.url.pathname;
+  const isApi = pathname.startsWith('/api/');
+  const isDocs = pathname === '/docs' || pathname.startsWith('/docs/');
+
+  if (!isApi && !isDocs) {
     return resolve(event);
   }
 
-  const path = event.url.pathname.slice(4);
+  const path = isApi ? pathname.slice(4) : pathname;
   const url = `${API_UPSTREAM}${path}${event.url.search}`;
 
   try {

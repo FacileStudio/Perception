@@ -6,11 +6,13 @@ Every HTTP route the Hono app mounts, grouped by router. Generated from
 Perception serves its own machine-readable spec, and that spec is the authority when the two
 disagree:
 
-- `GET /openapi.json` — the OpenAPI document
-- `GET /docs` — Scalar reference, also mirrored at `/docs` in the client
+- `GET /docs` — Scalar reference
+- `GET /docs/openapi.json` — the OpenAPI document
 
 Paths below are as the API sees them. From a browser, everything is reached through the client's
-proxy under `/api/…` — `GET /events` in the API is `GET /api/events` from the front end.
+proxy under `/api/…` — `GET /events` in the API is `GET /api/events` from the front end. `/docs`
+is the exception: the client proxies it verbatim, so the reference lives at `/docs` on the public
+root, exactly as it does on every other Facile app.
 
 ## Authentication
 
@@ -42,8 +44,8 @@ credentials. Requests from any other origin fail before they reach a handler.
 |---|---|---|---|
 | GET | `/health` | none | `{ok, ready, startupError?, authError?}`. Always `200`, even after a failed migration |
 | GET | `/ready` | none | `503` until bootstrap finishes, then runs `SELECT 1`. `503 {"error":"db_unavailable"}` if the database is down |
-| GET | `/openapi.json` | none | OpenAPI document |
-| GET | `/docs` | none | Scalar API reference |
+| GET | `/docs` | none | Scalar API reference, reachable at `/docs` on the public root |
+| GET | `/docs/openapi.json` | none | OpenAPI document |
 
 Use `/ready` for alerting. `/health` returning `200` means the process is alive and nothing else.
 

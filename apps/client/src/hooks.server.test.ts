@@ -33,6 +33,30 @@ describe('api proxy handle', () => {
     expect(await response.text()).toBe('{"ok":true}');
   });
 
+  test('forwards /docs to the upstream without stripping a /api prefix', async () => {
+    const requested: string[] = [];
+    globalThis.fetch = (async (input: string) => {
+      requested.push(String(input));
+      return new Response('<!doctype html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      });
+    }) as unknown as typeof fetch;
+
+    for (const path of ['/docs', '/docs/openapi.json']) {
+      const request = new Request(`http://client.test${path}`);
+      const response = await handle({
+        event: { url: new URL(request.url), request } as never,
+        resolve: (() => {
+          throw new Error('resolve should not be called for /docs paths');
+        }) as never,
+      });
+      expect(response.status).toBe(200);
+    }
+
+    expect(requested).toEqual(['http://api:8787/docs', 'http://api:8787/docs/openapi.json']);
+  });
+
   test('forwards every upstream set-cookie header as a separate cookie', async () => {
     const upstream = new Headers({ 'content-type': 'application/json' });
     upstream.append('set-cookie', 'perception.session_token=abc; Path=/; HttpOnly');

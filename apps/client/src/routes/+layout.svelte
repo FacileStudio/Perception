@@ -24,13 +24,13 @@
       api.auth.syncProfile().catch(() => {});
       return;
     }
-    if ($page.url.pathname !== '/login' && !$page.url.pathname.startsWith('/docs')) {
+    if ($page.url.pathname !== '/login') {
       goto('/login');
     }
   });
 
   $effect(() => {
-    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/' && !$page.url.pathname.startsWith('/docs')) {
+    if (!auth.checking && !auth.authenticated && $page.url.pathname !== '/login' && $page.url.pathname !== '/') {
       goto('/login');
     }
   });
@@ -46,7 +46,7 @@
   }
 </script>
 
-{#if $page.url.pathname === '/login' || $page.url.pathname === '/' || $page.url.pathname.startsWith('/docs')}
+{#if $page.url.pathname === '/login' || $page.url.pathname === '/'}
   {@render children?.()}
 {:else if auth.checking}
   <div class="flex h-screen items-center justify-center">
