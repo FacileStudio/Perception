@@ -7,6 +7,12 @@ const HOP_HEADERS = new Set([
   'te', 'trailers', 'transfer-encoding', 'upgrade',
 ]);
 
+const STRIPPED_RESPONSE_HEADERS = new Set([
+  ...HOP_HEADERS,
+  'content-encoding',
+  'content-length',
+]);
+
 export const handle: Handle = async ({ event, resolve }) => {
   if (!event.url.pathname.startsWith('/api/')) {
     return resolve(event);
@@ -25,18 +31,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 
     const method = event.request.method;
     const hasBody = method !== 'GET' && method !== 'HEAD';
-    const body = hasBody ? await event.request.arrayBuffer() : null;
 
-    const res = await fetch(url, {
-      method,
-      headers,
-      body,
-      redirect: 'manual',
-    });
+    const init: RequestInit & { duplex?: 'half' } = { method, headers, redirect: 'manual' };
+    if (hasBody) {
+      init.body = event.request.body;
+      init.duplex = 'half';
+    }
+
+    const res = await fetch(url, init);
 
     const responseHeaders = new Headers();
     for (const [key, value] of res.headers) {
-      if (!HOP_HEADERS.has(key.toLowerCase())) {
+      if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
         responseHeaders.set(key, value);
       }
     }

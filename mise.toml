@@ -11,8 +11,8 @@ run = "bun run --filter=* build"
 description = "Build all services"
 
 [tasks.test]
-run = "bun test apps/api"
-description = "Run API tests"
+run = "bun test apps/api apps/client"
+description = "Run API and client tests"
 
 [tasks.typecheck]
 run = "bun run --filter=apps/api typecheck"
