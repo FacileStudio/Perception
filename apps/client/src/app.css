@@ -96,6 +96,7 @@
 
 @theme inline {
   --font-sans: "Goga", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: "Goga", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

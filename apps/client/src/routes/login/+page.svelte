@@ -4,9 +4,6 @@
   import { page } from '$app/stores';
   import { authClient } from '$lib/auth-client';
   import { auth, checkAuth, loadAuthConfig } from '$lib/stores';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
   import { buildTitle } from '$lib/head';
   import { ensureSolar } from '$lib/solar';
   import Icon from '@iconify/svelte';
@@ -14,6 +11,14 @@
   ensureSolar();
 
   const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+
+  const inputClass =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50';
+  const labelClass = 'text-sm font-medium leading-none';
+  const primaryButtonClass =
+    'inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50';
+  const outlineButtonClass =
+    'inline-flex h-10 w-full items-center justify-center rounded-md border border-border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50';
 
   let tab = $state<'signin' | 'signup'>('signin');
   let email = $state('');
@@ -69,19 +74,19 @@
 </script>
 
 <svelte:head>
-  <title>{buildTitle(!auth.config.sso_only && tab === 'signup' ? 'Create account' : 'Sign in')}</title>
+  <title>{buildTitle(!auth.config.sso_only && tab === 'signup' ? 'Create account' : 'Log in')}</title>
   <meta name="description" content="Sign in to Perception and skip the folklore." />
 </svelte:head>
 
 <div class="flex min-h-screen">
   <div class="hidden lg:flex lg:w-1/2 flex-col bg-black px-12 py-10">
     <a href="/" class="flex items-center gap-3 mb-auto">
-      <Icon icon="solar:eye-linear" class="size-7 text-white" />
-      <span class="text-xl font-bold tracking-tight text-white">Perception</span>
+      <Icon icon="solar:eye-bold-duotone" class="size-7 text-white" />
+      <span class="text-xl font-bold font-heading tracking-tight text-white">Perception</span>
     </a>
 
     <div class="mb-auto">
-      <h2 class="text-4xl font-bold text-white leading-tight tracking-tight">
+      <h2 class="text-4xl font-bold font-heading text-white leading-tight tracking-tight">
         Interrogate the noise.<br />See clearly.
       </h2>
       <p class="mt-4 text-sm text-white/50 max-w-xs leading-relaxed">
@@ -97,15 +102,15 @@
   <div class="flex w-full lg:w-1/2 flex-col items-center justify-center px-8 py-12 bg-background">
     <div class="w-full max-w-sm">
       <div class="mb-8">
-        <h1 class="text-2xl font-bold tracking-tight text-foreground">
-          {!auth.config.sso_only && tab === 'signup' ? 'Create your account' : 'Welcome back'}
+        <h1 class="text-2xl font-bold font-heading tracking-tight text-foreground">
+          {!auth.config.sso_only && tab === 'signup' ? 'Create account' : 'Welcome back'}
         </h1>
         <p class="mt-1.5 text-sm text-muted-foreground">
           {!auth.config.sso_only && tab === 'signup'
             ? 'Fill in your details to get started.'
             : auth.config.sso_only
-              ? 'Sign in with your organization account.'
-              : 'Sign in with your email and password.'}
+              ? 'Sign in with your organization account to access Perception.'
+              : 'Log in to your Perception account.'}
         </p>
       </div>
 
@@ -113,30 +118,36 @@
         <div class="h-40"></div>
       {:else}
         {#if !auth.config.sso_only}
-          <div class="mb-6 flex rounded-lg border border-border bg-muted p-1 gap-1">
+          <div class="mb-6 flex rounded-lg border border-border bg-muted p-1 gap-1" role="tablist">
             <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'signin'}
               class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors {tab === 'signin'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'}"
               onclick={() => { tab = 'signin'; error = ''; }}
             >
-              Sign in
+              Log in
             </button>
             <button
+              type="button"
+              role="tab"
+              aria-selected={tab === 'signup'}
               class="flex-1 rounded-md py-1.5 text-sm font-medium transition-colors {tab === 'signup'
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'}"
               onclick={() => { tab = 'signup'; error = ''; }}
             >
-              Sign up
+              Register
             </button>
           </div>
 
           <form onsubmit={tab === 'signin' ? handleSignIn : handleSignUp} class="space-y-4">
             {#if tab === 'signup'}
               <div class="space-y-1.5">
-                <Label for="name">Name</Label>
-                <Input
+                <label for="name" class={labelClass}>Name</label>
+                <input
                   id="name"
                   type="text"
                   placeholder="Your name"
@@ -144,13 +155,14 @@
                   disabled={loading}
                   autocomplete="name"
                   required
+                  class={inputClass}
                 />
               </div>
             {/if}
 
             <div class="space-y-1.5">
-              <Label for="email">Email</Label>
-              <Input
+              <label for="email" class={labelClass}>Email</label>
+              <input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
@@ -158,12 +170,13 @@
                 disabled={loading}
                 autocomplete="email"
                 required
+                class={inputClass}
               />
             </div>
 
             <div class="space-y-1.5">
-              <Label for="password">Password</Label>
-              <Input
+              <label for="password" class={labelClass}>Password</label>
+              <input
                 id="password"
                 type="password"
                 placeholder="••••••••"
@@ -171,16 +184,21 @@
                 disabled={loading}
                 autocomplete={tab === 'signin' ? 'current-password' : 'new-password'}
                 required
+                class={inputClass}
               />
             </div>
 
             {#if error}
-              <p class="text-sm text-destructive">{error}</p>
+              <p class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
             {/if}
 
-            <Button type="submit" class="w-full" disabled={loading}>
-              {tab === 'signup' ? 'Create account' : 'Sign in'}
-            </Button>
+            <button type="submit" disabled={loading} class={primaryButtonClass}>
+              {loading
+                ? tab === 'signup' ? 'Creating account…' : 'Logging in…'
+                : tab === 'signup' ? 'Create account' : 'Log in'}
+            </button>
           </form>
         {/if}
 
@@ -194,9 +212,7 @@
           {/if}
 
           <a href="{API_BASE}/auth/oidc" class="block">
-            <Button variant="outline" class="w-full" type="button">
-              Continue with SSO
-            </Button>
+            <button type="button" class={outlineButtonClass}>Continue with SSO</button>
           </a>
         {/if}
 
