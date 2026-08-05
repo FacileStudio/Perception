@@ -43,7 +43,15 @@ export const handle: Handle = async ({ event, resolve }) => {
     const responseHeaders = new Headers();
     for (const [key, value] of res.headers) {
       if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
-        responseHeaders.set(key, value);
+        responseHeaders.append(key, value);
+      }
+    }
+
+    const setCookies = res.headers.getSetCookie?.();
+    if (setCookies) {
+      responseHeaders.delete('set-cookie');
+      for (const cookie of setCookies) {
+        responseHeaders.append('set-cookie', cookie);
       }
     }
 
