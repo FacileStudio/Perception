@@ -33,12 +33,16 @@ class ThemeState {
 		this.apply();
 	}
 
+	// Both classes are set, not just `dark`. muse paints dark from
+	// `prefers-color-scheme` on `:root:not(.light)`, so an explicit light choice
+	// on a dark-preferring OS only lands if `.light` is present to opt out.
 	private apply() {
 		if (!browser) return;
 		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 		const dark = this.preference === 'dark' || (this.preference === 'system' && prefersDark);
 		this.resolved = dark ? 'dark' : 'light';
 		document.documentElement.classList.toggle('dark', dark);
+		document.documentElement.classList.toggle('light', !dark);
 	}
 }
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Alert, Button, Divider, Field, Input } from '@facile/lib';
+	import { Alert, Button, Divider, Field, Input } from '@facile/muse';
 	import { auth } from '$lib/auth.svelte';
 	import { OIDC_START_URL } from '$lib/backend';
 

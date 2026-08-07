@@ -1,10 +1,14 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button, Divider, icons } from '@facile/lib';
-	import OptionCards from '$lib/components/OptionCards.svelte';
-	import SettingsRow from '$lib/components/SettingsRow.svelte';
-	import SettingsSection from '$lib/components/SettingsSection.svelte';
-	import Tabs from '$lib/components/Tabs.svelte';
+	import {
+		Button,
+		Divider,
+		OptionCards,
+		SettingsRow,
+		SettingsSection,
+		Tabs,
+		icons
+	} from '@facile/muse';
 	import { auth } from '$lib/auth.svelte';
 	import { API_BASE } from '$lib/backend';
 	import { theme, type ThemePreference } from '$lib/theme.svelte';

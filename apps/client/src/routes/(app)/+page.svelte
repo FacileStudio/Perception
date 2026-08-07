@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Button } from '@facile/lib';
-	import EmptyState from '$lib/components/EmptyState.svelte';
+	import { Button, EmptyState } from '@facile/muse';
 </script>
 
 <svelte:head>

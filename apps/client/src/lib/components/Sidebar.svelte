@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { NavButton, icons } from '@facile/lib';
+	import { NavButton, icons } from '@facile/muse';
 	import Logo from './Logo.svelte';
 
 	let { email, name }: { email: string; name: string } = $props();

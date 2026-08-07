@@ -8,8 +8,6 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
 		<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0a" />
-		<link rel="preload" href="%sveltekit.assets%/fonts/GogaTest-Medium-BF6646d5d84754e.otf" as="font" type="font/otf" crossorigin />
-		<link rel="preload" href="%sveltekit.assets%/fonts/GogaTest-Semibold-BF6646d5d8544cf.otf" as="font" type="font/otf" crossorigin />
 		<script type="module" src="https://cdn.jsdelivr.net/npm/iconify-icon@2.2.0/dist/iconify-icon.min.js"></script>
 		<script>
 			// Resolve the theme before first paint so the app never flashes light-on-dark.
@@ -21,6 +19,7 @@
 						((!stored || stored === 'system') &&
 							window.matchMedia('(prefers-color-scheme: dark)').matches);
 					document.documentElement.classList.toggle('dark', dark);
+					document.documentElement.classList.toggle('light', !dark);
 				} catch (e) {}
 			})();
 		</script>

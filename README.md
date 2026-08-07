@@ -38,7 +38,7 @@ Planned, in order — see [`ROADMAP.md`](ROADMAP.md):
 | Layer | Tech |
 |---|---|
 | API | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, [tronc](https://github.com/FacileStudio/tronc) v0.9.0 |
-| Client | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/lib`), bits-ui |
+| Client | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
 | Auth | Sessions (argon2id) or OIDC SSO via `porte.facile.studio`, `SSO_ONLY` supported |
 | Logging | [Journal](https://github.com/FacileStudio/Journal) SDK |
 | Secrets | [Casier](https://casier.facile.studio) in development, Dokploy in production |

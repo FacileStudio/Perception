@@ -15,7 +15,7 @@ first; most of it was deleted on purpose.
 | Layer   | Stack                                                                    |
 | ------- | ------------------------------------------------------------------------ |
 | API     | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, tronc v0.9.0            |
-| Client  | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/lib`), bits-ui |
+| Client  | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
 | Build   | `go build`, Bun                                                          |
 | Deploy  | Docker Compose, one distroless container serving API + client, Dokploy + Traefik |
 | Auth    | Sessions (argon2id) or Authentik OIDC, `SSO_ONLY` supported              |

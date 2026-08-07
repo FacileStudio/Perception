@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Alert, Button, Field, Input } from '@facile/lib';
+	import { Alert, Button, Field, Input } from '@facile/muse';
 	import { auth } from '$lib/auth.svelte';
 
 	let name = $state('');
