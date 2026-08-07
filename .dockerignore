@@ -1,0 +1,11 @@
+.git
+*.md
+.env
+.env.*
+!.env.example
+.local
+**/node_modules
+**/.svelte-kit
+**/build
+apps/api/bin
+apps/api/vendor

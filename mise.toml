@@ -1,23 +1,54 @@
 [tools]
-bun = "latest"
-node = "22"
+go = "1.25"
 
+# The API reads its configuration from the process environment, so Casier can
+# supply it directly and no .env has to exist. `casier run` is network-first
+# with a last-known-good cache, so a Casier outage degrades to the previous
+# values with a warning rather than to an empty environment.
 [tasks.dev]
-run = "bun run --filter=* dev"
-description = "Start all services in dev mode"
+description = "Run the API with secrets injected from Casier"
+run = "casier run -- sh -c 'cd apps/api && go run .'"
 
-[tasks.build]
-run = "bun run --filter=* build"
-description = "Build all services"
+[tasks.dev-offline]
+description = "Run the API from the cached secrets, without contacting Casier"
+run = "casier run --offline -- sh -c 'cd apps/api && go run .'"
 
-[tasks.test]
-run = "bun test apps/api apps/client"
-description = "Run API and client tests"
+[tasks.dev-client]
+description = "Run the client development server"
+run = "cd apps/client && bun run dev"
 
-[tasks.typecheck]
-run = "bun run --filter=apps/api typecheck"
-description = "Type-check API"
+[tasks.secrets]
+description = "List the secrets Casier holds for this project"
+run = "casier secrets list -p perception -e dev"
 
-[tasks.lint]
-run = "bun run --filter=* lint"
-description = "Lint all"
+[tasks.install]
+description = "Install client dependencies"
+run = "cd apps/client && bun install --frozen-lockfile"
+
+[tasks.db-up]
+description = "Start the development Postgres database"
+run = "docker compose -f docker-compose.dev.yml up -d"
+
+[tasks.db-down]
+description = "Stop the development Postgres database"
+run = "docker compose -f docker-compose.dev.yml down"
+
+# check.sh is a plain shell script and the tasks below only shell out to it, so
+# it stays runnable without mise: `mise run` resolves every tool in the merged
+# config before running any task body, and an unrelated broken tool in the
+# user's global config would otherwise take the quality gate down with it.
+[tasks.check]
+description = "Run the full quality gate: the Go module, then the client"
+run = "sh ./scripts/check.sh"
+
+[tasks.check-go]
+description = "Run the Go half of the quality gate"
+run = "sh ./scripts/check.sh --go-only"
+
+[tasks.format]
+description = "Format the Go sources in place"
+run = "sh ./scripts/check.sh --format"
+
+[tasks.hooks]
+description = "Enable the tracked git hooks in this clone"
+run = "git config core.hooksPath .githooks"
