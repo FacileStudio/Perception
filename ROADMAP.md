@@ -106,6 +106,27 @@ Do not rebuild these. They are done and wired.
 - **`scripts/check.sh`** — gofmt, vet, test, client type-check; also refuses any non-Postgres
   database driver. Wired to a `pre-push` hook via `mise run hooks`.
 
+## 5b. Deployed state, as of 2026-08-07
+
+The scaffold is live at `perception.facile.studio`: one container on `:4000` behind Traefik,
+`pgvector/pgvector:pg16` beside it, OIDC through Authentik with `SSO_ONLY=true`, and a login
+that has been round-tripped by a human. Routing is owned by `docker-compose.yml`, not by
+Dokploy's panel — do not add a domain entry there, it would fight the compose labels and
+Dokploy aborts a deploy when a panel domain names a service the compose does not have.
+
+The TypeScript deployment is fully retired: containers, images and the libSQL volume are
+deleted, and `api-perception.facile.studio` no longer exists in DNS. Nothing may point at
+that host again; the API is same-origin under `/api`.
+
+Two things are still owed and are easy to forget:
+
+- **`POSTGRES_PASSWORD` is the compose default** (`perception-internal-db`). The database is
+  `expose`-only on an internal network, so nothing external reaches it, but set a real value
+  in Dokploy.
+- **Nook has never been repointed.** It still targets the retired endpoint, so no events are
+  arriving and none will until phase 1 lands. Repointing it and setting `INGEST_HMAC_SECRET`
+  on both sides is a paired change, part of phase 1's exit criteria.
+
 ## 6. Phases
 
 Each phase is independently shippable and ends in something a person can use. Do them in
