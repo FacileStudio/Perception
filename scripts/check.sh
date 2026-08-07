@@ -87,6 +87,17 @@ for dir in $GO_MODULES; do
     "$GO" vet ./... || s=1
     "$GO" test ./... || s=1
 
+    # Build for what actually ships, not only for the machine running the gate.
+    # go.sum records the modules the host's platform needs; a dependency pulled
+    # in by an amd64-only file is absent on an arm64 laptop, so the gate goes
+    # green and the Docker build fails on `missing go.sum entry`. That happened
+    # on 2026-08-07 and cost a deploy cycle. `go mod tidy` is the fix; this is
+    # what notices when someone reaches for `go get` instead.
+    GOOS=linux GOARCH=amd64 "$GO" build -o /dev/null ./... || {
+      echo "the linux/amd64 build failed; run 'go mod tidy' if it is a missing go.sum entry"
+      s=1
+    }
+
     # Postgres is the only database in this suite, tests included. A test on
     # SQLite builds a different schema from the GORM struct tags and then
     # passes, proving nothing about the Postgres DDL that actually ships — and
