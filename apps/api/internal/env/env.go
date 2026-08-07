@@ -70,5 +70,12 @@ func Load() (Config, error) {
 		}
 	}
 
+	// SSO_ONLY removes the password routes, so without an issuer there is no way
+	// left to authenticate at all. Refusing to boot beats a running instance that
+	// serves a login page nobody can get through.
+	if cfg.SSOOnly && cfg.OIDC == nil {
+		return Config{}, fmt.Errorf("SSO_ONLY is set without OIDC_ISSUER, which would leave no way to sign in")
+	}
+
 	return cfg, nil
 }
