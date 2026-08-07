@@ -6,13 +6,16 @@
 	let { email, name }: { email: string; name: string } = $props();
 
 	/*
+	 * Chat uses a raw Solar name because muse's icons map has no chat key. Add
+	 * one there rather than growing a second vocabulary here.
+	 *
 	 * The rewrite ships the chassis first, so the sections that do not exist yet
 	 * are rendered disabled rather than linking nowhere — a nav row that 404s is
 	 * worse than one that admits it is not ready.
 	 */
 	const sections = [
 		{ label: 'Chat', href: '/chat', icon: 'solar:chat-round-dots-linear', ready: false },
-		{ label: 'Events', href: '/events', icon: 'solar:bolt-linear', ready: false },
+		{ label: 'Events', href: '/events', icon: icons.bolt, ready: false },
 		{ label: 'Entities', href: '/entities', icon: icons.usersGroup, ready: false }
 	];
 
