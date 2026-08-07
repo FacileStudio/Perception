@@ -1,10 +1,24 @@
+# Local Postgres data directory created by scripts/postgres-up.sh
+.local/
+
+# Go
+apps/api/bin/
+apps/api/vendor/
+apps/api/tmp/
+
+# Node / Bun / SvelteKit
 node_modules/
-dist/
-build/
-.env
-data/
-*.db
-*.db-shm
-*.db-wal
+apps/client/build/
+apps/client/.svelte-kit/
 .svelte-kit/
-.vite/
+build/
+
+# Env
+.env
+.env.local
+*.env
+!*.env.example
+
+# OS / tooling
+.DS_Store
+mise.lock

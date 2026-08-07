@@ -1,0 +1,25 @@
+# The development database only. The API runs on the host under `mise run dev`,
+# so this file publishes the port that the deployed compose file deliberately
+# does not: there the API reaches Postgres over the compose network.
+services:
+  perception-db:
+    container_name: perception-db-dev
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-perception}
+      POSTGRES_USER: ${POSTGRES_USER:-perception}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-perception}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-perception}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db_data:
+    name: perception_db_data_dev

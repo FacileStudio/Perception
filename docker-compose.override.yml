@@ -1,8 +1,0 @@
-services:
-  api:
-    ports:
-      - "${API_PORT:-8787}:8787"
-
-  client:
-    ports:
-      - "${CLIENT_PORT:-3000}:3000"

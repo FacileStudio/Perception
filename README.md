@@ -1,96 +1,106 @@
 # Perception
 
-Operational context brain for Facile — it ingests signed event envelopes from Nook, turns them
-into durable business memory, and answers grounded questions about what happened through a chat
-interface.
+Context brain for Facile operations. Ingests structured events from across the suite, builds
+durable business memory, and answers grounded operational questions in natural language.
 
-Perception is a stack outlier: libSQL rather than PostgreSQL, Claude and Voyage AI rather than no
-model at all, and a retrieval layer built out of nine parallel lanes rather than a single vector
-search. Every answer is grounded in stored events, and event content is treated as untrusted
-evidence, never as instructions.
+One Go binary serves the API under `/api` and the built SvelteKit dashboard on everything
+else. Storage is PostgreSQL 16 with pgvector; identity comes from Authentik over OIDC.
 
 Live at [perception.facile.studio](https://perception.facile.studio).
 
+> **Perception is being rebuilt.** This branch is the Go rewrite of a TypeScript app that ran
+> from May to August 2026 and was retired unused. The chassis, auth and deployment are done;
+> ingest, embeddings, chat and entities are not. See [`ROADMAP.md`](ROADMAP.md) for the plan
+> and [`docs/SPEC.md`](docs/SPEC.md) for the contract.
+
 ## What it does
 
-- Ingests `NookEventEnvelope` payloads over a single HMAC-signed endpoint, with replay protection
-- Infers a schema per provider and event type, then extracts facts against it; unknown shapes are
-  stored at `quality = degraded` rather than dropped
-- Builds an ontology of concepts and stable capabilities so new providers do not need new enums
-- Resolves entities across providers, links relations, detects communities and writes narratives
-- Answers questions over that memory with Claude, retrieving through nine lanes and citing events
-- Runs statistical analysis in the background — change points, drift, Granger causality, graph
-  health, topological gap detection
-- Generates and scores calibrated forecasts, plus action proposals from detected gaps
-- Indexes uploaded documents alongside events as retrievable resources
-- Isolates everything by workspace, with local password auth or OIDC SSO
+Today, in this scaffold:
+
+- Serves `/health` and `/ready` at both the root and `/api`, plus an argv healthcheck hook for
+  the distroless container
+- Publishes its own API reference at [`/docs`](https://perception.facile.studio/docs), generated
+  from a route registry the test suite keeps honest
+- Authenticates with email and password (argon2id sessions) or Authentik OIDC, with an
+  `SSO_ONLY` mode that removes the local forms entirely
+- Ships structured logs to Journal and reads its secrets from Casier
+- Serves the SvelteKit dashboard from the same binary, at the same origin
+
+Planned, in order — see [`ROADMAP.md`](ROADMAP.md):
+
+- HMAC-signed event ingest from Nook, with rejections recorded rather than dropped
+- Voyage embeddings into pgvector, with the backlog wired to `/ready`
+- Hybrid retrieval (vector + Postgres full-text) and streamed, cited answers from Claude
+- Entity resolution over repos, people, projects and deployments
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| API | Bun 1.2, Hono 4, libSQL (`@libsql/client` 0.14), `better-auth` 1.6, `jose` 6 |
-| Client | SvelteKit 2 with Svelte 5 runes, Tailwind CSS 4, bits-ui, Vite 6, `adapter-node` |
-| Models | Claude Sonnet 4.6 through the Vercel AI SDK, Voyage AI `voyage-4-lite` at 1024 dimensions |
-| Storage | libSQL file database — SQLite with vector search and FTS, 56 tables |
-| Deploy | Docker Compose, two containers behind one hostname, Dokploy on la ruche |
+| API | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, [tronc](https://github.com/FacileStudio/tronc) v0.9.0 |
+| Client | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/lib`), bits-ui |
+| Auth | Sessions (argon2id) or OIDC SSO via `porte.facile.studio`, `SSO_ONLY` supported |
+| Logging | [Journal](https://github.com/FacileStudio/Journal) SDK |
+| Secrets | [Casier](https://casier.facile.studio) in development, Dokploy in production |
+| Deploy | Docker Compose, one distroless container serving API + client, Traefik |
+| Planned | Claude via `anthropic-sdk-go`, Voyage `voyage-4-lite` embeddings |
 
-## Quick start
+## Development
 
-```sh
-cp .env.example .env
-docker compose up -d
-```
-
-The base compose file uses `expose`, not `ports`, because it targets a reverse proxy.
-`docker-compose.override.yml` publishes the API on `8787` and the client on `3000` locally, and
-Docker Compose picks it up automatically. Then open <http://localhost:3000>.
-
-The Anthropic and Voyage API keys are **not** environment variables. Set them in the app once it
-is running, under settings — see [docs/configuration.md](docs/configuration.md).
-
-### Local development
+Requires `mise`, Go 1.25 and `bun`. Secrets are injected by Casier — there is no `.env` to
+create for normal work.
 
 ```sh
-cp .env.example .env
-mise run dev
+mise run hooks       # enable the pre-push quality gate, once per clone
+mise run install     # client dependencies
+mise run db-up       # local PostgreSQL with pgvector
+mise run dev         # API with secrets injected from Casier
+mise run dev-client  # the SvelteKit dev server, in another shell
 ```
 
-API on `http://localhost:8787`, client on `http://localhost:3000`. Migrations run on API startup.
+Without access to Casier, copy `.env.example` to `.env` and fill it in; every variable is
+documented there.
 
-## Configuration
+```sh
+mise run check       # gofmt, go vet, go test, then the client type-check
+mise run check-go    # the Go half only
+mise run format      # rewrite Go sources in place
+```
 
-| Variable | What it does |
-|---|---|
-| `PERCEPTION_DATABASE_URL` | libSQL URL. Default `file:./data/perception.db` |
-| `PERCEPTION_SESSION_SECRET` | Session signing key |
-| `PERCEPTION_ADMIN_PASSWORD` | Password for local login; the only credential when SSO is off |
-| `CLIENT_ORIGIN` | Public client origin. Must match, or CORS and session cookies break |
-| `OIDC_ISSUER` | Authentik issuer URL; enables SSO when set with client id, secret and redirect |
-| `SSO_ONLY` | `true` disables password login entirely |
+`scripts/check.sh` is the gate and runs on every push. It also refuses any non-Postgres
+database driver in `go.mod`: a test on SQLite builds a different schema from the GORM tags and
+proves nothing about the DDL that ships.
 
-Full reference: [docs/configuration.md](docs/configuration.md).
+## Deployment
 
-## Structure
+`docker-compose.yml` targets Dokploy behind Traefik on la ruche. The API service uses `expose`
+rather than `ports` and carries its own router labels for `perception.facile.studio`. The
+database image is `pgvector/pgvector:pg16` — plain `postgres:16` will fail the migration that
+enables the `vector` extension.
+
+Configuration is documented in [`.env.example`](.env.example) and
+[`docs/SPEC.md`](docs/SPEC.md) §7.
+
+## Repository
 
 ```
 apps/
-  api/       Bun + Hono service — routes/, ingest/, chat/, entities/, forecasts/, workers/, db/
-  client/    SvelteKit app that also proxies /api/* to the API container
-docs/        Architecture, configuration, development, deployment, API
+  api/                Go backend
+    main.go           Entrypoint: config, chassis, routes, graceful shutdown
+    apiref_test.go    Fails the build when a route is missing from /docs
+    seam_test.go      Fails the build when a module reaches into auth (see ROADMAP §7)
+    internal/         identity (the porte seam), env, database, middleware,
+                      authcrypto, documentation
+    modules/auth/     Sessions and OIDC — the only module in the scaffold
+    schemas/          GORM models and migrations
+  client/             SvelteKit dashboard
+docs/                 SPEC.md and reference docs
+scripts/              check.sh and the repo-local Postgres helpers
 ```
 
-## Documentation
+## Related
 
-| Doc | What's in it |
-|---|---|
-| [Architecture](docs/architecture.md) | Topology, the ingest pipeline, retrieval lanes, the data model, workers |
-| [Configuration](docs/configuration.md) | Every environment variable, and the settings that are not variables |
-| [Development](docs/development.md) | Local setup, tests, migrations, conventions |
-| [Deployment](docs/deployment.md) | Docker, the two-container split, Dokploy, backups, running costs |
-| [API](docs/api.md) | HTTP endpoints, the ingest contract, payloads |
-
----
-
-Part of the [Facile Suite](https://facile.studio) — self-hosted tools for creative studios
-and freelancers. One login, zero cloud dependency.
+- [ROADMAP.md](ROADMAP.md) — why the rewrite, what was cut, and the phase order
+- [docs/SPEC.md](docs/SPEC.md) — ingest contract, data model, retrieval design
+- [Nook](https://github.com/FacileStudio/Nook) — the event bus Perception ingests from
+- [tronc](https://github.com/FacileStudio/tronc) — the Go app chassis

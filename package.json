@@ -1,5 +1,0 @@
-{
-  "name": "perception",
-  "private": true,
-  "workspaces": ["apps/api", "apps/client"]
-}

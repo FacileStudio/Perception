@@ -1,37 +1,83 @@
 services:
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    expose:
-      - "8787"
+  perception-db:
+    container_name: perception-db
+    # pgvector, not plain postgres:16-alpine: the embeddings phase needs the
+    # vector extension and swapping the image under a populated volume later is
+    # a migration nobody wants to write.
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-perception}
+      POSTGRES_USER: ${POSTGRES_USER:-perception}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-perception-internal-db}
     volumes:
-      - perception_data:/app/data
-    env_file:
-      - .env
-    environment:
-      - PERCEPTION_DATABASE_URL=file:/app/data/perception.db
-    restart: unless-stopped
+      - db_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8787/health"]
-      interval: 30s
-      timeout: 30s
-      retries: 5
-      start_period: 30s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-perception}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  client:
+  perception-api:
+    container_name: perception-api
+    restart: unless-stopped
     build:
       context: .
-      dockerfile: apps/client/Dockerfile
+      dockerfile: Dockerfile
     expose:
-      - "3000"
+      - "4000"
+    networks:
+      - default
+      - dokploy-network
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: dokploy-network
+      traefik.http.routers.perception-web.rule: "Host(`perception.facile.studio`)"
+      traefik.http.routers.perception-web.entrypoints: web
+      traefik.http.routers.perception-web.middlewares: redirect-to-https@file
+      traefik.http.routers.perception-web.service: perception-svc
+      traefik.http.routers.perception-secure.rule: "Host(`perception.facile.studio`)"
+      traefik.http.routers.perception-secure.entrypoints: websecure
+      traefik.http.routers.perception-secure.tls.certresolver: letsencrypt
+      traefik.http.routers.perception-secure.service: perception-svc
+      traefik.http.services.perception-svc.loadbalancer.server.port: "4000"
+    healthcheck:
+      test: ["CMD", "/api", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
-      - API_UPSTREAM=http://api:8787
-      - ORIGIN=${CLIENT_ORIGIN:-https://perception.facile.studio}
+      APP_ENV: ${APP_ENV:-production}
+      DATABASE_URL: postgres://${POSTGRES_USER:-perception}:${POSTGRES_PASSWORD:-perception-internal-db}@perception-db:5432/${POSTGRES_DB:-perception}?sslmode=disable
+      PORT: "4000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://perception.facile.studio}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      SSO_ONLY: ${SSO_ONLY:-false}
+      PERCEPTION_ADMIN_EMAILS: ${PERCEPTION_ADMIN_EMAILS:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_REDIRECT_URL: ${OIDC_REDIRECT_URL:-}
+      OIDC_SUCCESS_URL: ${OIDC_SUCCESS_URL:-}
+      JOURNAL_URL: ${JOURNAL_URL:-}
+      JOURNAL_TOKEN: ${JOURNAL_TOKEN:-}
+      # Reserved for later phases — the scaffold does not read these yet.
+      # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      # INGEST_HMAC_SECRET: ${INGEST_HMAC_SECRET:-}
+      # INGEST_HMAC_SECRET_PREVIOUS: ${INGEST_HMAC_SECRET_PREVIOUS:-}
     depends_on:
-      api:
-        condition: service_started
-    restart: unless-stopped
+      perception-db:
+        condition: service_healthy
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
-  perception_data:
+  db_data:
+    name: perception_db_data
