@@ -51,6 +51,7 @@ services:
       start_period: 10s
     environment:
       APP_ENV: ${APP_ENV:-production}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       DATABASE_URL: postgres://${POSTGRES_USER:-perception}:${POSTGRES_PASSWORD:-perception-internal-db}@perception-db:5432/${POSTGRES_DB:-perception}?sslmode=disable
       PORT: "4000"
       LOG_LEVEL: ${LOG_LEVEL:-info}
