@@ -43,7 +43,7 @@
 	<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Welcome back</h1>
 	<p class="mt-1.5 text-fc-sm text-fc-fg-muted">
 		{ssoOnly
-			? 'Sign in with your organization account to reach Perception.'
+			? 'Sign in with your Facile account to access Perception.'
 			: 'Log in to your Perception account.'}
 	</p>
 </div>
@@ -51,6 +51,26 @@
 {#if !ready}
 	<div class="h-40"></div>
 {:else}
+	{#if oidcEnabled}
+		<Button
+			type="button"
+			size="lg"
+			class="w-full rounded-fc-md"
+			icon="solar:key-minimalistic-square-bold-duotone"
+			onclick={() => (window.location.href = OIDC_START_URL)}
+		>
+			Sign in with Facile
+		</Button>
+
+		{#if !ssoOnly}
+			<div class="my-5 flex items-center gap-3">
+				<Divider class="my-0 flex-1" />
+				<span class="text-fc-xs text-fc-fg-muted">or</span>
+				<Divider class="my-0 flex-1" />
+			</div>
+		{/if}
+	{/if}
+
 	{#if showPasswordForm}
 		<form onsubmit={handleLogin} class="flex flex-col gap-4">
 			<Field label="Email">
@@ -83,30 +103,10 @@
 				<Alert tone="danger">{error}</Alert>
 			{/if}
 
-			<Button type="submit" size="lg" class="w-full" disabled={loading}>
+			<Button type="submit" size="lg" class="w-full rounded-fc-md" disabled={loading}>
 				{loading ? 'Logging in…' : 'Log in'}
 			</Button>
 		</form>
-	{/if}
-
-	{#if oidcEnabled}
-		{#if showPasswordForm}
-			<div class="my-5 flex items-center gap-3">
-				<Divider class="my-0 flex-1" />
-				<span class="text-fc-xs text-fc-fg-muted">or</span>
-				<Divider class="my-0 flex-1" />
-			</div>
-		{/if}
-
-		<Button
-			type="button"
-			variant="outline"
-			size="lg"
-			class="w-full"
-			onclick={() => (window.location.href = OIDC_START_URL)}
-		>
-			Continue with SSO
-		</Button>
 	{/if}
 
 	{#if ssoOnly && !oidcEnabled}

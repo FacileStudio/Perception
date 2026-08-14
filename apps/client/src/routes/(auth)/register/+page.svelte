@@ -113,7 +113,7 @@
 			<Alert tone="danger">{error}</Alert>
 		{/if}
 
-		<Button type="submit" size="lg" class="w-full" disabled={loading || mismatch}>
+		<Button type="submit" size="lg" class="w-full rounded-fc-md" disabled={loading || mismatch}>
 			{loading ? 'Creating account…' : 'Create account'}
 		</Button>
 	</form>
