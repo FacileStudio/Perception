@@ -49,12 +49,15 @@ import (
 
 const sessionCleanupInterval = 15 * time.Minute
 
+// Service implements authentication: registration, login, sessions and OIDC,
+// persisted through the controller on its own orm handle.
 type Service struct {
 	orm        *gorm.DB
 	logger     *slog.Logger
 	controller *Controller
 }
 
+// NewService wires a Service onto the database, returning one bound to appLogger.
 func NewService(db *gorm.DB, appLogger *slog.Logger) *Service {
 	service := &Service{orm: db, logger: appLogger}
 	service.controller = newController(service)
@@ -250,6 +253,8 @@ func (service *Service) StartSessionCleanup(ctx context.Context) {
 	}()
 }
 
+// SetSessionCookie writes the session token to the browser cookie for the
+// session's lifetime.
 func SetSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
@@ -262,6 +267,8 @@ func SetSessionCookie(w http.ResponseWriter, token string) {
 	})
 }
 
+// ClearSessionCookie expires the session cookie: an already-deleted session and
+// a missing one both answer the same, so logout is idempotent.
 func ClearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,

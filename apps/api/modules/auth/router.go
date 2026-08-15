@@ -13,6 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// RegisterRoutes mounts the auth endpoints. Under SSO_ONLY the password routes
+// are not registered at all rather than answering 403, so a probe cannot tell
+// that local accounts ever existed.
 func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 	oidcEnabled := appEnv.OIDC != nil
 	authLimiter := middleware.NewRateLimiter(5, 1*time.Minute)
@@ -24,8 +27,6 @@ func RegisterRoutes(router chi.Router, service *Service, appEnv env.Config) {
 		})
 	})
 
-	// Under SSO_ONLY the password routes are not registered at all rather than
-	// answering 403, so a probe cannot tell that local accounts ever existed.
 	if !appEnv.SSOOnly {
 		router.With(middleware.RateLimit(authLimiter)).Post(PathRegister, func(w http.ResponseWriter, request *http.Request) {
 			var req RegisterRequest

@@ -6,6 +6,8 @@ import (
 	troncenv "github.com/FacileStudio/tronc/env"
 )
 
+// OIDCConfig is the OpenID Connect client configuration, only present when
+// OIDC_ISSUER was set.
 type OIDCConfig struct {
 	Issuer       string
 	ClientID     string
@@ -14,6 +16,8 @@ type OIDCConfig struct {
 	SuccessURL   string
 }
 
+// Config is the process configuration: the tronc core plus Perception's OIDC
+// and SSO policy.
 type Config struct {
 	troncenv.Core
 	OIDC        *OIDCConfig
@@ -22,6 +26,13 @@ type Config struct {
 	AdminEmails []string
 }
 
+// Load reads and validates the environment. The public origin is what an OIDC
+// redirect has to point at, so it falls back to the first CORS origin when
+// PUBLIC_URL is unset; OIDC_ISSUER is the switch that mounts the OIDC routes
+// and demands its client triple now, at startup, rather than at the first login
+// attempt of a deployment that believed SSO was configured; and SSO_ONLY
+// without an issuer refuses to boot, because a running instance that serves a
+// login page nobody can get through is worse than none.
 func Load() (Config, error) {
 	core, err := troncenv.LoadCore()
 	if err != nil {
@@ -39,17 +50,11 @@ func Load() (Config, error) {
 
 	cfg.AdminEmails = troncenv.List("PERCEPTION_ADMIN_EMAILS")
 
-	// The public origin is what an OIDC redirect has to point at. Deployments
-	// almost never set it twice, so it falls back to the first CORS origin the
-	// same way OIDC_SUCCESS_URL does.
 	cfg.PublicURL = troncenv.String("PUBLIC_URL", "")
 	if cfg.PublicURL == "" && len(cfg.CORSAllowedOrigins) > 0 {
 		cfg.PublicURL = cfg.CORSAllowedOrigins[0]
 	}
 
-	// OIDC_ISSUER is the switch: unset means the OIDC routes are never mounted.
-	// Set means the rest has to add up now, at startup, rather than at the first
-	// login attempt of a deployment that believed SSO was configured.
 	if issuer := troncenv.String("OIDC_ISSUER", ""); issuer != "" {
 		clientID := troncenv.String("OIDC_CLIENT_ID", "")
 		clientSecret := troncenv.String("OIDC_CLIENT_SECRET", "")
@@ -70,9 +75,6 @@ func Load() (Config, error) {
 		}
 	}
 
-	// SSO_ONLY removes the password routes, so without an issuer there is no way
-	// left to authenticate at all. Refusing to boot beats a running instance that
-	// serves a login page nobody can get through.
 	if cfg.SSOOnly && cfg.OIDC == nil {
 		return Config{}, fmt.Errorf("SSO_ONLY is set without OIDC_ISSUER, which would leave no way to sign in")
 	}

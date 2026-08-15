@@ -27,14 +27,15 @@ type oidcHandler struct {
 	successURL string
 }
 
+// newOIDCHandler builds the provider-backed OIDC flow. No offline_access is
+// requested: Perception stores neither access nor refresh tokens, so asking for
+// one it would have to discard only widens the blast radius.
 func newOIDCHandler(ctx context.Context, cfg *env.OIDCConfig, service *Service) (*oidcHandler, error) {
 	provider, err := gooidc.NewProvider(ctx, cfg.Issuer)
 	if err != nil {
 		return nil, err
 	}
 
-	// No offline_access: Perception stores neither access nor refresh tokens,
-	// so asking for one it would have to discard only widens the blast radius.
 	oauth2Cfg := oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,

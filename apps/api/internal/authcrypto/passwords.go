@@ -24,6 +24,7 @@ const (
 // as one for a known address, so response time never discloses which.
 var DummyHash, _ = HashPassword("timing-safe-dummy-value")
 
+// HashPassword argon2id-hashes a password into the modular $argon2id$ encoding.
 func HashPassword(password string) (string, error) {
 	if password == "" {
 		return "", errors.New("password required")
@@ -38,6 +39,8 @@ func HashPassword(password string) (string, error) {
 	return encodeArgon2ID(saltBytes, hash), nil
 }
 
+// VerifyPassword reports whether a password matches an encoded argon2id hash,
+// comparing the result in constant time to resist timing attacks.
 func VerifyPassword(password, encodedHash string) bool {
 	params, saltBytes, wantHash, err := decodeArgon2ID(encodedHash)
 	if err != nil || password == "" {

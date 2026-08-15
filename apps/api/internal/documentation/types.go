@@ -11,10 +11,18 @@ package docs
 
 import "github.com/FacileStudio/tronc/apiref"
 
-type (
-	Response = apiref.Registry
-	Module   = apiref.Module
-	Route    = apiref.Route
-	Field    = apiref.Field
-	Error    = apiref.Error
-)
+// Response names the registry that aggregates a module's declared routes.
+// Response aliases tronc/apiref.Registry.
+type Response = apiref.Registry
+
+// Module aliases tronc/apiref.Module.
+type Module = apiref.Module
+
+// Route aliases tronc/apiref.Route.
+type Route = apiref.Route
+
+// Field aliases tronc/apiref.Field.
+type Field = apiref.Field
+
+// Error aliases tronc/apiref.Error.
+type Error = apiref.Error
