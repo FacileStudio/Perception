@@ -275,6 +275,13 @@ Built (scaffold):
 | POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` |
 | GET | `/api/auth/me` |
 | GET | `/api/auth/oidc`, `/api/auth/oidc/callback` |
+| POST | `/api/auth/oidc/exchange`, `/api/auth/backchannel-logout` |
+
+Everything under `/api/auth` except `/auth/me` is served by
+[porte](https://github.com/FacileStudio/porte) v0.3.0 and mounted from `main.go`. Sessions are
+an opaque token, hashed at rest in `porte_sessions`, carried in an `HttpOnly` `__Host-`-prefixed
+cookie for browsers and as a bearer token for everything else. **A cookie-borne mutating call
+must send `X-Facile-CSRF`** or it is answered 403.
 
 Planned, by phase:
 

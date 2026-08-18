@@ -19,6 +19,10 @@ import (
 	"github.com/FacileStudio/Perception/apps/api/schemas"
 
 	"github.com/FacileStudio/Journal/sdk/journal"
+	"github.com/FacileStudio/porte/local"
+	"github.com/FacileStudio/porte/oidc"
+	portepg "github.com/FacileStudio/porte/pg"
+	"github.com/FacileStudio/porte/session"
 	"github.com/FacileStudio/tronc/apiref"
 	"github.com/FacileStudio/tronc/health"
 	"github.com/FacileStudio/tronc/healthcheck"
@@ -66,7 +70,7 @@ func main() {
 // trusted — Traefik replaces the forwarded chain rather than extending it, so
 // the visitor survives in Cf-Connecting-Ip alone and
 // TRUSTED_PROXIES=private,cloudflare fills all three.
-func buildRouter(authService *auth.Service, sqlDB *sql.DB, appLogger *slog.Logger, appEnv env.Config) chi.Router {
+func buildRouter(kits authKits, authService *auth.Service, sqlDB *sql.DB, appLogger *slog.Logger, appEnv env.Config) chi.Router {
 	router := httpx.NewRouter(httpx.Config{
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
@@ -82,10 +86,112 @@ func buildRouter(authService *auth.Service, sqlDB *sql.DB, appLogger *slog.Logge
 	apiref.Mount(router, refConfig())
 
 	router.Route("/api", func(r chi.Router) {
-		auth.RegisterRoutes(r, authService, appEnv)
+		kits.sessions.Mount(r)
+		if kits.oidc != nil {
+			kits.oidc.Mount(r)
+		}
+		if kits.passwords != nil {
+			kits.passwords.Mount(r)
+		}
+		auth.RegisterRoutes(r, authService)
 	})
 
 	return router
+}
+
+// authKits is porte, assembled. The password kit is nil under SSO_ONLY and the
+// OIDC kit is nil without an issuer, which is how a route that must not exist
+// ends up unmounted rather than answering 403 — there is no endpoint to probe.
+type authKits struct {
+	sessions  *session.Manager
+	passwords *local.Kit
+	oidc      *oidc.Kit
+}
+
+// buildAuth constructs porte: one session manager, shared by the OIDC kit and
+// the local login, over porte's identity tables.
+//
+// One manager and not two: they would each keep their own idea of the clock and
+// of whether the cookie is Secure, and porte refuses a kit whose config
+// disagrees with its manager's for exactly that reason.
+//
+// Discovery runs here, so an unreachable or half-configured issuer fails at
+// boot rather than on somebody's first login. That is a deliberate change from
+// the module this replaces, which logged the error at route-registration time
+// and left SSO 404ing until the next restart.
+func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger *slog.Logger) (authKits, error) {
+	cfg := appEnv.Porte()
+	store := portepg.New(sqlDB)
+
+	sessions, err := session.New(cfg, session.Deps{Sessions: store.Sessions(), Logger: appLogger})
+	if err != nil {
+		return authKits{}, err
+	}
+	kits := authKits{sessions: sessions}
+
+	if appEnv.OIDC != nil {
+		kits.oidc, err = oidc.New(ctx, cfg, oidc.Deps{
+			Users:      store.Users(),
+			Identities: store.Identities(),
+			Sessions:   sessions,
+			Codes:      store.LoginCodes(),
+			Logger:     appLogger,
+		})
+		if err != nil {
+			return authKits{}, err
+		}
+	}
+
+	if !appEnv.SSOOnly {
+		kits.passwords, err = local.New(local.Config{AllowRegistration: true}, local.Deps{
+			Users:      store.Users(),
+			Identities: store.Identities(),
+			Sessions:   sessions,
+			Logger:     appLogger,
+			Count:      countUsers(sqlDB),
+		})
+		if err != nil {
+			return authKits{}, err
+		}
+	}
+
+	return kits, nil
+}
+
+// countUsers backs porte/local's first-account exception: registration is open
+// while the instance is empty and closed the moment an account exists, so a
+// public deployment cannot be claimed by whoever finds it second.
+//
+// It counts porte's table directly because Perception has no user table of its
+// own to count.
+func countUsers(sqlDB *sql.DB) func(context.Context) (int64, error) {
+	return func(ctx context.Context) (int64, error) {
+		var count int64
+		if err := sqlDB.QueryRowContext(ctx, `SELECT count(*) FROM porte_users`).Scan(&count); err != nil {
+			return 0, err
+		}
+		return count, nil
+	}
+}
+
+// startSessionSweep deletes expired session rows on a timer. porte expires a
+// session by comparing timestamps on read, so a stale row is never honoured;
+// this only stops the table growing without bound.
+func startSessionSweep(ctx context.Context, sessions *session.Manager, appLogger *slog.Logger) {
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if _, err := sessions.Sweep(ctx); err != nil {
+					appLogger.Warn("failed to sweep expired sessions", slog.Any("error", err))
+				}
+			}
+		}
+	}()
 }
 
 func run() int {
@@ -134,10 +240,15 @@ func run() int {
 	shutdownCtx, cancelCleanup := context.WithCancel(context.Background())
 	defer cancelCleanup()
 
-	authService := auth.NewService(db, appLogger)
-	authService.StartSessionCleanup(shutdownCtx)
+	kits, err := buildAuth(shutdownCtx, sqlDB, appEnv, appLogger)
+	if err != nil {
+		appLogger.Error("failed to build authentication", slog.Any("error", err))
+		return 1
+	}
+	authService := auth.NewService(db, kits.sessions)
+	startSessionSweep(shutdownCtx, kits.sessions, appLogger)
 
-	router := buildRouter(authService, sqlDB, appLogger, appEnv)
+	router := buildRouter(kits, authService, sqlDB, appLogger, appEnv)
 
 	clientDir := spa.DirFromEnv()
 	if spa.Available(clientDir) {

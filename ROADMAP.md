@@ -140,8 +140,9 @@ Do not rebuild these. They are done and wired.
 - **Scalar API reference at `/docs`**, generated from the hand-written route registry in each
   module's `documentation.go`. `TestEveryRouteIsDocumented` fails the build when a route is
   added without an entry. Fix the registry, never the test.
-- **Auth** — sessions with argon2id local accounts and optional Authentik OIDC, `SSO_ONLY`
-  supported. Isolated behind the porte seam (§7).
+- **Auth** — [porte](https://github.com/FacileStudio/porte) v0.3.0: sessions, argon2id local
+  accounts, Authentik OIDC, CLI login codes, back-channel logout, `SSO_ONLY`. Mounted from
+  `main.go` behind the seam in §7.
 - **Postgres 16 + pgvector**, extension enabled by the migration runner; GORM models and
   `schemas.Migrate`
 - **Journal** log shipping, **Casier** secret injection via `mise run dev`
@@ -348,15 +349,19 @@ right shape is probably "Kori tells you when you ask" plus one daily digest, not
 
 ## 7. The porte seam, and the seams that follow it
 
-Auth will be extracted into a shared suite package called **porte**. The scaffold is built so
-that becomes a mechanical change, and it must stay that way.
+**porte has landed** (2026-08-19, v0.3.0). The scaffold was built so that would be a mechanical
+change, and it was: the hand-rolled auth module became a constructor call in `main.go`, and no
+consumer outside it changed. That is the whole argument for keeping the discipline.
 
 - `internal/identity` owns `Identity` and the `Authenticator` interface. Nothing else does.
 - `middleware.RequireAuth` takes the interface, never a concrete service.
 - **Feature modules take `identity.Authenticator` in `RegisterRoutes`. Never `*auth.Service`.**
-- `modules/auth` is imported by `main.go` and by nothing else. `seam_test.go` enforces this.
+- `modules/auth` is imported by `main.go` and by nothing else.
+- Only `main.go` and `modules/auth` build a porte kit — `porte/session`, `porte/local`,
+  `porte/oidc`. A second session manager is a second clock and a second cookie policy.
+- `seam_test.go` enforces the last two. The contract package `porte` and the storage package
+  `porte/pg` are exempt: neither authenticates anybody.
 
-When porte lands: delete `modules/auth`, add the dependency, construct it in `main.go`, done.
 If you find yourself reaching into `modules/auth` from a feature module, you are about to cost
 someone a day.
 

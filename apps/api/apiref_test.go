@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -18,11 +19,22 @@ import (
 // testRouter is the shipped router mounted against a nil database handle. No
 // service reads the handle until a request arrives, and these tests only walk
 // the route table and read /docs.
+//
+// It builds porte for real rather than passing an empty authKits: porte owns
+// /auth/config, the credential routes and logout now, so a router without it
+// would let the coverage guard pass over the routes most likely to move. The
+// OIDC kit stays out because constructing it performs discovery against a live
+// issuer, and its routes are registered from the same registry entry either
+// way.
 var testRouter = newTestRouter()
 
 func newTestRouter() chi.Router {
 	discardLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	return buildRouter(auth.NewService(nil, discardLogger), nil, discardLogger, env.Config{})
+	kits, err := buildAuth(context.Background(), nil, env.Config{}, discardLogger)
+	if err != nil {
+		panic("building authentication for the test router: " + err.Error())
+	}
+	return buildRouter(kits, auth.NewService(nil, kits.sessions), nil, discardLogger, env.Config{})
 }
 
 // A hand-written registry rots the moment a route is added without it, which is

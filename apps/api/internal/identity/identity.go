@@ -1,25 +1,24 @@
-// Package identity owns the seam porte will slot into.
+// Package identity owns the seam porte slots into.
 //
-// Authentication is destined to leave this repository for the shared porte
-// package. That move is only mechanical if nothing outside modules/auth ever
-// names a concrete auth type, so every consumer — middleware, feature modules,
-// handlers — depends on the Authenticator interface and the Identity value
-// declared here, and on nothing else. Swapping the implementation then means
-// changing one constructor call in main.go.
+// Authentication lives in the shared porte package rather than in this
+// repository. Nothing outside main.go names a porte type: every consumer —
+// middleware, feature modules, handlers — depends on the Authenticator
+// interface and the Identity value declared here, so swapping the
+// implementation again stays a change to one constructor call.
 package identity
 
-import "context"
-
-// SessionCookieName is the wire contract, so it lives with the seam rather than
-// with the implementation. Both the middleware that reads the cookie and the
-// auth module that writes it need the name, and the middleware may not import
-// modules/auth — that package is reachable from main.go alone. porte must keep
-// this spelling or every open session is dropped on deploy.
-const SessionCookieName = "perception_session"
+import (
+	"context"
+	"net/http"
+)
 
 // Identity is what an authenticated request carries. It is deliberately flat
-// and free of database types: porte will have its own storage and must still
-// be able to produce this value.
+// and free of database types, so whatever authenticates a request can still
+// produce it.
+//
+// UserID is a decimal string rather than porte's int64: it is an opaque handle
+// everywhere downstream, and keeping it a string leaves the JSON shape the
+// client already reads untouched.
 type Identity struct {
 	UserID   string
 	Email    string
@@ -27,11 +26,16 @@ type Identity struct {
 	ClientIP string
 }
 
-// Authenticator resolves a credential into an Identity. modules/auth implements
-// it today; porte will implement it tomorrow. Nothing outside this package may
-// depend on which one is in use.
+// Authenticator verifies a credential and resolves the profile behind it.
+//
+// The two halves are separate because porte splits them: its session manager
+// verifies a cookie or a bearer token and yields a user id, and deliberately
+// carries no email — a library that decided what an identity means to an app
+// would be routed around by the second app that adopted it. So the credential
+// check is middleware and the profile is a lookup, and this interface is both.
 type Authenticator interface {
-	Authenticate(ctx context.Context, authorization string) (Identity, error)
+	RequireAuth(next http.Handler) http.Handler
+	IdentityForUser(ctx context.Context, userID int64) (Identity, error)
 }
 
 type contextKey struct{}

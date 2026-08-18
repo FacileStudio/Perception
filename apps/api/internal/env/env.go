@@ -3,6 +3,7 @@ package env
 import (
 	"fmt"
 
+	"github.com/FacileStudio/porte"
 	troncenv "github.com/FacileStudio/tronc/env"
 )
 
@@ -80,4 +81,27 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// Porte translates this config into porte's. The environment variable names are
+// the suite convention and do not change; this only reshapes what Load already
+// validated.
+//
+// AcceptLegacyCookie stays off. It exists so an adopting app does not log
+// everyone out, and it does that by also reading an unprefixed `session`
+// cookie — which is the cookie a compromised sibling host plants, and exactly
+// what the __Host- prefix refuses. Perception's pre-porte cookie was named
+// perception_session, which that fallback would not have matched anyway, so
+// turning it on would widen the attack surface and rescue nothing.
+func (c Config) Porte() porte.Config {
+	cfg := porte.Config{SSOOnly: c.SSOOnly}
+	if c.OIDC == nil {
+		return cfg
+	}
+	cfg.Issuer = c.OIDC.Issuer
+	cfg.ClientID = c.OIDC.ClientID
+	cfg.ClientSecret = c.OIDC.ClientSecret
+	cfg.RedirectURL = c.OIDC.RedirectURL
+	cfg.SuccessURL = c.OIDC.SuccessURL
+	return cfg
 }

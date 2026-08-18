@@ -15,6 +15,9 @@ type FetchOptions = {
 	body?: unknown;
 };
 
+/** The methods porte treats as non-mutating, and so exempt from the CSRF header. */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 export class ApiError extends Error {
 	status: number;
 	code: string;
@@ -62,14 +65,26 @@ function parseError(body: string, status: number): ApiError {
 async function request<T>(path: string, options: FetchOptions = {}): Promise<T> {
 	if (!browser) throw new ApiError('The API is only reachable from the browser', 0, 'no_browser');
 
+	const method = options.method ?? 'GET';
 	const headers: Record<string, string> = {};
 
 	if (options.body !== undefined) {
 		headers['Content-Type'] = 'application/json';
 	}
 
+	/*
+	 * porte's second lock on the cookie transport. SameSite=Lax stops
+	 * cross-site form posts; a header a browser will not attach to a simple
+	 * cross-origin request stops the rest. Any non-empty value counts, so
+	 * there is no token to fetch or rotate — and without it every mutating
+	 * call authenticated by the cookie is answered 403.
+	 */
+	if (!SAFE_METHODS.has(method)) {
+		headers['X-Facile-CSRF'] = '1';
+	}
+
 	const response = await fetch(`${API_BASE}${path}`, {
-		method: options.method ?? 'GET',
+		method,
 		headers,
 		credentials: 'include',
 		body: options.body === undefined ? undefined : JSON.stringify(options.body)

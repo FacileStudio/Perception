@@ -24,7 +24,7 @@ first; most of it was deleted on purpose.
 | Client  | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
 | Build   | `go build`, Bun                                                          |
 | Deploy  | Docker Compose, one distroless container serving API + client, Dokploy + Traefik |
-| Auth    | Sessions (argon2id) or Authentik OIDC, `SSO_ONLY` supported              |
+| Auth    | [porte](https://github.com/FacileStudio/porte) v0.3.0 — sessions, argon2id passwords, Authentik OIDC, `SSO_ONLY` |
 | Logging | Journal SDK; secrets from Casier in dev, Dokploy in production           |
 | Planned | Voyage `voyage-4-lite` embeddings; `claude-opus-5` through nacelle; MCP server via `modelcontextprotocol/go-sdk` |
 
@@ -38,13 +38,12 @@ apps/
     seam_test.go        modules/auth may be imported by main.go alone
     internal/
       identity/         Identity and the Authenticator interface — the porte seam
-      env/              Config on top of tronc/env.Core
+      env/              Config on top of tronc/env.Core, plus Config.Porte()
       database/         GORM + Postgres handle
-      middleware/       RequireAuth, rate limiting
-      authcrypto/       argon2id passwords, session tokens
+      middleware/       RequireAuth (porte + profile hydration), rate limiting
       documentation/    Aliases of tronc/apiref, so modules write against a local package
-    modules/auth/       Sessions and OIDC. The only module that exists yet
-    schemas/            GORM models and migrations
+    modules/auth/       The porte adapter: profile lookup and /auth/me. The only module yet
+    schemas/            Migrations; porte owns the identity tables
   client/               SvelteKit dashboard
     src/lib/backend.ts  API client
     src/lib/auth.svelte.ts, theme.svelte.ts   Runes stores
@@ -91,10 +90,24 @@ because mise pins a version while leaving another `go` earlier on PATH.
   reported as `IgnoredGoFiles` and importers fail with `build constraints exclude all Go files`,
   with no build tag anywhere to explain it. Import it as
   `documentation "…/internal/documentation"`. Casier does the same thing for the same reason.
-- **The porte seam is load-bearing.** Feature modules take `identity.Authenticator` in
-  `RegisterRoutes`, never `*auth.Service`, and nothing but `main.go` imports `modules/auth`.
-  `seam_test.go` enforces it. Auth will be replaced by a shared package; keep the swap
-  mechanical. This is a deliberate divergence from Casier — do not port its pattern back.
+- **The porte seam is load-bearing, and it already paid for itself.** Auth is
+  `github.com/FacileStudio/porte`; swapping the hand-rolled module for it was a change to one
+  constructor call because nothing outside `main.go` named the implementation. Keep it that
+  way: feature modules take `identity.Authenticator` in `RegisterRoutes`, never `*auth.Service`;
+  only `main.go` imports `modules/auth`; only `main.go` and `modules/auth` build a porte kit
+  (`porte/session`, `porte/local`, `porte/oidc`). `seam_test.go` enforces both rules. The
+  contract package `porte` and the storage package `porte/pg` are exempt and may be imported
+  anywhere — neither authenticates anybody. This is a deliberate divergence from Casier — do
+  not port its pattern back.
+- **porte mounts eight of the nine auth routes**, from `main.go`, not from `modules/auth`. That
+  module holds the profile lookup porte declines to make and `GET /auth/me`. Its
+  `documentation.go` still has to describe every porte route, because `/docs` is Perception's
+  contract with its callers and `TestEveryRouteIsDocumented` walks the router that ships.
+- **Cookie-borne mutations need `X-Facile-CSRF`.** porte answers 403 without it. The client
+  sends it on every non-GET/HEAD/OPTIONS call from `backend.ts`; a new caller must too.
+  Bearer callers are exempt — nothing attaches a header on their behalf.
+- **Perception keeps no user table.** `porte_users` is the profile table; no domain row hangs
+  off an account, so there is nothing to join and no parallel table to keep in step.
 - **Do not store OIDC access or refresh tokens.** The old app did, which is why the August 2026
   backup contains live credentials.
 - Errors, JSON, logging, CORS, health and the API reference all come from `tronc`. Never
@@ -115,7 +128,7 @@ because mise pins a version while leaving another `go` earlier on PATH.
 | `LOG_LEVEL` | No | debug/info/warn/error, default info |
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated, read through `tronc/env`; legacy names remain fallbacks. Unset denies every cross-origin caller; `*` is refused at startup because the API sends credentials |
 | `PUBLIC_URL` | No | Public origin for links that leave the server. Defaults to the first CORS origin |
-| `SSO_ONLY` | No | Removes the local login and register routes entirely when true |
+| `SSO_ONLY` | No | Removes the local login and register routes entirely when true — porte does not register them, so there is no endpoint to probe |
 | `PERCEPTION_ADMIN_EMAILS` | No | Comma-separated. Empty means nobody — admin routes fail closed |
 | `OIDC_ISSUER` | No | Enables SSO. `porte.facile.studio/application/o/perception/` |
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` / `OIDC_REDIRECT_URL` | If OIDC | Required together once the issuer is set; validated at startup |
