@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Alert, Button, Divider, Field, Input } from '@facile/muse';
 	import { auth } from '$lib/auth.svelte';
 	import { OIDC_START_URL } from '$lib/backend';
@@ -14,6 +15,19 @@
 	const ssoOnly = $derived(auth.ssoOnly);
 	const oidcEnabled = $derived(auth.oidcEnabled);
 	const showPasswordForm = $derived(!ssoOnly);
+
+	/*
+	 * A failed SSO callback comes back as a redirect to /login?error=<reason>,
+	 * not as a status code, so without reading this a rejected sign-in is
+	 * indistinguishable from arriving at the page normally.
+	 *
+	 * The reason is porte's own sentence, but it reaches us through a URL
+	 * anybody can write, so it is capped: Svelte escapes it, which stops
+	 * markup, and the cap stops the page being used to display a paragraph of
+	 * someone else's choosing above a login form.
+	 */
+	const redirectError = $derived(page.url.searchParams.get('error')?.trim().slice(0, 200) ?? '');
+	const notice = $derived(error || redirectError);
 
 	onMount(async () => {
 		if (!auth.loaded) await auth.load();
@@ -51,6 +65,15 @@
 {#if !ready}
 	<div class="h-40"></div>
 {:else}
+	<!--
+		Outside every SSO_ONLY branch on purpose. Under SSO_ONLY the password
+		form is not rendered, and an alert nested inside it would swallow the
+		one message a rejected federated login ever produces.
+	-->
+	{#if notice}
+		<Alert tone="danger" class="mb-5">{notice}</Alert>
+	{/if}
+
 	{#if oidcEnabled}
 		<Button
 			type="button"
@@ -98,10 +121,6 @@
 					disabled={loading}
 				/>
 			</Field>
-
-			{#if error}
-				<Alert tone="danger">{error}</Alert>
-			{/if}
 
 			<Button type="submit" size="lg" class="w-full rounded-fc-md" disabled={loading}>
 				{loading ? 'Logging in…' : 'Log in'}

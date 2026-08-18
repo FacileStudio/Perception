@@ -25,7 +25,7 @@ var Documentation = documentation.Module{
 			Method:       "POST",
 			Path:         porte.RouteRegister,
 			Summary:      "Register a local user",
-			Description:  "Creates a password account, opens a session and sets the session cookie. Not mounted when SSO_ONLY is enabled, and refused once an account exists.",
+			Description:  "Creates a password account, opens a session and sets the session cookie. Not mounted when SSO_ONLY is enabled. Only the first account is creatable: once one exists the route answers 403, so an instance cannot be claimed by whoever finds it second.",
 			Auth:         "public",
 			RequestBody:  "porte.CredentialsRequest",
 			ResponseBody: "porte.ExchangeResponse",
