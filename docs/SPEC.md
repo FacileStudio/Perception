@@ -6,6 +6,11 @@ scope and this wins on detail.
 
 Nothing here is built yet. The scaffold implements auth and the chassis only.
 
+**Perception is the engine, Kori is the agent.** This document specifies the engine: ingest,
+storage, embeddings, the entity graph, retrieval, and the MCP surface. Kori's prompt, sessions
+and client are specified in the roadmap; the agent SDK it runs on lives in
+[`FacileStudio/nacelle`](https://github.com/FacileStudio/nacelle).
+
 ---
 
 ## 1. The corpus, measured
@@ -48,11 +53,15 @@ ISO-8601. Sorting was therefore wrong for 107 events. Parse both, store `timesta
 ```
 POST /api/ingest
 Content-Type: application/json
-X-Nook-Event-Id:        <stable id, unique per event>
-X-Nook-Timestamp:       <unix seconds>
-X-Nook-Schema-Version:  1
-X-Nook-Signature-256:   sha256=<hex hmac>
+x-antenne-event-id:        <stable id, unique per event>
+x-antenne-timestamp:       <unix seconds>
+x-antenne-schema-version:  1
+x-antenne-signature-256:   sha256=<hex hmac>
 ```
+
+These are the headers Antenne sends today — see its `apps/api/internal/envelope/signing.go`.
+Earlier drafts of this spec said `X-Nook-*`; the bus was renamed and the emitter was updated,
+the spec was not. Do not build against the old names.
 
 ### Signature
 
@@ -73,7 +82,7 @@ re-serialisation. Compare in constant time. Reject when:
 | `invalid_signature` | no configured secret matches |
 
 Two secrets are accepted, `INGEST_HMAC_SECRET` and `INGEST_HMAC_SECRET_PREVIOUS`, so rotation
-does not require a synchronised restart of Nook and Perception.
+does not require a synchronised restart of Antenne and Perception.
 
 **Replay protection is deduplication, not a nonce cache.** The event id is the primary key;
 a resend is an idempotent upsert answering `202`. Say so plainly rather than claiming a
@@ -100,7 +109,7 @@ boot from `schemas.Migrate`.
 
 | Column | Type | Notes |
 |---|---|---|
-| `id` | text PK | the Nook event id; dedup key |
+| `id` | text PK | the Antenne event id; dedup key |
 | `schema_version` | int | |
 | `source` | text | `webhook`, `poll` |
 | `provider_id` | text | |
@@ -155,10 +164,36 @@ Standard resolution tables. Two constraints learned the hard way:
 - Relations need a reason to exist. The old system stored **271,126** relations over 572
   entities — a fully-connected-by-accident graph nothing queried.
 
+### `entity_relations`
+
+| Column | Type | Notes |
+|---|---|---|
+| `source_id`, `target_id` | text FK → `entities.id` | stored once per unordered pair |
+| `kind` | text | `touched_by`, `deployed_with`, `belongs_to`, … |
+| `evidence_count` | int | how many events witnessed it |
+| `weight` | real | derived from evidence and recency; what the graph is traversed on |
+| `first_seen_at`, `last_seen_at` | timestamptz | |
+
+**Co-occurrence in a single event is not a relation.** A pair earns a row above an evidence
+floor and loses it when the relation goes cold. This constraint is the entire difference
+between a graph you can traverse and the 271,126-row one that nothing queried.
+
+### `communities`, `entity_communities`
+
+Clusters over the weighted relation graph — Leiden or label propagation, recomputed on a
+schedule, never per event. `communities` holds the cluster, its size, its algorithm run id and
+a generated label; `entity_communities` is the membership with a strength score.
+
+**These tables exist only to be read by retrieval or the UI.** They were cut from the rewrite
+alongside forecasting and are back as of 2026-08-19 because "what is connected to this" is a
+real question. If they are ever computed and unread, delete them — that is what the old
+`topology_snapshots` was.
+
 ### `chat_sessions`, `chat_messages`
 
-Session, role, content, and the event ids cited by each assistant message so a citation can be
-re-rendered without re-running retrieval.
+Kori's transcripts. Session, role, content, the tool calls made during the turn, and the event
+ids cited by each assistant message so a citation can be re-rendered without re-running
+retrieval.
 
 ## 4. Retrieval
 
@@ -167,32 +202,68 @@ One lane. Hybrid, because neither half is sufficient alone:
 1. **Vector** — embed the question with `voyage-4-lite`, cosine top-k over `event_embeddings`.
 2. **Full-text** — `websearch_to_tsquery` against `events.search`, ranked with `ts_rank_cd`.
    Journal's `modules/logs` already does this half; read it rather than reinventing.
-3. **Fuse** — reciprocal rank fusion over the two lists, then a time-decay factor. Operational
+3. **Graph expansion** — when the query resolves to a known entity, widen the candidate set to
+   that entity's relations above the weight floor and to its community before ranking. This is
+   a predicate on the same query, not a third retriever with its own weights.
+4. **Fuse** — reciprocal rank fusion over the lists, then a time-decay factor. Operational
    questions are almost always about the recent past.
 
-Filters (provider, entity, time range) are SQL predicates applied to both halves, never a
+Filters (provider, entity, time range) are SQL predicates applied to every half, never a
 post-filter on the fused list — post-filtering silently empties results.
 
 The old system had five lanes plus a 3,169-line LLM planner choosing between them, exercised
 by no user. **Add a second lane only when a specific real question demonstrably fails.**
 
-## 5. Chat
+## 5. The MCP server
 
-`POST /api/chat` streaming SSE. Claude via `anthropic-sdk-go` — there is no Vercel AI SDK in
-Go, so the tool-call loop is hand-rolled, which is a couple of hundred lines against one lane.
+Perception's surface for machines, at `/api/mcp`, streamable HTTP transport, authenticated by
+the same session or by a service token. Built with the official Go MCP SDK
+(`github.com/modelcontextprotocol/go-sdk`) — verify its current API against the repo before
+writing, it moves.
 
-Shape of a turn:
+Tools, each a thin wrapper over an existing HTTP handler:
 
-1. Retrieve with the user's question, optionally narrowed by filters from the UI.
-2. Build a context block of the top events: `occurred_at`, provider, title, summary, url.
-3. Stream the answer, requiring inline citations by event id.
-4. Persist the message with its cited ids.
+| Tool | For |
+|---|---|
+| `search_events` | the hybrid retrieval of §4, with filters |
+| `get_event` | one event in full, by id |
+| `list_entities` | entities by type or name fragment |
+| `get_entity` | one entity, its aliases and its recent events |
+| `related_entities` | the neighbourhood: strong relations and the community |
+| `event_stats` | counts by provider, type, entity or window |
 
-**An answer with no citations is a bug.** This is grounded retrieval over a known corpus, not
-a general assistant. When retrieval returns nothing, the correct answer is "nothing in the
-events covers that", not a plausible paragraph.
+Two rules. **If writing an MCP tool needs new business logic, that logic belonged in the
+module** — the server is a wrapper, not a second implementation. And **every result carries
+event ids**, so a citation survives the round trip into whatever agent called it.
 
-## 6. API surface
+The acceptance test is that Claude Code can connect to this server and answer a real question
+about the suite. That needs no Kori and should be true before Kori exists.
+
+## 6. Kori
+
+The agent. `POST /api/kori/chat` streaming SSE, sessions under `/api/kori/sessions`.
+
+Kori runs on [nacelle](https://github.com/FacileStudio/nacelle), the suite agent SDK — the
+model loop, tool registry and MCP wiring live there, not here. This module owns the persona,
+the system prompt, session persistence and the client.
+
+- Model `claude-opus-5` with adaptive thinking (`thinking: {type: "adaptive"}`). **Never pass
+  `budget_tokens`** — it is a 400 on Opus 5; use `output_config.effort` instead.
+- The loop is the SDK's `toolrunner`, not hand-written. The claim in earlier drafts that Go
+  had no equivalent of the Vercel AI SDK is out of date.
+- Remote MCP servers are reached through the Claude API's MCP connector: `mcp_servers` **and**
+  a matching `mcp_toolset` entry in `tools`, with the `mcp-client-2025-11-20` beta. Both
+  halves, or the request is rejected.
+- Perception's own MCP server is Kori's first tool source. Others join as suite apps ship them.
+
+Shape of a turn: the model decides which tools to call, nacelle runs them, the transcript
+streams out as SSE, and the message persists with its tool calls and cited event ids.
+
+**An answer that asserts a fact with no citation is a bug.** This is grounded retrieval over a
+known corpus, not a general assistant. When retrieval returns nothing, the correct answer is
+"nothing in the events covers that", not a plausible paragraph.
+
+## 7. API surface
 
 Built (scaffold):
 
@@ -213,14 +284,16 @@ Planned, by phase:
 | 1 | GET | `/api/events`, `/api/events/{id}` |
 | 1 | GET | `/api/ingest/rejections` |
 | 2 | GET | `/api/embeddings/status` |
-| 3 | POST | `/api/chat` (SSE) |
-| 3 | GET | `/api/chat/sessions`, `/api/chat/sessions/{id}` |
-| 4 | GET | `/api/entities`, `/api/entities/{id}` |
+| 3 | GET | `/api/entities`, `/api/entities/{id}`, `/api/entities/{id}/related` |
+| 4 | POST | `/api/retrieve` |
+| 5 | GET/POST | `/api/mcp` |
+| 6 | POST | `/api/kori/chat` (SSE) |
+| 6 | GET | `/api/kori/sessions`, `/api/kori/sessions/{id}` |
 
 Every route needs an entry in its module's `documentation.go`. `TestEveryRouteIsDocumented`
 fails the build otherwise — fix the registry, never the test.
 
-## 7. Configuration
+## 8. Configuration
 
 Read today: `APP_ENV`, `PORT`, `LOG_LEVEL`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS`,
 `JOURNAL_URL`, `JOURNAL_TOKEN`, `PUBLIC_URL`, `SSO_ONLY`, `PERCEPTION_ADMIN_EMAILS`, and the

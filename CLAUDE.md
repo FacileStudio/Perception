@@ -1,7 +1,13 @@
 # Perception
 
-Context brain for Facile operations. Ingests structured events from the suite and answers
-grounded operational questions about them. Go API + SvelteKit frontend + PostgreSQL/pgvector.
+Context brain for Facile operations. Ingests structured events from the suite, embeds them,
+resolves the entity graph, and answers grounded operational questions about them. Go API +
+SvelteKit frontend + PostgreSQL/pgvector.
+
+**Perception is the engine; Kori is the agent.** Perception is headless — it speaks HTTP and
+MCP and has no chat UI. Kori is the suite's mascot and its only conversational surface, lives
+in `apps/api/modules/kori` plus the client, and runs on
+[nacelle](https://github.com/FacileStudio/nacelle), the suite agent SDK. Neither exists yet.
 
 **This repo is mid-rewrite.** A TypeScript version ran from 2026-05-08 to 2026-08-07 and was
 retired unused; it is gone from the tree and lives in git history on `main`. What exists now is
@@ -14,13 +20,13 @@ first; most of it was deleted on purpose.
 
 | Layer   | Stack                                                                    |
 | ------- | ------------------------------------------------------------------------ |
-| API     | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, tronc v0.9.0            |
+| API     | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, tronc v0.14.0           |
 | Client  | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
 | Build   | `go build`, Bun                                                          |
 | Deploy  | Docker Compose, one distroless container serving API + client, Dokploy + Traefik |
 | Auth    | Sessions (argon2id) or Authentik OIDC, `SSO_ONLY` supported              |
 | Logging | Journal SDK; secrets from Casier in dev, Dokploy in production           |
-| Planned | Claude via `anthropic-sdk-go`, Voyage `voyage-4-lite` embeddings         |
+| Planned | Voyage `voyage-4-lite` embeddings; `claude-opus-5` through nacelle; MCP server via `modelcontextprotocol/go-sdk` |
 
 ## Project Structure
 
@@ -120,12 +126,16 @@ because mise pins a version while leaving another `go` earlier on PATH.
 
 Reserved for later phases — present in `.env.example` and `docker-compose.yml` as commented
 lines, not read by any code yet: `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `INGEST_HMAC_SECRET`,
-`INGEST_HMAC_SECRET_PREVIOUS`.
+`INGEST_HMAC_SECRET_PREVIOUS`. Phase 1 also adds `INGEST_MAX_SKEW_SECONDS` (default 300).
 
 ## Suite context
 
-- Events arrive from **Nook**, the suite event bus. Perception is a consumer, not a peer of
-  other apps — see `~/Projects/Facile/Code/Suite/INTERCONNECTIVITY.md`.
+- Events arrive from **Antenne**, the suite event bus (renamed from Nook on 2026-08-07; its
+  headers are `x-antenne-*`). Perception is a consumer, not a peer of other apps — see the
+  `Suite` repo's `INTERCONNECTIVITY.md`.
+- **nacelle** is the agent SDK Kori runs on. It is a dependency, never vendored: nothing
+  Perception-shaped may leak into it. If a nacelle change would mention events, entities or
+  citations, the abstraction is wrong — keep it in `modules/kori`.
 - Identity federates to **Authentik** at `porte.facile.studio`, app slug `perception`.
 - Logs ship to **Journal**; secrets come from **Casier** (project `perception`).
 - The chassis is **tronc**; read it before writing HTTP plumbing, because it probably already

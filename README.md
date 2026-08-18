@@ -28,7 +28,7 @@ Today, in this scaffold:
 
 Planned, in order — see [`ROADMAP.md`](ROADMAP.md):
 
-- HMAC-signed event ingest from Nook, with rejections recorded rather than dropped
+- HMAC-signed event ingest from Antenne, with rejections recorded rather than dropped
 - Voyage embeddings into pgvector, with the backlog wired to `/ready`
 - Hybrid retrieval (vector + Postgres full-text) and streamed, cited answers from Claude
 - Entity resolution over repos, people, projects and deployments
@@ -102,5 +102,6 @@ scripts/              check.sh and the repo-local Postgres helpers
 
 - [ROADMAP.md](ROADMAP.md) — why the rewrite, what was cut, and the phase order
 - [docs/SPEC.md](docs/SPEC.md) — ingest contract, data model, retrieval design
-- [Nook](https://github.com/FacileStudio/Nook) — the event bus Perception ingests from
+- [Antenne](https://github.com/FacileStudio/Antenne) — the event bus Perception ingests from
+- [nacelle](https://github.com/FacileStudio/nacelle) — the agent SDK Kori runs on
 - [tronc](https://github.com/FacileStudio/tronc) — the Go app chassis
