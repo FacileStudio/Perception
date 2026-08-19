@@ -67,10 +67,11 @@ services:
       JOURNAL_URL: ${JOURNAL_URL:-}
       JOURNAL_TOKEN: ${JOURNAL_TOKEN:-}
       # Reserved for later phases — the scaffold does not read these yet.
+      INGEST_HMAC_SECRET: ${INGEST_HMAC_SECRET:-}
+      INGEST_HMAC_SECRET_PREVIOUS: ${INGEST_HMAC_SECRET_PREVIOUS:-}
+      INGEST_MAX_SKEW_SECONDS: ${INGEST_MAX_SKEW_SECONDS:-300}
       # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       # VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
-      # INGEST_HMAC_SECRET: ${INGEST_HMAC_SECRET:-}
-      # INGEST_HMAC_SECRET_PREVIOUS: ${INGEST_HMAC_SECRET_PREVIOUS:-}
     depends_on:
       perception-db:
         condition: service_healthy

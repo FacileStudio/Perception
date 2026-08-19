@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/FacileStudio/Perception/apps/api/internal/env"
-	"github.com/FacileStudio/Perception/apps/api/modules/auth"
 	"github.com/FacileStudio/tronc/apiref"
 	"github.com/go-chi/chi/v5"
 )
@@ -34,7 +33,7 @@ func newTestRouter() chi.Router {
 	if err != nil {
 		panic("building authentication for the test router: " + err.Error())
 	}
-	return buildRouter(kits, auth.NewService(nil, kits.sessions), nil, discardLogger, env.Config{})
+	return buildRouter(kits, buildModules(nil, kits.sessions, env.Config{}), nil, discardLogger, env.Config{})
 }
 
 // A hand-written registry rots the moment a route is added without it, which is

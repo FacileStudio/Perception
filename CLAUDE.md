@@ -42,8 +42,10 @@ apps/
       database/         GORM + Postgres handle
       middleware/       RequireAuth (porte + profile hydration), rate limiting
       documentation/    Aliases of tronc/apiref, so modules write against a local package
-    modules/auth/       The porte adapter: profile lookup and /auth/me. The only module yet
-    schemas/            Migrations; porte owns the identity tables
+    modules/auth/       The porte adapter: profile lookup and /auth/me
+    modules/ingest/     The signed intake path from Antenne, and the rejection log
+    modules/events/     The browsable corpus: filtered listing with cursor paging
+    schemas/            Event and IngestRejection models, migrations; porte owns identity
   client/               SvelteKit dashboard
     src/lib/backend.ts  API client
     src/lib/auth.svelte.ts, theme.svelte.ts   Runes stores
@@ -108,6 +110,16 @@ because mise pins a version while leaving another `go` earlier on PATH.
   Bearer callers are exempt — nothing attaches a header on their behalf.
 - **Perception keeps no user table.** `porte_users` is the profile table; no domain row hangs
   off an account, so there is nothing to join and no parallel table to keep in step.
+- **`events.actor_email` is source-reported and is not a Facile identity.** Antenne's envelope
+  package says so itself: the value is whatever a third-party payload carried. It answers
+  "what did this person touch" and must never be joined to an SSO account. The August roadmap
+  claimed otherwise; it was wrong.
+- **Ingest is unauthenticated by design.** The HMAC signature is the credential — requiring a
+  session as well would mean Antenne holding one. Every refusal is written to
+  `ingest_rejections` so a misconfigured emitter is visible rather than silent.
+- **Database tests use `tronc/testdb`**, which gives each test binary its own Postgres schema.
+  A shared schema deadlocks in porte's DDL when two packages migrate at once, and leaks one
+  package's fixtures into another's assertions. Both happened before it was adopted.
 - **Do not store OIDC access or refresh tokens.** The old app did, which is why the August 2026
   backup contains live credentials.
 - Errors, JSON, logging, CORS, health and the API reference all come from `tronc`. Never
@@ -129,6 +141,9 @@ because mise pins a version while leaving another `go` earlier on PATH.
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated, read through `tronc/env`; legacy names remain fallbacks. Unset denies every cross-origin caller; `*` is refused at startup because the API sends credentials |
 | `PUBLIC_URL` | No | Public origin for links that leave the server. Defaults to the first CORS origin |
 | `SSO_ONLY` | No | Removes the local login and register routes entirely when true — porte does not register them, so there is no endpoint to probe |
+| `INGEST_HMAC_SECRET` | For ingest | Signs the Antenne endpoint. Must match Antenne's Perception delivery target. Unset means every delivery is refused, and the API warns at boot |
+| `INGEST_HMAC_SECRET_PREVIOUS` | No | Accepted alongside the current key so a rotation needs no synchronised restart |
+| `INGEST_MAX_SKEW_SECONDS` | No | Accepted clock difference, default 300 |
 | `PERCEPTION_ADMIN_EMAILS` | No | Comma-separated. Empty means nobody — admin routes fail closed |
 | `OIDC_ISSUER` | No | Enables SSO. `porte.facile.studio/application/o/perception/` |
 | `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` / `OIDC_REDIRECT_URL` | If OIDC | Required together once the issuer is set; validated at startup |
@@ -138,8 +153,7 @@ because mise pins a version while leaving another `go` earlier on PATH.
 | `TEST_DATABASE_URL` | No | Test-only Postgres; unset makes database tests skip loudly |
 
 Reserved for later phases — present in `.env.example` and `docker-compose.yml` as commented
-lines, not read by any code yet: `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `INGEST_HMAC_SECRET`,
-`INGEST_HMAC_SECRET_PREVIOUS`. Phase 1 also adds `INGEST_MAX_SKEW_SECONDS` (default 300).
+lines, not read by any code yet: `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`.
 
 ## Suite context
 

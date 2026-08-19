@@ -5,8 +5,9 @@ why the rewrite happened, what was deliberately left out, and the order the rema
 should be done in. Read it before writing code. The technical contract — data model, ingest
 signature, retrieval design — is in [`docs/SPEC.md`](docs/SPEC.md).
 
-**Status: the scaffold is done. Phase 1 has not started.** 1,879 lines of Go, one module
-(`auth`), and an empty authenticated shell in the client.
+**Status: phase 1 is built, and waiting on Antenne being repointed.** Ingest, the event
+listing and the rejection log are in; the corpus is empty until Antenne's Perception delivery
+target names the new endpoint and both sides share `INGEST_HMAC_SECRET`.
 
 ---
 
@@ -199,8 +200,11 @@ The intake path, and nothing downstream of it.
   never fired, so it is untested in practice. Test it.
 - Normalise `occurred_at` to `timestamptz` at the boundary. The old corpus mixes ISO-8601
   with RFC-2822 from the IMAP provider, which broke ordering. Parse both, store one.
-- Fix `actor_email`. The old schema stored only `actor_email_hash`, which is why Perception
-  is invisible to the suite event contract (`Wiki/HARMONIZATION.md` §3). Store the address.
+- Fix `actor_email`. The old schema stored only `actor_email_hash`, which made "what did this
+  person touch" unanswerable. **It does not make Perception part of the suite event contract**,
+  which keys on a Facile SSO identity — Antenne's envelope package says plainly that
+  `actor.email` is whatever a third-party payload carried. Store it, name it honestly, never
+  join it to an account.
 
 **Exit:** Antenne points at the new endpoint and events accumulate. `GET /api/events` lists
 and filters them. The corpus grows for a few days before anything is built on top.
@@ -392,7 +396,7 @@ Settled. Reopen only with new evidence, not with taste.
 | `claude-opus-5`, adaptive thinking, no `budget_tokens` | `budget_tokens` is a 400 on Opus 5; effort replaces it |
 | SDK tool runner and the API's MCP connector, not hand-rolled loops | Both exist now; hand-rolling is strictly more code and more bugs |
 | No OIDC access/refresh token storage | The old app stored them; today's backup contains live refresh tokens as a result |
-| `actor_email`, not `actor_email_hash` | The hash is why Perception is invisible to the suite event contract |
+| `actor_email`, not `actor_email_hash` | The hash made "what did this person touch" unanswerable. It is source-reported, not a Facile identity, and joins to no account |
 | Notifications last, not first | 7,550 alerts is what "first" produced |
 
 ## 9. Explicitly not building

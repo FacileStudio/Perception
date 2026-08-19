@@ -2,6 +2,7 @@ package env
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/FacileStudio/porte"
 	troncenv "github.com/FacileStudio/tronc/env"
@@ -17,15 +18,31 @@ type OIDCConfig struct {
 	SuccessURL   string
 }
 
-// Config is the process configuration: the tronc core plus Perception's OIDC
-// and SSO policy.
+// Config is the process configuration: the tronc core plus Perception's OIDC,
+// SSO and ingest policy.
 type Config struct {
 	troncenv.Core
 	OIDC        *OIDCConfig
 	PublicURL   string
 	SSOOnly     bool
 	AdminEmails []string
+
+	// IngestSecrets are the HMAC keys a delivery's signature may match,
+	// current first. Empty means the endpoint refuses everything and says
+	// so, which is the honest state for an instance nobody has pointed a
+	// bus at yet.
+	IngestSecrets []string
+
+	// IngestMaxSkew bounds how old or how far ahead a delivery's timestamp
+	// may be.
+	IngestMaxSkew time.Duration
 }
+
+// DefaultIngestMaxSkew is the accepted clock difference between Antenne and
+// Perception. Five minutes is what the old deployment ran with, and 243
+// rejections out of 9,598 deliveries were not clock-related, so it is wide
+// enough.
+const DefaultIngestMaxSkew = 5 * time.Minute
 
 // Load reads and validates the environment. The public origin is what an OIDC
 // redirect has to point at, so it falls back to the first CORS origin when
@@ -51,29 +68,17 @@ func Load() (Config, error) {
 
 	cfg.AdminEmails = troncenv.List("PERCEPTION_ADMIN_EMAILS")
 
+	if err := cfg.loadIngest(); err != nil {
+		return Config{}, err
+	}
+
 	cfg.PublicURL = troncenv.String("PUBLIC_URL", "")
 	if cfg.PublicURL == "" && len(cfg.CORSAllowedOrigins) > 0 {
 		cfg.PublicURL = cfg.CORSAllowedOrigins[0]
 	}
 
-	if issuer := troncenv.String("OIDC_ISSUER", ""); issuer != "" {
-		clientID := troncenv.String("OIDC_CLIENT_ID", "")
-		clientSecret := troncenv.String("OIDC_CLIENT_SECRET", "")
-		redirectURL := troncenv.String("OIDC_REDIRECT_URL", "")
-		if clientID == "" || clientSecret == "" || redirectURL == "" {
-			return Config{}, fmt.Errorf("OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URL are required when OIDC_ISSUER is set")
-		}
-		successURL := troncenv.String("OIDC_SUCCESS_URL", "")
-		if successURL == "" && len(cfg.CORSAllowedOrigins) > 0 {
-			successURL = cfg.CORSAllowedOrigins[0]
-		}
-		cfg.OIDC = &OIDCConfig{
-			Issuer:       issuer,
-			ClientID:     clientID,
-			ClientSecret: clientSecret,
-			RedirectURL:  redirectURL,
-			SuccessURL:   successURL,
-		}
+	if err := cfg.loadOIDC(); err != nil {
+		return Config{}, err
 	}
 
 	if cfg.SSOOnly && cfg.OIDC == nil {
@@ -81,6 +86,62 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// loadOIDC reads the SSO client configuration.
+//
+// The issuer is the switch: setting it demands the client triple now, at
+// startup, rather than at the first login attempt of a deployment that
+// believed SSO was configured.
+func (c *Config) loadOIDC() error {
+	issuer := troncenv.String("OIDC_ISSUER", "")
+	if issuer == "" {
+		return nil
+	}
+
+	clientID := troncenv.String("OIDC_CLIENT_ID", "")
+	clientSecret := troncenv.String("OIDC_CLIENT_SECRET", "")
+	redirectURL := troncenv.String("OIDC_REDIRECT_URL", "")
+	if clientID == "" || clientSecret == "" || redirectURL == "" {
+		return fmt.Errorf("OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, and OIDC_REDIRECT_URL are required when OIDC_ISSUER is set")
+	}
+
+	successURL := troncenv.String("OIDC_SUCCESS_URL", "")
+	if successURL == "" && len(c.CORSAllowedOrigins) > 0 {
+		successURL = c.CORSAllowedOrigins[0]
+	}
+
+	c.OIDC = &OIDCConfig{
+		Issuer:       issuer,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  redirectURL,
+		SuccessURL:   successURL,
+	}
+	return nil
+}
+
+// loadIngest reads the intake policy.
+//
+// The previous secret is accepted alongside the current one so a rotation does
+// not need Antenne and Perception restarted in the same second: add the new key
+// here, switch the emitter, then drop the old key.
+func (c *Config) loadIngest() error {
+	for _, key := range []string{"INGEST_HMAC_SECRET", "INGEST_HMAC_SECRET_PREVIOUS"} {
+		if secret := troncenv.String(key, ""); secret != "" {
+			c.IngestSecrets = append(c.IngestSecrets, secret)
+		}
+	}
+
+	skewSeconds, err := troncenv.Int("INGEST_MAX_SKEW_SECONDS", int(DefaultIngestMaxSkew.Seconds()))
+	if err != nil {
+		return err
+	}
+	if skewSeconds <= 0 {
+		return fmt.Errorf("INGEST_MAX_SKEW_SECONDS must be positive")
+	}
+	c.IngestMaxSkew = time.Duration(skewSeconds) * time.Second
+	return nil
 }
 
 // Porte translates this config into porte's. The environment variable names are

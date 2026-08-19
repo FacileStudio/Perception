@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/FacileStudio/tronc/testdb v0.1.1 // indirect
 	github.com/coreos/go-oidc/v3 v3.20.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect

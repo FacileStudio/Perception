@@ -16,6 +16,8 @@ import (
 	documentation "github.com/FacileStudio/Perception/apps/api/internal/documentation"
 	"github.com/FacileStudio/Perception/apps/api/internal/env"
 	"github.com/FacileStudio/Perception/apps/api/modules/auth"
+	"github.com/FacileStudio/Perception/apps/api/modules/events"
+	"github.com/FacileStudio/Perception/apps/api/modules/ingest"
 	"github.com/FacileStudio/Perception/apps/api/schemas"
 
 	"github.com/FacileStudio/Journal/sdk/journal"
@@ -36,6 +38,8 @@ func registry() documentation.Response {
 	return documentation.Response{
 		Modules: []documentation.Module{
 			auth.Documentation,
+			ingest.Documentation,
+			events.Documentation,
 		},
 	}
 }
@@ -66,7 +70,7 @@ func main() {
 // trusted — Traefik replaces the forwarded chain rather than extending it, so
 // the visitor survives in Cf-Connecting-Ip alone and
 // TRUSTED_PROXIES=private,cloudflare fills all three.
-func buildRouter(kits authKits, authService *auth.Service, sqlDB *sql.DB, appLogger *slog.Logger, appEnv env.Config) chi.Router {
+func buildRouter(kits authKits, services modules, sqlDB *sql.DB, appLogger *slog.Logger, appEnv env.Config) chi.Router {
 	router := httpx.NewRouter(httpx.Config{
 		TrustedProxies: appEnv.TrustedProxies,
 		CDNProxies:     appEnv.CDNProxies,
@@ -89,7 +93,9 @@ func buildRouter(kits authKits, authService *auth.Service, sqlDB *sql.DB, appLog
 		if kits.passwords != nil {
 			kits.passwords.Mount(r)
 		}
-		auth.RegisterRoutes(r, authService)
+		auth.RegisterRoutes(r, services.auth)
+		ingest.RegisterRoutes(r, services.ingest, services.intake, services.auth)
+		events.RegisterRoutes(r, services.events, services.auth)
 	})
 
 	return router
@@ -102,20 +108,8 @@ func run() int {
 		appLogger.Error("failed to load config", slog.Any("error", err))
 		return 1
 	}
-	var journalClient *journal.Client
-	appLogger = logger.New(logger.Config{
-		Level: appEnv.LogLevel,
-		Wrap: func(handler slog.Handler) slog.Handler {
-			if appEnv.JournalURL == "" || appEnv.JournalToken == "" {
-				return handler
-			}
-			journalClient = journal.New(journal.Config{URL: appEnv.JournalURL, Token: appEnv.JournalToken})
-			return journal.NewHandler(journalClient, handler)
-		},
-	})
-	if journalClient != nil {
-		defer journalClient.Close()
-	}
+	appLogger, closeJournal := buildLogger(appEnv)
+	defer closeJournal()
 
 	db, err := database.Open(appEnv.DatabaseURL)
 	if err != nil {
@@ -147,10 +141,15 @@ func run() int {
 		appLogger.Error("failed to build authentication", slog.Any("error", err))
 		return 1
 	}
-	authService := auth.NewService(db, kits.sessions)
+	services := buildModules(db, kits.sessions, appEnv)
 	startSessionSweep(shutdownCtx, kits.sessions, appLogger)
 
-	router := buildRouter(kits, authService, sqlDB, appLogger, appEnv)
+	if len(appEnv.IngestSecrets) == 0 {
+		appLogger.Warn("no ingest secret configured; every delivery will be refused",
+			slog.String("fix", "set INGEST_HMAC_SECRET, and the same value on Antenne's Perception delivery target"))
+	}
+
+	router := buildRouter(kits, services, sqlDB, appLogger, appEnv)
 
 	clientDir := spa.DirFromEnv()
 	if spa.Available(clientDir) {
@@ -158,7 +157,35 @@ func run() int {
 		appLogger.Info("serving client", slog.String("dir", clientDir))
 	}
 
-	addr := ":" + strconv.Itoa(appEnv.Port)
+	return serve(router, ":"+strconv.Itoa(appEnv.Port), appLogger)
+}
+
+// buildLogger assembles the application logger, shipping to Journal when both
+// its URL and token are set. The returned function closes the shipper.
+func buildLogger(appEnv env.Config) (*slog.Logger, func()) {
+	var client *journal.Client
+
+	appLogger := logger.New(logger.Config{
+		Level: appEnv.LogLevel,
+		Wrap: func(handler slog.Handler) slog.Handler {
+			if appEnv.JournalURL == "" || appEnv.JournalToken == "" {
+				return handler
+			}
+			client = journal.New(journal.Config{URL: appEnv.JournalURL, Token: appEnv.JournalToken})
+			return journal.NewHandler(client, handler)
+		},
+	})
+
+	return appLogger, func() {
+		if client != nil {
+			client.Close()
+		}
+	}
+}
+
+// serve runs the HTTP server until it fails or the process is asked to stop,
+// and returns the exit status.
+func serve(router chi.Router, addr string, appLogger *slog.Logger) int {
 	server := &http.Server{
 		Addr:              addr,
 		Handler:           router,

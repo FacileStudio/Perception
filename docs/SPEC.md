@@ -95,9 +95,14 @@ payload hash, timestamp). A misconfigured emitter must be visible, not silent.
 
 - **`workspace_id` is gone.** Perception is single-tenant. The old app carried a workspace
   column and an `organization` table with 3 rows and no product behind them.
-- **`actor_email` replaces `actor_email_hash`.** Storing only a hash is exactly why Perception
-  cannot participate in the suite event contract, which keys on `actor_email`
-  (`Wiki/HARMONIZATION.md` §3). Store the address.
+- **`actor_email` replaces `actor_email_hash`, but it is not a Facile identity.** The old
+  schema stored only a hash, which made "what did this person touch" unanswerable. The address
+  is stored now — and named after what it is, because Antenne's own envelope package states
+  that `actor.email` is whatever a third-party payload happened to carry and that nothing
+  downstream should read it as a suite identity. An earlier draft of this spec claimed storing
+  it would let Perception participate in the suite event contract, which keys on a Facile SSO
+  identity. **That was wrong.** This column is source-reported and must never be joined to an
+  account.
 - The `X-Perception-Workspace` header is no longer read.
 
 ## 3. Data model
@@ -111,7 +116,7 @@ boot from `schemas.Migrate`.
 |---|---|---|
 | `id` | text PK | the Antenne event id; dedup key |
 | `schema_version` | int | |
-| `source` | text | `webhook`, `poll` |
+| `source` | text | `webhook`, `website`, `imap`, `rss`, `test`, `system` — where the event entered Antenne, not the provider |
 | `provider_id` | text | |
 | `provider_type` | text | `opus`, `git`, `dokploy`, … |
 | `provider_name` | text | human label |
@@ -129,8 +134,12 @@ boot from `schemas.Migrate`.
 | `title`, `summary` | text | |
 | `searchable_text` | text | the full-text and embedding input |
 | `search` | tsvector | generated column, GIN indexed |
-| `payload_redacted` | jsonb | |
+| `payload_normalized` | jsonb | the envelope's normalised fields |
+| `payload_raw` | jsonb | the source's own body, kept only when `privacy.rawPayloadAllowed` |
 | `payload_hash` | text | |
+| `contains_pii` | bool | from `privacy.containsPii` |
+| `entity_url` | text | the subject's link, distinct from the event's |
+| `provider_tags` | jsonb | |
 | `quality` | text | `complete` \| `partial` \| `degraded` |
 
 Index `(occurred_at DESC)`, `(provider_type, occurred_at DESC)`, `(entity_type, entity_name)`.
