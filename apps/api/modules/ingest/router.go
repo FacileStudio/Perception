@@ -3,6 +3,7 @@ package ingest
 import (
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/FacileStudio/Perception/apps/api/internal/identity"
 	"github.com/FacileStudio/Perception/apps/api/internal/middleware"
@@ -17,6 +18,17 @@ import (
 const (
 	PathIngest     = "/ingest"
 	PathRejections = "/ingest/rejections"
+)
+
+// ingestRate bounds an unauthenticated endpoint.
+//
+// It is generous on purpose. The old corpus averaged around a hundred events a
+// day, so nothing legitimate comes near this even during a burst — and the
+// endpoint's one real caller must never be the thing that gets throttled. What
+// it does is put a ceiling on how fast a stranger can make Perception write.
+const (
+	ingestPerMinute = 120
+	ingestWindow    = time.Minute
 )
 
 // maxBodyBytes caps a delivery.
@@ -34,7 +46,9 @@ const maxBodyBytes = 4 << 20
 // and requiring a session as well would mean Antenne holding one. The
 // rejection log is a human's view of the same data and takes the session.
 func RegisterRoutes(router chi.Router, service *Service, controller *Controller, authenticator identity.Authenticator) {
-	router.Post(PathIngest, func(w http.ResponseWriter, request *http.Request) {
+	limiter := middleware.NewRateLimiter(ingestPerMinute, ingestWindow)
+
+	router.With(middleware.RateLimitByClient(limiter)).Post(PathIngest, func(w http.ResponseWriter, request *http.Request) {
 		body, err := io.ReadAll(io.LimitReader(request.Body, maxBodyBytes+1))
 		if err != nil {
 			httpjson.WriteError(w, errors.Invalid("could not read the request body"))
@@ -89,7 +103,9 @@ func RegisterRoutes(router chi.Router, service *Service, controller *Controller,
 // Everything is a 400 except a missing secret, which is Perception's own
 // misconfiguration and deserves a 500 so it shows up on the right dashboard.
 func refuse(w http.ResponseWriter, request *http.Request, service *Service, attempt delivery, reason string) {
-	service.Reject(request.Context(), reason, attempt.eventID, attempt.clientIP, attempt.body)
+	if recordable(reason) {
+		service.Reject(request.Context(), reason, attempt.eventID, attempt.clientIP, attempt.body)
+	}
 
 	status := http.StatusBadRequest
 	switch reason {
@@ -101,4 +117,15 @@ func refuse(w http.ResponseWriter, request *http.Request, service *Service, atte
 		status = http.StatusRequestEntityTooLarge
 	}
 	httpjson.WriteJSON(w, status, RejectionResponse{Reason: reason})
+}
+
+// recordable reports whether a refusal says anything about the emitter.
+//
+// The log exists so a misconfigured sender is visible. A delivery refused
+// because Perception has no secret configured describes Perception, not the
+// sender — and while that is true it is true of every request, so recording it
+// fills the table with rows that diagnose nothing. It is warned about at boot
+// instead, which is where an operator can act on it.
+func recordable(reason string) bool {
+	return reason != ReasonNoSecret
 }

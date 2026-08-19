@@ -122,3 +122,51 @@ func TestRejectionsAreRecordedWithoutTheAddress(t *testing.T) {
 		t.Error("no payload hash was recorded")
 	}
 }
+
+// The rejection log is fed by an unauthenticated endpoint, so it needs a
+// ceiling and not only an age policy: an age rule bounds how long a flood's
+// rows live, never how many arrive inside the window.
+func TestPruneBoundsTheLogByCountAndByAge(t *testing.T) {
+	service := NewService(testDB(t))
+	ctx := context.Background()
+
+	stale := time.Now().UTC().Add(-30 * 24 * time.Hour)
+	rows := make([]schemas.IngestRejection, 0, 12)
+	for index := range 12 {
+		row := schemas.IngestRejection{Reason: ReasonBadSignature, RejectedAt: time.Now().UTC()}
+		if index < 4 {
+			row.RejectedAt = stale
+		}
+		rows = append(rows, row)
+	}
+	if err := service.orm.Create(&rows).Error; err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	if _, err := service.Prune(ctx); err != nil {
+		t.Fatalf("prune: %v", err)
+	}
+
+	var remaining int64
+	service.orm.Model(&schemas.IngestRejection{}).Count(&remaining)
+	if remaining != 8 {
+		t.Errorf("kept %d rows, want the 8 recent ones and none of the 4 stale", remaining)
+	}
+}
+
+// A refusal for a missing secret describes Perception, not the sender — and it
+// is true of every request while unconfigured, so recording it fills the log
+// with rows that diagnose nothing.
+func TestTheReasonsWorthRecordingExcludeOurOwnMisconfiguration(t *testing.T) {
+	if recordable(ReasonNoSecret) {
+		t.Error("a missing ingest secret is recorded; it describes this instance, not the emitter")
+	}
+	for _, reason := range []string{
+		ReasonBadSignature, ReasonTimestampSkew, ReasonBadSchemaVersion,
+		ReasonMalformedBody, ReasonMissingHeaders, ReasonTooLarge,
+	} {
+		if !recordable(reason) {
+			t.Errorf("%s is not recorded; it is a signal about the emitter", reason)
+		}
+	}
+}

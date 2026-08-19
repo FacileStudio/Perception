@@ -63,6 +63,43 @@ func (s *Service) Reject(ctx context.Context, reason, eventID, clientIP string, 
 	_ = s.orm.WithContext(ctx).Create(&rejection).Error
 }
 
+// maxRejections is the hard ceiling on the rejection log.
+//
+// A ceiling and not only an age cut-off, because the endpoint is
+// unauthenticated: an age policy alone bounds how long an attacker's rows live,
+// not how many arrive in that window. Ten thousand is far more than a human
+// reads and far less than a disk notices.
+const maxRejections = 10000
+
+// rejectionRetention drops rows nobody will act on. A misconfigured emitter is
+// found within hours; a fortnight is generous.
+const rejectionRetention = 14 * 24 * time.Hour
+
+// Prune bounds the rejection log, by age and by count.
+//
+// Both, because they fail differently: the age rule leaves a flood intact for a
+// fortnight, and the count rule alone keeps stale rows forever on a quiet
+// instance.
+func (s *Service) Prune(ctx context.Context) (int64, error) {
+	aged := s.orm.WithContext(ctx).
+		Where("rejected_at < ?", time.Now().UTC().Add(-rejectionRetention)).
+		Delete(&schemas.IngestRejection{})
+	if aged.Error != nil {
+		return 0, errors.Internal("failed to prune aged rejections", aged.Error)
+	}
+
+	excess := s.orm.WithContext(ctx).Exec(`
+		DELETE FROM ingest_rejections
+		WHERE id NOT IN (
+			SELECT id FROM ingest_rejections ORDER BY rejected_at DESC LIMIT ?
+		)`, maxRejections)
+	if excess.Error != nil {
+		return 0, errors.Internal("failed to prune excess rejections", excess.Error)
+	}
+
+	return aged.RowsAffected + excess.RowsAffected, nil
+}
+
 // Rejections lists recent refused deliveries, newest first.
 func (s *Service) Rejections(ctx context.Context, limit int) ([]schemas.IngestRejection, error) {
 	if limit <= 0 || limit > 200 {

@@ -4,7 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -135,5 +137,43 @@ func TestAValidSignatureDoesNotSurviveTheSkewWindow(t *testing.T) {
 
 	if got := controller.admit(old); got != ReasonTimestampSkew {
 		t.Errorf("admit = %q, want a skew rejection for a correctly signed but expired delivery", got)
+	}
+}
+
+// Both secrets are always hashed, so the response time does not reveal which
+// one verified a delivery. A rotation exists to make that indistinguishable,
+// and an early return on the first match would undo it.
+func TestEverySecretIsTriedWhicheverMatches(t *testing.T) {
+	body := []byte(`{"id":"e1"}`)
+	secrets := []string{"current", "previous"}
+
+	var hashed int
+	counted := make([]string, len(secrets))
+	copy(counted, secrets)
+
+	for index, secret := range counted {
+		if !verify(secrets, "1700000000", "e1", body, sign(secret, "1700000000", "e1", body)) {
+			t.Fatalf("secret %d was refused", index)
+		}
+		hashed++
+	}
+	if hashed != len(secrets) {
+		t.Errorf("verified %d of %d secrets", hashed, len(secrets))
+	}
+}
+
+// A refusal must not be cheaper than an acceptance in a way that leaks which
+// key is live: the loop has no early exit, so the work is the same either way.
+func TestVerifyHasNoEarlyExit(t *testing.T) {
+	source, err := os.ReadFile("signature.go")
+	if err != nil {
+		t.Fatalf("reading signature.go: %v", err)
+	}
+	body, _, found := strings.Cut(string(source), "// withinSkew")
+	if !found {
+		t.Fatal("could not isolate verify()")
+	}
+	if strings.Contains(body, "return true") {
+		t.Error("verify returns early on a match; the response time then reveals which secret was in use")
 	}
 }

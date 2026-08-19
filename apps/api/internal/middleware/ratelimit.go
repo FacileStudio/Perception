@@ -8,6 +8,7 @@ import (
 
 	"github.com/FacileStudio/tronc/errors"
 	"github.com/FacileStudio/tronc/httpjson"
+	troncmiddleware "github.com/FacileStudio/tronc/middleware"
 )
 
 type visitor struct {
@@ -98,6 +99,32 @@ func RateLimit(limiter *RateLimiter) func(http.Handler) http.Handler {
 				return
 			}
 
+			next.ServeHTTP(w, request)
+		})
+	}
+}
+
+// RateLimitByClient is RateLimit keyed on the resolved visitor rather than on
+// the socket's peer.
+//
+// The difference matters behind a proxy. RemoteAddr is Traefik's address for
+// every external caller, so RateLimit collapses the whole internet into one
+// bucket — and on an endpoint a single known sender depends on, that turns a
+// stranger's flood into a denial of service against the sender. Resolving the
+// visitor gives each one its own bucket.
+//
+// It is not the header-trusting hole RateLimit avoids: tronc resolves the
+// address through TRUSTED_PROXIES, so a forwarded header is believed only when
+// it arrives from a proxy this deployment configured. With no trusted proxies
+// set, this behaves exactly like RateLimit.
+func RateLimitByClient(limiter *RateLimiter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+			if !limiter.Allow(troncmiddleware.ClientIP(request)) {
+				w.Header().Set("Retry-After", "60")
+				httpjson.WriteError(w, errors.RateLimited("too many requests, try again later"))
+				return
+			}
 			next.ServeHTTP(w, request)
 		})
 	}

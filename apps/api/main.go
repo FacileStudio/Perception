@@ -143,6 +143,7 @@ func run() int {
 	}
 	services := buildModules(db, kits.sessions, appEnv)
 	startSessionSweep(shutdownCtx, kits.sessions, appLogger)
+	startRejectionSweep(shutdownCtx, services.ingest, appLogger)
 
 	if len(appEnv.IngestSecrets) == 0 {
 		appLogger.Warn("no ingest secret configured; every delivery will be refused",
@@ -158,6 +159,28 @@ func run() int {
 	}
 
 	return serve(router, ":"+strconv.Itoa(appEnv.Port), appLogger)
+}
+
+// startRejectionSweep bounds the ingest rejection log on a timer.
+//
+// It runs on a schedule rather than on every write because the endpoint it
+// protects is unauthenticated: pruning inline would let a caller decide how
+// often Perception does housekeeping.
+func startRejectionSweep(ctx context.Context, service *ingest.Service, appLogger *slog.Logger) {
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if _, err := service.Prune(ctx); err != nil {
+					appLogger.Warn("failed to prune the ingest rejection log", slog.Any("error", err))
+				}
+			}
+		}
+	}()
 }
 
 // buildLogger assembles the application logger, shipping to Journal when both

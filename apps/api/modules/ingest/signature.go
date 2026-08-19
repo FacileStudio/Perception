@@ -20,8 +20,9 @@ const signaturePrefix = "sha256="
 // what makes bounding the age of an accepted request possible at all.
 //
 // Comparison is constant time, and every secret is tried even after one
-// matches: returning early would let the response time reveal which key was in
-// use, which is exactly what a rotation is hiding.
+// matches. Returning on the first match would make the response time reveal
+// which key verified it — which is what a rotation is hiding, since the whole
+// point of accepting two is that nobody outside can tell which one is live.
 //
 // body must be the bytes exactly as received. Verifying a re-encoded payload
 // compares a signature against something the sender never signed, and it fails
@@ -36,6 +37,7 @@ func verify(secrets []string, timestamp, eventID string, body []byte, signature 
 		return false
 	}
 
+	matched := false
 	for _, secret := range secrets {
 		if secret == "" {
 			continue
@@ -48,10 +50,10 @@ func verify(secrets []string, timestamp, eventID string, body []byte, signature 
 		mac.Write(body)
 
 		if hmac.Equal(mac.Sum(nil), expected) {
-			return true
+			matched = true
 		}
 	}
-	return false
+	return matched
 }
 
 // withinSkew reports whether a delivery's timestamp is close enough to now.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	portepg "github.com/FacileStudio/porte/pg"
 
@@ -29,6 +30,12 @@ import (
 // acquired once, above this call, and a handle failure is reported as what it is
 // instead of arriving disguised as a migration error.
 func Migrate(db *gorm.DB, sqlDB *sql.DB) error {
+	unlock, err := lockMigrations(sqlDB)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
 	if err := db.Exec(`CREATE EXTENSION IF NOT EXISTS vector`).Error; err != nil {
 		return fmt.Errorf("enable pgvector: %w", err)
 	}
@@ -45,6 +52,49 @@ func Migrate(db *gorm.DB, sqlDB *sql.DB) error {
 	}
 
 	return nil
+}
+
+// migrationLockKey is an arbitrary constant, shared by every process that
+// migrates this database and used by nothing else.
+const migrationLockKey = 8_140_251_019
+
+// lockMigrations serialises migrations across processes, returning the release.
+//
+// IF NOT EXISTS is not the protection it reads as. Two processes migrating at
+// once both find the extension missing and both create it, and one loses with a
+// unique violation on pg_extension_name_index; the same race exists for
+// CREATE TABLE, and porte's DDL deadlocks outright. All three were observed —
+// the extension one in `go test ./...`, which runs packages concurrently, and
+// the deadlock before the tests moved to a schema per binary.
+//
+// It matters outside tests too: a rolling deploy overlaps two containers, and
+// without this the new one exits 1 on a migration that was only ever going to
+// be run by somebody.
+//
+// The lock is held on its own pinned connection because a session-level
+// advisory lock belongs to the connection that took it, and a pool would
+// otherwise release it from a different one. Closing that connection drops the
+// lock regardless, so a failed unlock costs nothing but a tidy log.
+func lockMigrations(sqlDB *sql.DB) (func(), error) {
+	ctx := context.Background()
+
+	conn, err := sqlDB.Conn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("acquire a connection for the migration lock: %w", err)
+	}
+	if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_lock($1)`, migrationLockKey); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("take the migration lock: %w", err)
+	}
+
+	return func() {
+		if _, err := conn.ExecContext(ctx, `SELECT pg_advisory_unlock($1)`, migrationLockKey); err != nil {
+			log.Printf("release the migration lock: %v", err)
+		}
+		if err := conn.Close(); err != nil {
+			log.Printf("close the migration lock connection: %v", err)
+		}
+	}, nil
 }
 
 // fullTextSearch adds the generated tsvector column and its index.
