@@ -150,7 +150,7 @@ Do not rebuild these. They are done and wired.
 - **Docker + Dokploy + Traefik** for `perception.facile.studio`, distroless, argv healthcheck
 - **SvelteKit 5 SPA** with muse, auth flow, empty authenticated shell
 - **`scripts/check.sh`** — gofmt, vet, test, client type-check; also refuses any non-Postgres
-  database driver. Wired to a `pre-push` hook via `mise run hooks`.
+  database driver. Run as a lefthook `pre-push` job, installed by `mise install`.
 
 ### Deployed state, and two things still owed
 

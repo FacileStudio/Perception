@@ -51,7 +51,7 @@ Requires `mise`, Go 1.25 and `bun`. Secrets are injected by Casier — there is 
 create for normal work.
 
 ```sh
-mise run hooks       # enable the pre-push quality gate, once per clone
+mise install         # tools, and the git hooks, once per clone
 mise run install     # client dependencies
 mise run db-up       # local PostgreSQL with pgvector
 mise run dev         # API with secrets injected from Casier
@@ -70,6 +70,10 @@ mise run format      # rewrite Go sources in place
 `scripts/check.sh` is the gate and runs on every push. It also refuses any non-Postgres
 database driver in `go.mod`: a test on SQLite builds a different schema from the GORM tags and
 proves nothing about the DDL that ships.
+
+`mise install` wires the git hooks through lefthook. `lefthook.yml` pulls the shared
+conventional-commit check from [FacileStudio/hooks](https://github.com/FacileStudio/hooks),
+pinned by tag, and runs `scripts/check.sh` as the local `pre-push` job.
 
 ## Deployment
 

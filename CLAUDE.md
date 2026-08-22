@@ -61,7 +61,7 @@ docker-compose.yml      Deploy stack; docker-compose.dev.yml is the local databa
 ## Commands
 
 ```sh
-mise run hooks       # enable .githooks, once per clone
+mise install         # tools, and the git hooks, once per clone
 mise run install     # client dependencies
 mise run db-up       # local PostgreSQL with pgvector
 mise run dev         # API with secrets injected from Casier
@@ -75,6 +75,10 @@ The gate is `sh scripts/check.sh` and is deliberately not run through mise: `mis
 every tool in the merged config before running a task body, so an unrelated broken tool in a
 global config would take the gate down with it. It resolves `go` from `GOROOT` when set,
 because mise pins a version while leaving another `go` earlier on PATH.
+
+`mise install` wires the git hooks through lefthook. The shared conventional-commit check
+comes from `FacileStudio/hooks`, pinned by tag in `lefthook.yml`. `scripts/check.sh` is
+unchanged and still the gate, now run as a lefthook `pre-push` job.
 
 ## Conventions and Gotchas
 
