@@ -71,7 +71,7 @@ services:
       INGEST_HMAC_SECRET_PREVIOUS: ${INGEST_HMAC_SECRET_PREVIOUS:-}
       INGEST_MAX_SKEW_SECONDS: ${INGEST_MAX_SKEW_SECONDS:-300}
       # ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      # VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:-}
     depends_on:
       perception-db:
         condition: service_healthy

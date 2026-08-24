@@ -36,6 +36,11 @@ type Config struct {
 	// IngestMaxSkew bounds how old or how far ahead a delivery's timestamp
 	// may be.
 	IngestMaxSkew time.Duration
+
+	// VoyageAPIKey enables the embedding worker. Empty means the worker
+	// never starts and readiness stays green: no key is configuration, not
+	// degradation.
+	VoyageAPIKey string
 }
 
 // DefaultIngestMaxSkew is the accepted clock difference between Antenne and
@@ -71,6 +76,7 @@ func Load() (Config, error) {
 	if err := cfg.loadIngest(); err != nil {
 		return Config{}, err
 	}
+	cfg.VoyageAPIKey = troncenv.String("VOYAGE_API_KEY", "")
 
 	cfg.PublicURL = troncenv.String("PUBLIC_URL", "")
 	if cfg.PublicURL == "" && len(cfg.CORSAllowedOrigins) > 0 {

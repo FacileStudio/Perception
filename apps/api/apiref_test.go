@@ -33,7 +33,7 @@ func newTestRouter() chi.Router {
 	if err != nil {
 		panic("building authentication for the test router: " + err.Error())
 	}
-	return buildRouter(kits, buildModules(nil, kits.sessions, env.Config{}), nil, discardLogger, env.Config{})
+	return buildRouter(kits, buildModules(nil, kits.sessions, env.Config{}, discardLogger), nil, discardLogger, env.Config{})
 }
 
 // A hand-written registry rots the moment a route is added without it, which is

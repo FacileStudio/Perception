@@ -44,14 +44,13 @@ func Migrate(db *gorm.DB, sqlDB *sql.DB) error {
 		return fmt.Errorf("ensure porte schema: %w", err)
 	}
 
-	if err := db.AutoMigrate(&Event{}, &IngestRejection{}); err != nil {
+	if err := db.AutoMigrate(&Event{}, &IngestRejection{}, &EventEmbedding{}); err != nil {
 		return fmt.Errorf("migrate events: %w", err)
 	}
 	if err := fullTextSearch(db); err != nil {
 		return err
 	}
-
-	return nil
+	return vectorIndex(db)
 }
 
 // migrationLockKey is an arbitrary constant, shared by every process that
@@ -113,6 +112,20 @@ func fullTextSearch(db *gorm.DB) error {
 		if err := db.Exec(statement).Error; err != nil {
 			return fmt.Errorf("enable full-text search: %w", err)
 		}
+	}
+	return nil
+}
+
+// vectorIndex adds the HNSW index over the embedding column.
+//
+// It is raw DDL because an index over a pgvector operator class is not
+// something a GORM tag can express. Cosine is the distance phase 3 retrieval
+// will query with; building it now keeps that phase to application code.
+func vectorIndex(db *gorm.DB) error {
+	statement := `CREATE INDEX IF NOT EXISTS idx_event_embeddings_embedding
+		ON event_embeddings USING hnsw (embedding vector_cosine_ops)`
+	if err := db.Exec(statement).Error; err != nil {
+		return fmt.Errorf("index embeddings: %w", err)
 	}
 	return nil
 }

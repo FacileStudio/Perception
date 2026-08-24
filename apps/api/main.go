@@ -16,6 +16,7 @@ import (
 	documentation "github.com/FacileStudio/Perception/apps/api/internal/documentation"
 	"github.com/FacileStudio/Perception/apps/api/internal/env"
 	"github.com/FacileStudio/Perception/apps/api/modules/auth"
+	"github.com/FacileStudio/Perception/apps/api/modules/embeddings"
 	"github.com/FacileStudio/Perception/apps/api/modules/events"
 	"github.com/FacileStudio/Perception/apps/api/modules/ingest"
 	"github.com/FacileStudio/Perception/apps/api/schemas"
@@ -40,6 +41,7 @@ func registry() documentation.Response {
 			auth.Documentation,
 			ingest.Documentation,
 			events.Documentation,
+			embeddings.Documentation,
 		},
 	}
 }
@@ -82,7 +84,7 @@ func buildRouter(kits authKits, services modules, sqlDB *sql.DB, appLogger *slog
 		},
 	})
 
-	health.Mount(router, health.DB(sqlDB))
+	health.Mount(router, health.DB(sqlDB), services.embeddings.ReadyCheck())
 	apiref.Mount(router, refConfig())
 
 	router.Route("/api", func(r chi.Router) {
@@ -96,6 +98,7 @@ func buildRouter(kits authKits, services modules, sqlDB *sql.DB, appLogger *slog
 		auth.RegisterRoutes(r, services.auth)
 		ingest.RegisterRoutes(r, services.ingest, services.intake, services.auth)
 		events.RegisterRoutes(r, services.events, services.auth)
+		embeddings.RegisterRoutes(r, services.embeddings, services.auth)
 	})
 
 	return router
@@ -141,7 +144,8 @@ func run() int {
 		appLogger.Error("failed to build authentication", slog.Any("error", err))
 		return 1
 	}
-	services := buildModules(db, kits.sessions, appEnv)
+	services := buildModules(db, kits.sessions, appEnv, appLogger)
+	services.embeddings.StartWorker(shutdownCtx)
 	startSessionSweep(shutdownCtx, kits.sessions, appLogger)
 	startRejectionSweep(shutdownCtx, services.ingest, appLogger)
 
