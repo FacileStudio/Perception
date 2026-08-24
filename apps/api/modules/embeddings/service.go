@@ -123,7 +123,8 @@ func (service *Service) backfillMissing(ctx context.Context) error {
 	result := service.db.WithContext(ctx).Exec(`
 		INSERT INTO event_embeddings (event_id, model, input_hash, status, attempts)
 		SELECT id, ?, ?, 'pending', 0 FROM events
-		WHERE NOT EXISTS (SELECT 1 FROM event_embeddings WHERE event_id = events.id)`,
+		WHERE NOT EXISTS (SELECT 1 FROM event_embeddings WHERE event_id = events.id)
+		ON CONFLICT (event_id) DO NOTHING`,
 		schemas.EmbeddingModel, "")
 	if result.Error != nil {
 		return result.Error
@@ -205,8 +206,8 @@ func truncateError(message string) string {
 // is supposed to be draining, or any terminal errors. With embeddings disabled
 // it passes — that is configuration, not degradation.
 func (service *Service) ReadyCheck() func(context.Context) error {
-	return func(_ context.Context) error {
-		status := service.computeStatus()
+	return func(ctx context.Context) error {
+		status := service.computeStatus(ctx)
 		if !status.Enabled || !status.Degraded {
 			return nil
 		}
@@ -225,13 +226,10 @@ type stallError struct{ message string }
 
 func (e *stallError) Error() string { return e.message }
 
-func (service *Service) computeStatus() StatusResponse {
+func (service *Service) computeStatus(ctx context.Context) StatusResponse {
 	if !service.enabled || service.db == nil {
 		return StatusResponse{Enabled: false, Model: schemas.EmbeddingModel, StallThreshold: describeThresholds()}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
 	var counts struct {
 		Pending int64
 		Ready   int64
@@ -283,5 +281,7 @@ func describeThresholds() string {
 
 // Status answers GET /api/embeddings/status.
 func (service *Service) Status() StatusResponse {
-	return service.computeStatus()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return service.computeStatus(ctx)
 }

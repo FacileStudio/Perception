@@ -83,7 +83,7 @@ func (v *Vector) Scan(src any) error {
 // sits pending is the backlog the readiness check watches.
 type EventEmbedding struct {
 	EventID       string     `gorm:"column:event_id;primaryKey"`
-	Embedding     Vector     `gorm:"column:embedding;type:vector(1024)"`
+	Embedding     Vector     `gorm:"column:embedding;type:public.vector(1024)"`
 	Model         string     `gorm:"column:model;size:64"`
 	InputHash     string     `gorm:"column:input_hash"`
 	Status        string     `gorm:"column:status;size:16;default:pending;index"`
