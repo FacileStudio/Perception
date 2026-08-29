@@ -1,9 +1,7 @@
 github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260805234318-3de3753b1357 h1:Z98JZMz9M/622ND6N4jO9BVpJOhUqebALfBa8GhwNnA=
 github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260805234318-3de3753b1357/go.mod h1:mb3rZqpSwA4CMrP9LQe2eWdM/4np3xzkRy6l/WWSaUg=
-github.com/FacileStudio/porte v0.3.0 h1:REJ9N1wlHciKjarAwJHqzeHW/QDu+lYxAqc/l9oTGZw=
-github.com/FacileStudio/porte v0.3.0/go.mod h1:dXC79PY1VUB8mpirq2IBA0/8/hpEAWH4+ZhsJ1D57h0=
-github.com/FacileStudio/tronc v0.14.0 h1:fhE8QpryUumuiUcJujwBCVLE9/aLskgWtZbeUZBbJvI=
-github.com/FacileStudio/tronc v0.14.0/go.mod h1:n+msHH6RQLvhcIQfFzeWaAgwqL8UkNuLPTqbu+C02so=
+github.com/FacileStudio/porte v0.5.2 h1:uB/KeI38IjOoJJz6Fm/wfkmfHW1Q/SjsOE+KQh0dH7w=
+github.com/FacileStudio/porte v0.5.2/go.mod h1:dXC79PY1VUB8mpirq2IBA0/8/hpEAWH4+ZhsJ1D57h0=
 github.com/FacileStudio/tronc v0.16.0 h1:vfZIBTKrKMTx3hOFxSc2jO4LCZcOBI2sB7XVAjL4b60=
 github.com/FacileStudio/tronc v0.16.0/go.mod h1:n+msHH6RQLvhcIQfFzeWaAgwqL8UkNuLPTqbu+C02so=
 github.com/FacileStudio/tronc/testdb v0.1.1 h1:PTwGRnPcibkhzEdCM+YTxare8L2vneuUrhoGfPO7Iao=
