@@ -1,111 +1,91 @@
 # Perception
 
-Context brain for Facile operations. Ingests structured events from across the suite, builds
-durable business memory, and answers grounded operational questions in natural language.
+Context brain for Facile operations. Ingests structured events from across the suite, builds durable business memory, and answers grounded operational questions in natural language.
 
-One Go binary serves the API under `/api` and the built SvelteKit dashboard on everything
-else. Storage is PostgreSQL 16 with pgvector; identity comes from Authentik over OIDC.
+One Go binary serves the API under `/api` and the built SvelteKit dashboard on everything else. Storage is PostgreSQL 16 with pgvector; identity comes from Authentik over OIDC.
 
 Live at [perception.facile.studio](https://perception.facile.studio).
 
-> **Perception is being rebuilt.** This branch is the Go rewrite of a TypeScript app that ran
-> from May to August 2026 and was retired unused. The chassis, auth and deployment are done;
-> ingest, embeddings, chat and entities are not. See [`ROADMAP.md`](ROADMAP.md) for the plan
-> and [`docs/SPEC.md`](docs/SPEC.md) for the contract.
-
 ## What it does
 
-Today, in this scaffold:
-
-- Serves `/health` and `/ready` at both the root and `/api`, plus an argv healthcheck hook for
-  the distroless container
-- Publishes its own API reference at [`/docs`](https://perception.facile.studio/docs), generated
-  from a route registry the test suite keeps honest
-- Authenticates with email and password (argon2id sessions) or Authentik OIDC, with an
-  `SSO_ONLY` mode that removes the local forms entirely
-- Ships structured logs to Journal and reads its secrets from Casier
-- Serves the SvelteKit dashboard from the same binary, at the same origin
-
-Planned, in order — see [`ROADMAP.md`](ROADMAP.md):
-
-- HMAC-signed event ingest from Antenne, with rejections recorded rather than dropped
-- Voyage embeddings into pgvector, with the backlog wired to `/ready`
-- Hybrid retrieval (vector + Postgres full-text) and streamed, cited answers from Claude
-- Entity resolution over repos, people, projects and deployments
+- Ingests HMAC-signed events from Antenne with deduplication and replay protection
+- Records refused deliveries in an audit log without storing source addresses
+- Computes Voyage text embeddings asynchronously into pgvector with retry backoff
+- Exposes worker backlog and coverage metrics via the status API and readiness check
+- Authenticates with email and password sessions or Authentik OIDC SSO
+- Serves the SvelteKit dashboard and Go API from a single container
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
-| API | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, [tronc](https://github.com/FacileStudio/tronc) v0.9.0 |
-| Client | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
-| Auth | Sessions (argon2id) or OIDC SSO via `porte.facile.studio`, `SSO_ONLY` supported |
-| Logging | [Journal](https://github.com/FacileStudio/Journal) SDK |
-| Secrets | [Casier](https://casier.facile.studio) in development, Dokploy in production |
-| Deploy | Docker Compose, one distroless container serving API + client, Traefik |
-| Planned | Claude via `anthropic-sdk-go`, Voyage `voyage-4-lite` embeddings |
+| API | Go 1.25, Chi v5, GORM, PostgreSQL 16 + pgvector, [tronc](https://github.com/FacileStudio/tronc) |
+| Client | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`) |
+| Deploy | Docker Compose, single container behind Traefik |
 
-## Development
+## Quick start
 
-Requires `mise`, Go 1.25 and `bun`. Secrets are injected by Casier — there is no `.env` to
-create for normal work.
+`docker-compose.yml` is deployment-shaped: it publishes no host port and expects the external `dokploy-network` with Traefik in front of it.
 
 ```sh
-mise install         # tools, and the git hooks, once per clone
-mise run install     # client dependencies
-mise run db-up       # local PostgreSQL with pgvector
-mise run dev         # API with secrets injected from Casier
-mise run dev-client  # the SvelteKit dev server, in another shell
+cp .env.example .env
+docker compose up -d --build
 ```
 
-Without access to Casier, copy `.env.example` to `.env` and fill it in; every variable is
-documented there.
+### Local development
+
+Start local Postgres, install dependencies, and run the API and client in separate shells.
 
 ```sh
-mise run check       # gofmt, go vet, go test, then the client type-check
-mise run check-go    # the Go half only
-mise run format      # rewrite Go sources in place
+mise run db-up
+mise run install
 ```
 
-`scripts/check.sh` is the gate and runs on every push. It also refuses any non-Postgres
-database driver in `go.mod`: a test on SQLite builds a different schema from the GORM tags and
-proves nothing about the DDL that ships.
+```sh
+cd apps/api
+go run .
+```
 
-`mise install` wires the git hooks through lefthook. `lefthook.yml` pulls the shared
-conventional-commit check from [FacileStudio/hooks](https://github.com/FacileStudio/hooks),
-pinned by tag, and runs `scripts/check.sh` as the local `pre-push` job.
+```sh
+cd apps/client
+bun run dev
+```
 
-## Deployment
+The client runs on <http://localhost:5173> and proxies `/api` requests to the Go backend on `:4000`.
 
-`docker-compose.yml` targets Dokploy behind Traefik on la ruche. The API service uses `expose`
-rather than `ports` and carries its own router labels for `perception.facile.studio`. The
-database image is `pgvector/pgvector:pg16` — plain `postgres:16` will fail the migration that
-enables the `vector` extension.
+## Configuration
 
-Configuration is documented in [`.env.example`](.env.example) and
-[`docs/SPEC.md`](docs/SPEC.md) §7.
+| Variable | What it does |
+|---|---|
+| `DATABASE_URL` | Postgres connection string. Required — the API exits 1 without it |
+| `PORT` | HTTP listen port. `tronc` defaults to `8080`; this repo pins `4000` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to call the API |
+| `INGEST_HMAC_SECRET` | HMAC secret key for incoming Antenne deliveries |
+| `OIDC_ISSUER` | Authentik OIDC discovery URL |
 
-## Repository
+Full reference: [docs/configuration.md](docs/configuration.md).
+
+## Structure
 
 ```
 apps/
-  api/                Go backend
-    main.go           Entrypoint: config, chassis, routes, graceful shutdown
-    apiref_test.go    Fails the build when a route is missing from /docs
-    seam_test.go      Fails the build when a module reaches into auth (see ROADMAP §7)
-    internal/         identity (the porte seam), env, database, middleware,
-                      authcrypto, documentation
-    modules/auth/     Sessions and OIDC — the only module in the scaffold
-    schemas/          GORM models and migrations
-  client/             SvelteKit dashboard
-docs/                 SPEC.md and reference docs
-scripts/              check.sh and the repo-local Postgres helpers
+  api/       Go backend — modules/ (auth, embeddings, events, ingest), schemas/
+  client/    SvelteKit 5 frontend
+docs/        Architecture, configuration, development, deployment, API
+scripts/     check.sh quality gate and local database scripts
 ```
 
-## Related
+## Documentation
 
-- [ROADMAP.md](ROADMAP.md) — why the rewrite, what was cut, and the phase order
-- [docs/SPEC.md](docs/SPEC.md) — ingest contract, data model, retrieval design
-- [Antenne](https://github.com/FacileStudio/Antenne) — the event bus Perception ingests from
-- [nacelle](https://github.com/FacileStudio/nacelle) — the agent SDK Kori runs on
-- [tronc](https://github.com/FacileStudio/tronc) — the Go app chassis
+| Doc | What's in it |
+|---|---|
+| [Architecture](docs/architecture.md) | Request flow, data model, how the pieces fit |
+| [Configuration](docs/configuration.md) | Every environment variable and default |
+| [Development](docs/development.md) | Local setup, tests, the quality gate |
+| [Deployment](docs/deployment.md) | Docker Compose, Dokploy, Traefik routing |
+| [API](docs/api.md) | HTTP endpoints and payloads |
+
+---
+
+Part of the [Facile Suite](https://facile.studio) — self-hosted tools for creative studios
+and freelancers. One login, zero cloud dependency.
