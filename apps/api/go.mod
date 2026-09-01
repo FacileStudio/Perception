@@ -1,6 +1,6 @@
 module github.com/FacileStudio/Perception/apps/api
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260805234318-3de3753b1357
