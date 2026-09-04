@@ -15,7 +15,7 @@
 	 */
 	const sections = [
 		{ label: 'Chat', href: '/chat', icon: 'solar:chat-round-dots-linear', ready: false },
-		{ label: 'Events', href: '/events', icon: icons.bolt, ready: false },
+		{ label: 'Events', href: '/events', icon: icons.bolt, ready: true },
 		{ label: 'Entities', href: '/entities', icon: icons.usersGroup, ready: false }
 	];
 

@@ -13,6 +13,7 @@ export const API_BASE = configuredOrigin ? `${configuredOrigin}/api` : '/api';
 type FetchOptions = {
 	method?: string;
 	body?: unknown;
+	query?: Record<string, string | number | undefined>;
 };
 
 /** The methods porte treats as non-mutating, and so exempt from the CSRF header. */
@@ -83,7 +84,22 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
 		headers['X-Facile-CSRF'] = '1';
 	}
 
-	const response = await fetch(`${API_BASE}${path}`, {
+	// Build URL with query parameters
+	let url = `${API_BASE}${path}`;
+	if (options.query && Object.keys(options.query).length > 0) {
+		const params = new URLSearchParams();
+		for (const [key, value] of Object.entries(options.query)) {
+			if (value !== undefined) {
+				params.append(key, String(value));
+			}
+		}
+		const queryString = params.toString();
+		if (queryString) {
+			url += `?${queryString}`;
+		}
+	}
+
+	const response = await fetch(url, {
 		method,
 		headers,
 		credentials: 'include',
@@ -106,6 +122,25 @@ async function request<T>(path: string, options: FetchOptions = {}): Promise<T> 
 		throw new ApiError('Unexpected response from server', response.status, 'invalid_response');
 	}
 }
+
+export type EventSummary = {
+	id: string;
+	occurred_at: string;
+	provider: string;
+	event_type: string;
+	entity_type: string;
+	entity_name: string;
+	actor_name: string;
+	title: string;
+	summary: string;
+	url?: string;
+	quality: string;
+};
+
+export type EventPage = {
+	events: EventSummary[];
+	next_cursor?: string;
+};
 
 export type AuthConfig = {
 	sso_only: boolean;
@@ -135,7 +170,12 @@ export const backend = {
 	register: (credentials: Credentials) =>
 		request<AuthResponse>('/auth/register', { method: 'POST', body: credentials }),
 	logout: () => request<void>('/auth/logout', { method: 'POST', body: {} }),
-	me: () => request<Me>('/auth/me')
+	me: () => request<Me>('/auth/me'),
+	events: (params?: { provider?: string; type?: string; limit?: number; cursor?: string }) =>
+		request<EventPage>('/events', {
+			method: 'GET',
+			query: params
+		})
 };
 
 export const OIDC_START_URL = `${API_BASE}/auth/oidc`;
