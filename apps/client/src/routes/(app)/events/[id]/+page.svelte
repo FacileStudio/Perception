@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { Button, Spinner } from '@facile/muse';
+	import { onMount } from 'svelte';
+	import { Button, Spinner, Badge } from '@facile/muse';
 	import { backend, type EventSummary } from '$lib/backend';
 	import { page } from '$app/state';
 
@@ -41,14 +41,14 @@
 		});
 	}
 
-	function getProviderBadgeVariant(provider: string) {
-		const variants: Record<string, string> = {
+	function getProviderBadgeTone(provider: string): 'accent' | 'info' | 'success' | 'warning' | 'danger' | 'owner' | 'admin' | 'neutral' {
+		const variants: Record<string, 'accent' | 'info' | 'success' | 'warning' | 'danger' | 'owner' | 'admin' | 'neutral'> = {
 			antenne: 'accent',
-			capsule: 'primary',
-			courrier: 'secondary',
-			sablier: 'default'
+			capsule: 'info',
+			courrier: 'success',
+			sablier: 'warning'
 		};
-		return variants[provider.toLowerCase()] ?? 'default';
+		return variants[provider.toLowerCase()] ?? 'neutral';
 	}
 </script>
 
@@ -73,9 +73,9 @@
 				← Back to events
 			</Button>
 			<div class="flex items-center gap-2">
-				<span class="badge badge-soft" data-variant={getProviderBadgeVariant(event.provider)}>
+				<Badge tone={getProviderBadgeTone(event.provider)}>
 					{event.provider}
-				</span>
+				</Badge>
 				<span class="text-fc-xs text-fc-fg-muted">{event.event_type}</span>
 				{#if event.entity_type}
 					<span class="text-fc-xs text-fc-fg-muted">{event.entity_type}</span>

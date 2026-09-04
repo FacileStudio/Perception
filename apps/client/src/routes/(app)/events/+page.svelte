@@ -51,14 +51,14 @@
 		});
 	}
 
-	function getProviderBadgeVariant(provider: string): 'default' | 'primary' | 'secondary' | 'accent' {
-		const variants: Record<string, 'default' | 'primary' | 'secondary' | 'accent'> = {
+	function getProviderBadgeVariant(provider: string): 'accent' | 'info' | 'success' | 'warning' | 'danger' | 'owner' | 'admin' | 'neutral' {
+		const variants: Record<string, 'accent' | 'info' | 'success' | 'warning' | 'danger' | 'owner' | 'admin' | 'neutral'> = {
 			antenne: 'accent',
-			capsule: 'primary',
-			courrier: 'secondary',
-			sablier: 'default'
+			capsule: 'info',
+			courrier: 'success',
+			sablier: 'warning'
 		};
-		return variants[provider.toLowerCase()] ?? 'default';
+		return variants[provider.toLowerCase()] ?? 'neutral';
 	}
 </script>
 
@@ -100,7 +100,7 @@
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0 flex-1">
 							<div class="flex items-center gap-2">
-								<Badge variant={getProviderBadgeVariant(event.provider)}>
+								<Badge tone={getProviderBadgeVariant(event.provider)}>
 									{event.provider}
 								</Badge>
 								<span class="text-fc-xs text-fc-fg-muted">{event.event_type}</span>
