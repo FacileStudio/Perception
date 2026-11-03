@@ -5,7 +5,7 @@
     "": {
       "name": "perception-client",
       "dependencies": {
-        "@facile/muse": "github:FacileStudio/muse#v0.4.0",
+        "@facile/muse": "github:FacileStudio/muse#v0.6.5",
       },
       "devDependencies": {
         "@sveltejs/adapter-static": "^3.0.10",
@@ -75,7 +75,7 @@
 
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.28.1", "", { "os": "win32", "cpu": "x64" }, "sha512-bm4Mowrv+GXMlpWX++EcXw/iLyd1o3+bJkC2DkWXYVvgZCqD/bSj9ctZeAMC3cIxgjRVR2Dufaiu4YPxr5gW1A=="],
 
-    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#b0c1e32", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-b0c1e32", "sha512-Zg9gFA8dqMcRtps59LZCbXHp9jdWZjZP/prC71Qqcb9ZbAoP066J7ac5W9t+WXi+WA7uZmplMdNGPZzqJIVWZQ=="],
+    "@facile/muse": ["@facile/muse@github:FacileStudio/muse#bc66f21", { "dependencies": { "gsap": "^3.13.0", "tailwind-merge": "^3.5.0" }, "peerDependencies": { "svelte": "^5.0.0", "tailwindcss": "^4.0.0" } }, "FacileStudio-muse-bc66f21", "sha512-sr6oJWCgipMgHG1nXBPhmTp3t1n4pjCJ1qRROMUIjHIvmUqbblZumv3aAWoi+v09S1WsjBzbTHfCU0xwAPDWsw=="],
 
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 
