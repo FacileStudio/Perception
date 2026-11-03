@@ -24,6 +24,6 @@ func RegisterRoutes(router chi.Router, service *Service) {
 			httpjson.WriteError(w, errors.Unauthorized("missing auth"))
 			return
 		}
-		httpjson.WriteJSON(w, http.StatusOK, MeResponse{ID: id.UserID, Email: id.Email, Name: id.Name})
+		httpjson.WriteJSON(w, http.StatusOK, MeResponse{ID: id.UserID, Email: id.Email, Name: id.Name, AvatarURL: id.AvatarURL})
 	})
 }

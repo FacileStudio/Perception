@@ -66,7 +66,7 @@ var Documentation = documentation.Module{
 			Method:       "GET",
 			Path:         PathMe,
 			Summary:      "Get the current user",
-			Description:  "Returns the authenticated user's id, email and name, read from porte's identity tables.",
+			Description:  "Returns the authenticated user's id, email, name and avatar_url, read from porte's identity tables. avatar_url is the identity provider's picture URL, or empty when the account has none.",
 			Auth:         "session cookie or bearer token required",
 			ResponseBody: "MeResponse",
 			Errors: []documentation.Error{

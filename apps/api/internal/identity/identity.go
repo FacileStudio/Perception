@@ -20,10 +20,11 @@ import (
 // everywhere downstream, and keeping it a string leaves the JSON shape the
 // client already reads untouched.
 type Identity struct {
-	UserID   string
-	Email    string
-	Name     string
-	ClientIP string
+	UserID    string
+	Email     string
+	Name      string
+	AvatarURL string
+	ClientIP  string
 }
 
 // Authenticator verifies a credential and resolves the profile behind it.

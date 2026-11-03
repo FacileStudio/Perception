@@ -48,13 +48,14 @@ func (service *Service) RequireAuth(next http.Handler) http.Handler {
 // keeping a parallel one to join against.
 func (service *Service) IdentityForUser(ctx context.Context, userID int64) (identity.Identity, error) {
 	var row struct {
-		ID    int64
-		Email string
-		Name  string
+		ID        int64
+		Email     string
+		Name      string
+		AvatarURL string
 	}
 	err := service.orm.WithContext(ctx).
 		Table("porte_users").
-		Select("id", "email", "name").
+		Select("id", "email", "name", "avatar_url").
 		Where("id = ?", userID).
 		Scan(&row).Error
 	if err != nil {
@@ -65,8 +66,9 @@ func (service *Service) IdentityForUser(ctx context.Context, userID int64) (iden
 	}
 
 	return identity.Identity{
-		UserID: strconv.FormatInt(row.ID, 10),
-		Email:  row.Email,
-		Name:   row.Name,
+		UserID:    strconv.FormatInt(row.ID, 10),
+		Email:     row.Email,
+		Name:      row.Name,
+		AvatarURL: row.AvatarURL,
 	}, nil
 }

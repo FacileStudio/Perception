@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/FacileStudio/Perception/apps/api/internal/env"
+	"github.com/FacileStudio/Perception/apps/api/modules/auth"
 
 	"github.com/FacileStudio/porte"
 	"github.com/FacileStudio/porte/local"
@@ -42,6 +43,9 @@ type authKits struct {
 // boot rather than on somebody's first login. That is a deliberate change from
 // the module this replaces, which logged the error at route-registration time
 // and left SSO 404ing until the next restart.
+//
+// The OIDC store is wrapped so the picture claim is stored on every upsert,
+// and accounts from before that are backfilled once the kit exists.
 func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger *slog.Logger) (authKits, error) {
 	cfg := appEnv.Porte()
 	store := portepg.New(sqlDB)
@@ -54,13 +58,16 @@ func buildAuth(ctx context.Context, sqlDB *sql.DB, appEnv env.Config, appLogger 
 
 	if appEnv.OIDC != nil {
 		kits.oidc, err = discoverOIDC(ctx, cfg, oidc.Deps{
-			Users:      store.Users(),
+			Users:      auth.PictureUsers{UserStore: store.Users()},
 			Identities: store.Identities(),
 			Sessions:   sessions,
 			Codes:      store.LoginCodes(),
 			Logger:     appLogger,
 		}, appLogger)
 		if err != nil {
+			return authKits{}, err
+		}
+		if err := auth.BackfillPictures(ctx, sqlDB, appEnv.OIDC.Issuer); err != nil {
 			return authKits{}, err
 		}
 	}
