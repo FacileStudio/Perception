@@ -121,9 +121,13 @@ func fullTextSearch(db *gorm.DB) error {
 // It is raw DDL because an index over a pgvector operator class is not
 // something a GORM tag can express. Cosine is the distance phase 3 retrieval
 // will query with; building it now keeps that phase to application code.
+//
+// The operator class is schema-qualified like the column type, because it
+// resolves through search_path and a database test scopes that to its own
+// schema, where the extension does not live.
 func vectorIndex(db *gorm.DB) error {
 	statement := `CREATE INDEX IF NOT EXISTS idx_event_embeddings_embedding
-		ON event_embeddings USING hnsw (embedding vector_cosine_ops)`
+		ON event_embeddings USING hnsw (embedding public.vector_cosine_ops)`
 	if err := db.Exec(statement).Error; err != nil {
 		return fmt.Errorf("index embeddings: %w", err)
 	}
