@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import {
+		Avatar,
 		Button,
 		Divider,
 		OptionCards,
@@ -47,12 +48,25 @@
 	<div class="mx-auto flex max-w-fc-md flex-col gap-4">
 		<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Settings</h1>
 		<Tabs items={tabItems} bind:value={active} label="Settings sections" />
-		<Divider class="my-0" />
+		<Divider />
 	</div>
 
 	<div class="mx-auto mt-6 flex max-w-fc-md flex-col gap-8">
 		{#if active === 'account'}
 			<SettingsSection title="Identity" description="Who this browser is signed in as.">
+				<SettingsRow label="Picture" description="Set once in your Facile account, shown across the suite.">
+					<a
+						href="https://sso.facile.studio/account"
+						class="flex items-center gap-2.5 rounded-fc-md text-fc-sm text-fc-fg-muted transition-colors hover:text-fc-fg"
+					>
+						<Avatar
+							src={auth.user?.avatar_url || undefined}
+							name={auth.user?.name || auth.user?.email || ''}
+							size="md"
+						/>
+						Change
+					</a>
+				</SettingsRow>
 				<SettingsRow label="Name">
 					<span class="text-fc-sm text-fc-fg-muted">{auth.user?.name || '—'}</span>
 				</SettingsRow>

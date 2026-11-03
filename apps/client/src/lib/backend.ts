@@ -155,6 +155,7 @@ export type Me = {
 	id: string;
 	email: string;
 	name: string;
+	avatar_url: string;
 };
 
 export type Credentials = {

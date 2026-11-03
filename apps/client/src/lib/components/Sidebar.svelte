@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { NavButton, icons } from '@facile/muse';
+	import { Avatar, NavButton, icons } from '@facile/muse';
 	import Logo from './Logo.svelte';
 
-	let { email, name }: { email: string; name: string } = $props();
+	let { email, name, avatar }: { email: string; name: string; avatar: string } = $props();
 
 	/*
 	 * Chat uses a raw Solar name because muse's icons map has no chat key. Add
@@ -65,11 +65,7 @@
 			? 'bg-fc-surface'
 			: ''}"
 	>
-		<span
-			class="flex h-7 w-7 shrink-0 items-center justify-center rounded-fc-pill bg-fc-accent text-fc-xs font-semibold text-fc-accent-fg"
-		>
-			{label.charAt(0).toUpperCase()}
-		</span>
+		<Avatar src={avatar || undefined} name={label} alt="" size="sm" />
 		<span class="flex min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden">
 			<span class="truncate">{label}</span>
 			<iconify-icon
