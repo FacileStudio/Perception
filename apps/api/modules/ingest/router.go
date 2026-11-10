@@ -48,7 +48,7 @@ const maxBodyBytes = 4 << 20
 func RegisterRoutes(router chi.Router, service *Service, controller *Controller, authenticator identity.Authenticator) {
 	limiter := middleware.NewRateLimiter(ingestPerMinute, ingestWindow)
 
-	router.With(middleware.RateLimitByClient(limiter)).Post(PathIngest, func(w http.ResponseWriter, request *http.Request) {
+	router.With(middleware.RateLimit(limiter)).Post(PathIngest, func(w http.ResponseWriter, request *http.Request) {
 		body, err := io.ReadAll(io.LimitReader(request.Body, maxBodyBytes+1))
 		if err != nil {
 			httpjson.WriteError(w, errors.Invalid("could not read the request body"))
