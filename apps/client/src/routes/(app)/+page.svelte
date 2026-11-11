@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-	<title>Perception</title>
+	<title>Perception · The context brain for operations</title>
 </svelte:head>
 
 <div class="px-4 py-6 md:px-8 md:py-8">
