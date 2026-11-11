@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1] - 2026-11-11
+
+### Fixed
+
+- The favicon, touch and manifest icons, link preview image and web manifest come from the muse v0.19.0 brand generator, and the head carries the suite's canonical title, description, theme colours and Open Graph and Twitter tags. The home page title matches the suite catalog.
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
