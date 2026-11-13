@@ -107,8 +107,9 @@ payload hash, timestamp). A misconfigured emitter must be visible, not silent.
 
 ## 3. Data model
 
-Postgres 16 with the `vector` extension. GORM models in `apps/api/schemas/`, migrations run at
-boot from `schemas.Migrate`.
+Postgres 16 with the `vector` extension. The schema is ordered goose SQL in
+`apps/api/migrations/`, applied at boot by `tronc/migrate`; the GORM models in
+`apps/api/schemas/` are the query layer.
 
 ### `events`
 

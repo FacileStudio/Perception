@@ -98,6 +98,16 @@ for dir in $GO_MODULES; do
       s=1
     }
 
+    # The schema lives in migrations/ and tronc/migrate applies it at boot.
+    # AutoMigrate would build a different schema from the struct tags, so it may
+    # not come back outside a test file.
+    automigrate="$(grep -rn --include='*.go' --exclude='*_test.go' --exclude-dir=vendor -E '\.AutoMigrate\(' . || true)"
+    if [ -n "$automigrate" ]; then
+      echo "AutoMigrate found; schema changes go in apps/api/migrations/ as a numbered SQL file:"
+      echo "$automigrate"
+      s=1
+    fi
+
     # Postgres is the only database in this suite, tests included. A test on
     # SQLite builds a different schema from the GORM struct tags and then
     # passes, proving nothing about the Postgres DDL that actually ships — and

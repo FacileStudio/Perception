@@ -43,7 +43,28 @@ If Casier is unreachable, run `mise run dev-offline` to use cached secrets, or c
 
 The API listens on port `4000`, and Vite proxies `/api` requests from `http://localhost:5173`.
 
-Database migrations run automatically at API startup via `schemas.Migrate`.
+Database migrations run automatically at API startup.
+
+## Changing the schema
+
+The schema is ordered goose SQL in `apps/api/migrations/`, embedded in the binary and applied at
+boot by `tronc/migrate`. GORM is the query layer only: `AutoMigrate` never runs, and
+`scripts/check.sh` fails on any `.AutoMigrate(` outside a test file.
+
+1. Add the next numbered file, say `apps/api/migrations/00003_events_region.sql`, with both
+   `-- +goose Up` and `-- +goose Down`.
+2. Change the struct in `apps/api/schemas/` by hand.
+3. Run the gate. `TestGORMModelsMatchTheMigratedSchema` fails when a struct names a column the
+   migrations do not create, or a type its field cannot hold, and
+   `TestPorteSchemaIsInTheMigrations` fails when a porte bump changes porte/pg's `Schema`, which
+   then needs a migration of its own.
+
+Never edit a migration a database has already run: goose records it as applied and will not
+run it again. `go run . migrate status` lists what is applied.
+
+The vector type and its operator class are written `public.vector` and
+`public.vector_cosine_ops` in the migrations. The extension lives in `public`, and a test schema
+from `tronc/testdb` puts only itself on `search_path`.
 
 ## Tasks
 

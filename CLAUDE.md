@@ -45,7 +45,8 @@ apps/
     modules/auth/       The porte adapter: profile lookup and /auth/me
     modules/ingest/     The signed intake path from Antenne, and the rejection log
     modules/events/     The browsable corpus: filtered listing with cursor paging
-    schemas/            Event and IngestRejection models, migrations; porte owns identity
+    schemas/            Event, IngestRejection and EventEmbedding models: the query layer
+    migrations/         Ordered goose SQL, embedded and applied at boot by tronc/migrate
   client/               SvelteKit dashboard
     src/lib/backend.ts  API client
     src/lib/auth.svelte.ts, theme.svelte.ts   Runes stores
@@ -87,8 +88,18 @@ unchanged and still the gate, now run as a lefthook `pre-push` job.
 - **Postgres only, tests included.** `check.sh` fails the build on any SQLite/MySQL driver in
   `go.mod`: a test on SQLite builds a different schema from the GORM tags and proves nothing
   about the DDL that ships.
-- **The database image must be `pgvector/pgvector:pg16`.** `schemas.Migrate` runs
-  `CREATE EXTENSION IF NOT EXISTS vector`; plain `postgres:16` fails at boot.
+- **The database image must be `pgvector/pgvector:pg16`.** The baseline migration runs
+  `CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public`; plain `postgres:16` fails at boot.
+- **Migrations are ordered SQL** in `apps/api/migrations/`, applied at boot by `tronc/migrate`
+  behind an advisory lock. `AutoMigrate` never runs and `scripts/check.sh` fails on it outside a
+  test file. Add a numbered file with Up and Down, then change the struct by hand;
+  `TestGORMModelsMatchTheMigratedSchema` catches a struct the migrations do not match. Keep
+  `public.vector` and `public.vector_cosine_ops` qualified: a test schema's `search_path` does
+  not include `public`. A failed migration exits 1. `docker run <image> migrate status`
+  answers without a shell.
+- **porte's tables live in the baseline.** porte/pg's `Schema` no longer runs at boot;
+  `TestPorteSchemaIsInTheMigrations` fails when a porte bump changes it, and that change then
+  needs its own migration.
 - **Every route needs an entry in its module's `documentation.go`**, or `apiref_test.go` fails.
   Fix the registry, never the test. That registry is what `/docs` renders.
 - **`internal/documentation/` declares `package docs`, and importers must alias it.** A Go

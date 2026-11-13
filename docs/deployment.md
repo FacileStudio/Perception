@@ -59,10 +59,24 @@ labels:
 
 ## Migrations
 
-Database schema migrations run automatically on startup via `schemas.Migrate`.
+The binary applies the pending files under `apps/api/migrations/` at every boot, through
+`tronc/migrate`, holding a Postgres advisory lock so two containers starting together cannot both
+migrate. A failed migration stops the boot and the process exits 1.
 
-1. Acquires a PostgreSQL session advisory lock (`8140251019`) to prevent concurrent migration races.
-2. Creates the `vector` extension if not present.
-3. Applies `porte` identity table migrations.
-4. Executes GORM AutoMigrate for `Event`, `IngestRejection`, and `EventEmbedding`.
-5. Ensures the generated `search` tsvector column with its GIN index and the HNSW vector index exist.
+- `00001_baseline.sql` creates the `vector` extension in `public`, porte's identity tables, the
+  three domain tables, the generated `search` column with its GIN index, and the HNSW index.
+- `00002_column_defaults.sql` gives `events.ingested_at`, `ingest_rejections.rejected_at` and
+  `event_embeddings.created_at` a `now()` default.
+
+A database built before v0.2.0 (the `events` table, no applied migration) is stamped at the
+baseline on its first boot: `migrate baseline 1` records version 1 as applied without running it,
+then the later files run. The image answers the subcommands without a shell:
+
+```sh
+docker run --rm -e DATABASE_URL=... <image> migrate status
+docker run --rm -e DATABASE_URL=... <image> migrate up
+```
+
+Rolling back to v0.1.x is a trap. Its `AutoMigrate` drops the defaults that 00002 added, while
+`goose_db_version` still records version 2. Before deploying v0.2.0 or later again after such a
+rollback, run `DELETE FROM goose_db_version WHERE version_id = 2`.

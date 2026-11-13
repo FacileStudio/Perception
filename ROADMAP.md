@@ -144,8 +144,8 @@ Do not rebuild these. They are done and wired.
 - **Auth** — [porte](https://github.com/FacileStudio/porte) v0.3.0: sessions, argon2id local
   accounts, Authentik OIDC, CLI login codes, back-channel logout, `SSO_ONLY`. Mounted from
   `main.go` behind the seam in §7.
-- **Postgres 16 + pgvector**, extension enabled by the migration runner; GORM models and
-  `schemas.Migrate`
+- **Postgres 16 + pgvector**, extension enabled by the first migration; goose SQL migrations
+  applied at boot by `tronc/migrate`, GORM models as the query layer
 - **Journal** log shipping, **Casier** secret injection via `mise run dev`
 - **Docker + Dokploy + Traefik** for `perception.facile.studio`, distroless, argv healthcheck
 - **SvelteKit 5 SPA** with muse, auth flow, empty authenticated shell

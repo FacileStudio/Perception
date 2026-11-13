@@ -25,7 +25,8 @@ One process, one container, one Traefik router. The SvelteKit client is built to
 | Entrypoint | `apps/api/main.go` | Loads config, opens the DB, migrates, builds the router, starts workers and background sweeps, shuts down on `SIGINT`/`SIGTERM` |
 | Router | `tronc/httpx.NewRouter` | Chi router with logging, recovery, and CORS middleware |
 | Modules | `apps/api/modules/*` | Four domain packages: `auth`, `embeddings`, `events`, `ingest` |
-| Schemas | `apps/api/schemas` | GORM models and `Migrate`, which handles extension setup, porte schema, and DDL migrations |
+| Schemas | `apps/api/schemas` | GORM models, the query layer. They create nothing |
+| Migrations | `apps/api/migrations` | Ordered goose SQL, embedded and applied at boot by `tronc/migrate`: pgvector, porte's tables, the domain tables and their indexes |
 | Internal | `apps/api/internal/*` | Shared packages: `database`, `documentation`, `env`, `identity`, `middleware` |
 | Client | `apps/client` | SvelteKit 5 dashboard with `adapter-static` and `fallback: index.html` |
 

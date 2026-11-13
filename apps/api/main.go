@@ -19,7 +19,6 @@ import (
 	"github.com/FacileStudio/Perception/apps/api/modules/embeddings"
 	"github.com/FacileStudio/Perception/apps/api/modules/events"
 	"github.com/FacileStudio/Perception/apps/api/modules/ingest"
-	"github.com/FacileStudio/Perception/apps/api/schemas"
 
 	"github.com/FacileStudio/Journal/sdk/journal"
 	"github.com/FacileStudio/tronc/apiref"
@@ -126,9 +125,8 @@ func run() int {
 		return 1
 	}
 
-	if err := schemas.Migrate(db, sqlDB); err != nil {
-		appLogger.Error("failed to run migrations", slog.Any("error", err))
-		return 1
+	if code, stop := migrateDatabase(sqlDB, appLogger); stop {
+		return code
 	}
 	defer func() {
 		if err := sqlDB.Close(); err != nil {

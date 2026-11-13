@@ -1,10 +1,12 @@
 package events
 
 import (
+	"context"
+	"log/slog"
 	"os"
 	"testing"
 
-	"github.com/FacileStudio/Perception/apps/api/schemas"
+	"github.com/FacileStudio/Perception/apps/api/migrations"
 	"github.com/FacileStudio/tronc/testdb"
 
 	"gorm.io/gorm"
@@ -30,7 +32,7 @@ func migrate(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	return schemas.Migrate(db, handle)
+	return migrations.Up(context.Background(), migrations.Config(handle, slog.New(slog.DiscardHandler)))
 }
 
 func TestMain(m *testing.M) {
