@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.2] - 2026-11-13
+
+### Security
+
+- Bump golang.org/x/crypto to 0.59.0, with x/sync 0.25.0, x/sys 0.50.0 and x/text 0.44.0. It clears GO-2026-5932, which douane reported as a scan gap because the advisory has no severity.
+
 ## [0.1.1] - 2026-11-11
 
 ### Fixed
