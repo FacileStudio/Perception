@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0] - 2026-11-14
+
+### Added
+
+- Landing page at `/` for signed-out visitors: hero, a mise-en-scene demo of the events timeline, four feature blocks and a sign-in call to action. Signed-in visitors still get the dashboard at `/`, and every other signed-out route still redirects to `/login`.
+
+### Changed
+
+- Client: muse v0.6.5 to v0.23.0 and mise-en-scene v0.2.1. Titles use muse's Magnetik through `font-fc-title`; the old `font-heading` class matched no token.
+- Events list and detail: error boxes are muse `Alert`s and cards have no borders. The `fc-error` colour they used does not exist in muse.
+- `vite dev` excludes `@facile/muse` and `@facile/mise-en-scene` from dependency pre-bundling, which failed on muse's TypeScript sources.
+
 ## [0.2.0] - 2026-11-13
 
 ### Changed
