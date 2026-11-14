@@ -2,16 +2,24 @@
 	import type { Snippet } from 'svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { icons } from '@facile/muse';
+	import { page } from '$app/state';
+	import { Spinner, icons } from '@facile/muse';
 	import { auth } from '$lib/auth.svelte';
+	import Landing from '$lib/components/landing/Landing.svelte';
 	import Logo from '$lib/components/Logo.svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 
 	let { children }: { children?: Snippet } = $props();
 
+	const signedOut = $derived(auth.loaded && !auth.isAuthenticated);
+	const landing = $derived(signedOut && page.url.pathname === '/');
+
 	onMount(async () => {
 		if (!auth.loaded) await auth.load();
-		if (!auth.isAuthenticated) goto('/login', { replaceState: true });
+	});
+
+	$effect(() => {
+		if (signedOut && !landing) goto('/login', { replaceState: true });
 	});
 </script>
 
@@ -38,12 +46,10 @@
 			</main>
 		</div>
 	</div>
+{:else if landing}
+	<Landing />
 {:else}
 	<div class="flex h-[100dvh] items-center justify-center">
-		<span
-			class="h-6 w-6 animate-spin rounded-fc-pill border-2 border-fc-border border-t-fc-fg motion-reduce:animate-none"
-			role="status"
-			aria-label="Loading"
-		></span>
+		<Spinner size="lg" label="Loading" />
 	</div>
 {/if}
