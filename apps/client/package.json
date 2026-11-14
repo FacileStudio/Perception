@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@facile/mise-en-scene": "github:FacileStudio/mise-en-scene#v0.2.1",
-    "@facile/muse": "github:FacileStudio/muse#v0.22.1"
+    "@facile/muse": "github:FacileStudio/muse#v0.23.0"
   },
   "overrides": {
     "devalue": "^5.9.3",
