@@ -46,7 +46,7 @@
 
 <div class="px-4 py-6 md:px-8 md:py-8">
 	<div class="mx-auto flex max-w-fc-md flex-col gap-4">
-		<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Settings</h1>
+		<h1 class="font-fc-title text-fc-2xl font-bold tracking-tight text-fc-fg">Settings</h1>
 		<Tabs items={tabItems} bind:value={active} label="Settings sections" />
 		<Divider />
 	</div>

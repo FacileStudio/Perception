@@ -54,7 +54,7 @@
 </svelte:head>
 
 <div class="mb-8">
-	<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Welcome back</h1>
+	<h1 class="font-fc-title text-fc-2xl font-bold tracking-tight text-fc-fg">Welcome back</h1>
 	<p class="mt-1.5 text-fc-sm text-fc-fg-muted">
 		{ssoOnly
 			? 'Sign in with your Facile account to access Perception.'

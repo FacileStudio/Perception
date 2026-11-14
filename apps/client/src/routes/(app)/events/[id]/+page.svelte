@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Button, Spinner, Badge } from '@facile/muse';
+	import { Alert, Button, Spinner, Badge } from '@facile/muse';
 	import { backend, type EventSummary } from '$lib/backend';
 	import { page } from '$app/state';
 
@@ -62,9 +62,7 @@
 	</div>
 {:else if error}
 	<div class="p-8">
-		<div class="rounded-fc-md border border-fc-error/30 bg-fc-error/10 p-4 text-fc-sm text-fc-error">
-			{error}
-		</div>
+		<Alert tone="danger">{error}</Alert>
 	</div>
 {:else if event}
 	<div class="px-4 py-6 md:px-8 md:py-8">
@@ -81,7 +79,7 @@
 					<span class="text-fc-xs text-fc-fg-muted">{event.entity_type}</span>
 				{/if}
 			</div>
-			<h1 class="mt-2 font-heading text-fc-xl font-semibold text-fc-fg">
+			<h1 class="mt-2 font-fc-title text-fc-xl font-bold text-fc-fg">
 				{event.title || event.event_type}
 			</h1>
 			<div class="mt-2 flex items-center gap-3 text-fc-sm text-fc-fg-muted">

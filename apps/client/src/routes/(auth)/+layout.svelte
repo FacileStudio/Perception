@@ -20,7 +20,7 @@
 		</a>
 
 		<div class="mb-auto">
-			<h2 class="font-heading text-fc-3xl leading-tight font-semibold text-fc-accent-fg">
+			<h2 class="font-fc-title text-fc-3xl leading-tight font-bold text-fc-accent-fg">
 				Everything that happened.<br />In one place.
 			</h2>
 			<p class="mt-4 max-w-xs text-fc-sm leading-relaxed text-fc-accent-fg/60">

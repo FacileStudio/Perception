@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Button, EmptyState, Spinner, Badge } from '@facile/muse';
+	import { Alert, Button, EmptyState, Spinner, Badge } from '@facile/muse';
 	import { backend, type EventSummary } from '$lib/backend';
 
 	let events = $state<EventSummary[]>([]);
@@ -68,16 +68,14 @@
 
 <div class="px-4 py-6 md:px-8 md:py-8">
 	<header class="mb-6">
-		<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Events</h1>
+		<h1 class="font-fc-title text-fc-2xl font-bold tracking-tight text-fc-fg">Events</h1>
 		<p class="mt-1.5 text-fc-sm text-fc-fg-muted">
 			Activity flowing through Perception
 		</p>
 	</header>
 
 	{#if error}
-		<div class="mb-4 rounded-fc-md border border-fc-error/30 bg-fc-error/10 p-4 text-fc-sm text-fc-error">
-			{error}
-		</div>
+		<Alert tone="danger" class="mb-4">{error}</Alert>
 	{/if}
 
 	{#if loading && events.length === 0}
@@ -95,7 +93,7 @@
 			{#each events as event (event.id)}
 				<a
 					href="/events/{event.id}"
-					class="block rounded-fc-md border border-fc-border bg-fc-component p-4 transition-colors hover:border-fc-border/80 hover:bg-fc-surface"
+					class="block rounded-fc-md bg-fc-component p-4 transition-colors hover:bg-fc-surface"
 				>
 					<div class="flex items-start justify-between gap-3">
 						<div class="min-w-0 flex-1">

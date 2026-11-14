@@ -50,7 +50,7 @@
 
 {#if ready}
 	<div class="mb-8">
-		<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Create account</h1>
+		<h1 class="font-fc-title text-fc-2xl font-bold tracking-tight text-fc-fg">Create account</h1>
 		<p class="mt-1.5 text-fc-sm text-fc-fg-muted">Sign up to reach this Perception instance.</p>
 	</div>
 

@@ -19,6 +19,6 @@
 		aria-hidden="true"
 	></iconify-icon>
 	{#if wordmark}
-		<span class="font-heading font-semibold tracking-tight">Perception</span>
+		<span class="font-fc-title font-bold tracking-tight">Perception</span>
 	{/if}
 </span>

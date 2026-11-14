@@ -9,7 +9,7 @@
 
 <div class="px-4 py-6 md:px-8 md:py-8">
 	<header class="mb-6">
-		<h1 class="font-heading text-fc-2xl font-semibold tracking-tight text-fc-fg">Overview</h1>
+		<h1 class="font-fc-title text-fc-2xl font-bold tracking-tight text-fc-fg">Overview</h1>
 		<p class="mt-1.5 text-fc-sm text-fc-fg-muted">
 			Perception is being rebuilt on Go. Only sign-in works today.
 		</p>
