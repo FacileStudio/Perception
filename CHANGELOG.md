@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1] - 2026-11-14
+
+### Changed
+
+- API: tronc v0.16.0 to v0.23.1 and porte v0.5.2 to v0.20.1, which brings chi v5.5.0 and go-jose v4.1.9 (security fixes in both).
+- Migration 00003 adds `porte_users.locale` and `porte_login_codes.provider` / `subject`, the columns porte's schema gained since v0.5.2. Without them porte/pg's user upsert fails.
+- `mise.toml` and `mise.lock` pin go 1.26.11, as go.mod and the Dockerfile do.
+
 ## [0.3.0] - 2026-11-14
 
 ### Added

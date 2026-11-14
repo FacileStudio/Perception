@@ -24,7 +24,7 @@ first; most of it was deleted on purpose.
 | Client  | SvelteKit 2, Svelte 5 (runes), Tailwind CSS 4, muse (`@facile/muse`), bits-ui |
 | Build   | `go build`, Bun                                                          |
 | Deploy  | Docker Compose, one distroless container serving API + client, Dokploy + Traefik |
-| Auth    | [porte](https://github.com/FacileStudio/porte) v0.3.0 — sessions, argon2id passwords, Authentik OIDC, `SSO_ONLY` |
+| Auth    | [porte](https://github.com/FacileStudio/porte) v0.20.1 — sessions, argon2id passwords, Authentik OIDC, `SSO_ONLY` |
 | Logging | Journal SDK; secrets from Casier in dev, Dokploy in production           |
 | Planned | Voyage `voyage-4-lite` embeddings; `claude-opus-5` through nacelle; MCP server via `modelcontextprotocol/go-sdk` |
 
