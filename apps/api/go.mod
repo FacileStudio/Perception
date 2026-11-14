@@ -4,18 +4,18 @@ go 1.26.11
 
 require (
 	github.com/FacileStudio/Journal/sdk/journal v0.0.0-20260805234318-3de3753b1357
-	github.com/FacileStudio/porte v0.5.2
-	github.com/FacileStudio/tronc v0.16.0
+	github.com/FacileStudio/porte v0.20.1
+	github.com/FacileStudio/tronc v0.23.1
 	github.com/FacileStudio/tronc/migrate v0.1.1
-	github.com/FacileStudio/tronc/testdb v0.1.1
-	github.com/go-chi/chi/v5 v5.4.0
+	github.com/FacileStudio/tronc/testdb v0.1.2
+	github.com/go-chi/chi/v5 v5.5.0
 	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2
 )
 
 require (
 	github.com/coreos/go-oidc/v3 v3.20.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.6 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.10.0 // indirect
