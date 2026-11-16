@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.2] - 2026-11-16
+
+### Changed
+
+- Client: muse v0.32.0. Tabs and segmented option cards are 36px tall on pointer devices and 44px on touch.
+
 ## [0.3.1] - 2026-11-14
 
 ### Changed
